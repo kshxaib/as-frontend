@@ -1,9 +1,16 @@
-import React from 'react'
+import React from 'react';
+import { Navbar } from './components/Navbar';
+import { QuestionReview } from './components/QuestionReview';
 
-const App = () => {
+function App() {
   return (
-    <div className='text-4xl bg-orange-500 hover:bg-orange-600 active:bg-orange-700 text-white p-2 m-2'>App</div>
-  )
+    <div className="min-h-screen bg-slate-950 font-sans antialiased text-slate-100 selection:bg-indigo-500 selection:text-white">
+      <Navbar />
+      <main>
+        <QuestionReview />
+      </main>
+    </div>
+  );
 }
 
-export default App
+export default App;
