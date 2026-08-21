@@ -23,11 +23,13 @@ export const QuestionReview = () => {
     questions,
     isLoading,
     isExtracting,
+    isGeneratingAnswers,
     error,
     successMessage,
     fetchQuestionBanks,
     selectQuestionBank,
     extractQuestions,
+    generateAnswers,
     clearFeedback,
   } = useQuestionBankStore();
 
@@ -135,7 +137,7 @@ export const QuestionReview = () => {
               >
                 <Sparkles className={`h-4 w-4 text-indigo-400 ${isExtracting ? 'animate-spin' : ''}`} />
                 {isExtracting
-                  ? 'Extracting with Gemini...'
+                  ? 'Extracting with OpenAI...'
                   : currentQuestionBank.status === 'extracted'
                   ? 'Re-extract Questions'
                   : 'Extract Questions (AI)'}
@@ -323,14 +325,12 @@ export const QuestionReview = () => {
             </div>
 
             <button
-              onClick={() =>
-                alert(
-                  `Phase 5 Review Complete! Ready for Phase 6 (RAG Answer Generation) with ${totalQuestions} questions.`
-                )
-              }
-              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-6 py-3 text-xs font-bold text-slate-950 shadow-lg shadow-emerald-500/20 hover:from-emerald-400 hover:to-teal-400 transition-all hover:scale-[1.02] active:scale-[0.98]"
+              onClick={() => generateAnswers(currentQuestionBank.id)}
+              disabled={isGeneratingAnswers}
+              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-6 py-3 text-xs font-bold text-slate-950 shadow-lg shadow-emerald-500/20 hover:from-emerald-400 hover:to-teal-400 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
             >
-              <span>Approve & Proceed to Generation</span>
+              <Sparkles className={`h-4 w-4 ${isGeneratingAnswers ? 'animate-spin' : ''}`} />
+              <span>{isGeneratingAnswers ? 'Generating Answers...' : 'Approve & Generate Answers'}</span>
               <ArrowRight className="h-4 w-4" />
             </button>
           </div>

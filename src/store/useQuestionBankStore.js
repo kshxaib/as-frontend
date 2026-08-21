@@ -5,10 +5,16 @@ export const useQuestionBankStore = create((set, get) => ({
   questionBanks: [],
   currentQuestionBank: null,
   questions: [],
+  currentAnswerSet: null,
+  answerSetsList: [],
+  activeTab: 'review', // 'review' | 'solutions'
   isLoading: false,
   isExtracting: false,
+  isGeneratingAnswers: false,
   error: null,
   successMessage: null,
+
+  setActiveTab: (tab) => set({ activeTab: tab }),
 
   // Fetch all question banks
   fetchQuestionBanks: async (userId = null) => {
@@ -29,17 +35,29 @@ export const useQuestionBankStore = create((set, get) => ({
     }
   },
 
-  // Select a question bank and load its questions
+  // Select a question bank and load its questions and existing answer sets
   selectQuestionBank: async (id) => {
     set({ isLoading: true, error: null });
     try {
-      const [bankRes, questionsRes] = await Promise.all([
+      const [bankRes, questionsRes, answerSetsRes] = await Promise.all([
         api.get(`/question-banks/${id}`),
         api.get(`/question-banks/${id}/questions`),
+        api.get(`/question-banks/${id}/answer-sets`),
       ]);
+
+      const answerSets = answerSetsRes.data.answer_sets || [];
+      let latestAnswerSet = null;
+
+      if (answerSets.length > 0) {
+        const fullSetRes = await api.get(`/answer-sets/${answerSets[0].id}`);
+        latestAnswerSet = fullSetRes.data;
+      }
+
       set({
         currentQuestionBank: bankRes.data,
         questions: questionsRes.data.questions || [],
+        answerSetsList: answerSets,
+        currentAnswerSet: latestAnswerSet,
         isLoading: false,
       });
     } catch (err) {
@@ -62,7 +80,7 @@ export const useQuestionBankStore = create((set, get) => ({
       });
     } catch (err) {
       set({
-        error: err.response?.data?.detail || 'Extraction failed. Make sure Gemini API key is valid.',
+        error: err.response?.data?.detail || 'Extraction failed. Make sure OpenAI API key is valid.',
         isExtracting: false,
       });
     }
@@ -112,6 +130,51 @@ export const useQuestionBankStore = create((set, get) => ({
     } catch (err) {
       set({
         error: err.response?.data?.detail || 'Failed to delete question',
+      });
+    }
+  },
+
+  // Phase 6: Generate Full Answer Set using RAG
+  generateAnswers: async (questionBankId) => {
+    set({ isGeneratingAnswers: true, error: null, successMessage: null });
+    try {
+      const res = await api.post('/answer-sets/generate', {
+        question_bank_id: questionBankId,
+      });
+      set({
+        currentAnswerSet: res.data,
+        isGeneratingAnswers: false,
+        activeTab: 'solutions',
+        successMessage: `Successfully generated ${res.data.completed_questions} answers with citations!`,
+      });
+    } catch (err) {
+      set({
+        error: err.response?.data?.detail || 'Answer generation failed. Verify Qdrant indexing & OpenAI API key.',
+        isGeneratingAnswers: false,
+      });
+    }
+  },
+
+  // Phase 6: Retry a single answer
+  retryAnswer: async (answerId) => {
+    try {
+      const res = await api.put ? api.post(`/answers/${answerId}/retry`) : api.post(`/answers/${answerId}/retry`);
+      set((state) => {
+        if (!state.currentAnswerSet) return state;
+        const updatedAnswers = state.currentAnswerSet.answers.map((a) =>
+          a.id === answerId ? res.data : a
+        );
+        return {
+          currentAnswerSet: {
+            ...state.currentAnswerSet,
+            answers: updatedAnswers,
+          },
+          successMessage: 'Answer regenerated successfully!',
+        };
+      });
+    } catch (err) {
+      set({
+        error: err.response?.data?.detail || 'Failed to retry answer',
       });
     }
   },
