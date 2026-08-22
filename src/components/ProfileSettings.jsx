@@ -16,6 +16,7 @@ import {
   Cpu,
   Flame,
   Layers,
+  Loader2,
 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 
@@ -23,7 +24,6 @@ export const ProfileSettings = () => {
   const {
     user,
     isAuthenticated,
-    isLoading,
     error,
     updateGeminiKey,
     deleteGeminiKey,
@@ -33,7 +33,6 @@ export const ProfileSettings = () => {
     deleteOpenRouterKey,
     updateNvidiaKey,
     deleteNvidiaKey,
-
     updateOpenAIKey,
     deleteOpenAIKey,
     openAuthModal,
@@ -48,7 +47,6 @@ export const ProfileSettings = () => {
     openai: '',
   });
 
-
   const [showKey, setShowKey] = useState({
     gemini: false,
     groq: false,
@@ -57,6 +55,13 @@ export const ProfileSettings = () => {
     openai: false,
   });
 
+  const [actionLoading, setActionLoading] = useState({
+    gemini: false,
+    groq: false,
+    openrouter: false,
+    nvidia: false,
+    openai: false,
+  });
 
   const [successMsg, setSuccessMsg] = useState(null);
 
@@ -88,44 +93,48 @@ export const ProfileSettings = () => {
     setShowKey((prev) => ({ ...prev, [provider]: !prev[provider] }));
   };
 
-  const handleSaveSingleKey = async (provider) => {
+  const handleSaveSingleKey = async (provider, providerName) => {
     const val = keysInput[provider]?.trim();
     if (!val) return;
 
     setSuccessMsg(null);
     clearError();
+    setActionLoading((prev) => ({ ...prev, [provider]: true }));
 
     let res;
     if (provider === 'gemini') res = await updateGeminiKey(val);
     else if (provider === 'groq') res = await updateGroqKey(val);
     else if (provider === 'openrouter') res = await updateOpenRouterKey(val);
-
     else if (provider === 'nvidia') res = await updateNvidiaKey(val);
     else if (provider === 'openai') res = await updateOpenAIKey(val);
 
+    setActionLoading((prev) => ({ ...prev, [provider]: false }));
+
     if (res?.success) {
       setKeysInput((prev) => ({ ...prev, [provider]: '' }));
-      setSuccessMsg(`${provider.toUpperCase()} API key saved successfully!`);
+      setSuccessMsg(`${providerName} API key saved successfully!`);
       setTimeout(() => setSuccessMsg(null), 4000);
     }
   };
 
-  const handleDeleteSingleKey = async (provider) => {
-    if (!window.confirm(`Are you sure you want to remove your ${provider.toUpperCase()} API key?`)) return;
+  const handleDeleteSingleKey = async (provider, providerName) => {
+    if (!window.confirm(`Are you sure you want to remove your ${providerName} API key?`)) return;
 
     setSuccessMsg(null);
     clearError();
+    setActionLoading((prev) => ({ ...prev, [provider]: true }));
 
     let res;
     if (provider === 'gemini') res = await deleteGeminiKey();
     else if (provider === 'groq') res = await deleteGroqKey();
     else if (provider === 'openrouter') res = await deleteOpenRouterKey();
-
     else if (provider === 'nvidia') res = await deleteNvidiaKey();
     else if (provider === 'openai') res = await deleteOpenAIKey();
 
+    setActionLoading((prev) => ({ ...prev, [provider]: false }));
+
     if (res?.success) {
-      setSuccessMsg(`${provider.toUpperCase()} API key removed.`);
+      setSuccessMsg(`${providerName} API key removed.`);
       setTimeout(() => setSuccessMsg(null), 4000);
     }
   };
@@ -136,7 +145,7 @@ export const ProfileSettings = () => {
       name: 'Google Gemini',
       tag: 'Required (100% Free)',
       tagColor: 'text-amber-300 bg-amber-500/10 border-amber-500/20',
-      description: 'Used for Free Vector Embeddings (text-embedding-004) and RAG fallback generation (1,500 RPD).',
+      description: 'Used for Free Vector Embeddings (gemini-embedding-001) and RAG fallback generation (1,500 RPD).',
       placeholder: 'AIzaSy...',
       hasKey: user.has_gemini_key,
       getKeyUrl: 'https://aistudio.google.com/app/api-keys?project=gen-lang-client-0528736665',
@@ -160,7 +169,7 @@ export const ProfileSettings = () => {
       name: 'OpenRouter',
       tag: 'Required (100% Free)',
       tagColor: 'text-cyan-300 bg-cyan-500/10 border-cyan-500/20',
-      description: 'Free access to top models (GPT-4o 120B, Qwen 3). Used for Question Extraction & AI Review.',
+      description: 'High-Volume Question Extraction & AI Reviewer with free AI models.',
       placeholder: 'sk-or-v1-...',
       hasKey: user.has_openrouter_key,
       getKeyUrl: 'https://openrouter.ai/workspaces/default/keys',
@@ -184,7 +193,7 @@ export const ProfileSettings = () => {
       name: 'OpenAI API',
       tag: 'Optional (Emergency Backup)',
       tagColor: 'text-slate-400 bg-slate-800 border-slate-700',
-      description: 'Optional final safety net (gpt-4o-mini). Used only if all 4 free providers above are exhausted.',
+      description: 'Optional safety net (gpt-4o-mini). Used only if all 4 free providers above are exhausted.',
       placeholder: 'sk-proj-...',
       hasKey: user.has_openai_key,
       getKeyUrl: 'https://platform.openai.com/api-keys',
@@ -207,28 +216,28 @@ export const ProfileSettings = () => {
             User Profile & Multi-Provider Keys
           </h1>
           <p className="mt-1 text-sm text-slate-400">
-            Configure your free AI API keys with automatic failover. Tasks will never stall midway.
+            Configure your individual AI API keys with automatic failover. Modify each provider separately.
           </p>
         </div>
 
         {/* Feedback Banners */}
         {error && (
-          <div className="mt-6 flex items-center justify-between rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-xs text-rose-300">
+          <div className="mt-6 flex items-center justify-between rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-xs text-rose-300 animate-in fade-in">
             <div className="flex items-center gap-2.5">
               <AlertCircle className="h-5 w-5 text-rose-400 shrink-0" />
               <span>{error}</span>
             </div>
-            <button onClick={clearError} className="text-rose-400 hover:underline">Dismiss</button>
+            <button onClick={clearError} className="text-rose-400 hover:underline font-semibold">Dismiss</button>
           </div>
         )}
 
         {successMsg && (
-          <div className="mt-6 flex items-center justify-between rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-xs text-emerald-300">
+          <div className="mt-6 flex items-center justify-between rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-xs text-emerald-300 animate-in fade-in">
             <div className="flex items-center gap-2.5">
               <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0" />
-              <span>{successMsg}</span>
+              <span className="font-medium">{successMsg}</span>
             </div>
-            <button onClick={() => setSuccessMsg(null)} className="text-emerald-400 hover:underline">Dismiss</button>
+            <button onClick={() => setSuccessMsg(null)} className="text-emerald-400 hover:underline font-semibold">Dismiss</button>
           </div>
         )}
 
@@ -249,32 +258,28 @@ export const ProfileSettings = () => {
               </div>
               <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
                 <span className="text-[11px] text-slate-500 uppercase font-medium">Member Since</span>
-                <p className="mt-1 text-sm font-semibold text-slate-300 flex items-center gap-1.5">
-                  <Calendar className="h-3.5 w-3.5 text-slate-400" />
-                  {new Date(user.created_at).toLocaleDateString()}
+                <p className="mt-1 text-base font-bold text-slate-300">
+                  {user.created_at ? new Date(user.created_at).toLocaleDateString() : 'Active Member'}
                 </p>
               </div>
             </div>
           </div>
 
-          {/* AI Providers Section */}
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-base font-bold text-white flex items-center gap-2">
-                  <ShieldCheck className="h-5 w-5 text-indigo-400" />
-                  AI Provider Keys & Failover Setup
-                </h2>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  Enter all 4 free keys below. OpenAI is optional backup. All keys are encrypted at rest.
-                </p>
-              </div>
+          {/* API Keys Management Section */}
+          <div className="space-y-6">
+            <div>
+              <h2 className="text-lg font-bold text-white flex items-center gap-2">
+                <KeyRound className="h-5 w-5 text-indigo-400" />
+                AI Provider API Keys
+              </h2>
+              <p className="text-xs text-slate-400 mt-1">
+                Keys are stored securely with AES-GCM encryption. Add, update, or remove any key individually.
+              </p>
             </div>
 
             {/* Required Keys Progress Status Banner */}
             {(() => {
               const requiredCount = [user.has_gemini_key, user.has_groq_key, user.has_openrouter_key, user.has_nvidia_key].filter(Boolean).length;
-
               const isFullyConfigured = requiredCount === 4;
               return (
                 <div className={`flex items-center justify-between rounded-2xl p-4 border ${
@@ -291,14 +296,13 @@ export const ProfileSettings = () => {
                     <div>
                       <span className="font-bold text-xs">
                         {isFullyConfigured
-                          ? 'All 4 Required AI Keys Active — Pipeline Ready!'
+                          ? 'All 4 Required AI Keys Active — Full AI Pipeline Unlocked!'
                           : `Setup Incomplete (${requiredCount}/4 Required Keys Configured)`}
                       </span>
                       <p className="text-[11px] text-slate-400 mt-0.5">
                         {isFullyConfigured
-                          ? 'Multi-provider automatic failover is active. You can now extract questions, index notes, and generate answers.'
+                          ? 'Multi-provider failover is active. You can now extract questions, index notes, and generate answers.'
                           : 'Please add all 4 free provider keys below (Gemini, Groq, OpenRouter, and NVIDIA NIM) to unlock AI pipeline features.'}
-
                       </p>
                     </div>
                   </div>
@@ -316,6 +320,7 @@ export const ProfileSettings = () => {
                 const isConfigured = p.hasKey;
                 const inputVal = keysInput[p.id];
                 const isShowing = showKey[p.id];
+                const isProcessing = actionLoading[p.id];
 
                 return (
                   <div
@@ -340,7 +345,7 @@ export const ProfileSettings = () => {
                         </div>
                       </div>
 
-                      {/* Get Key Link */}
+                      {/* Direct Get Key Link */}
                       <a
                         href={p.getKeyUrl}
                         target="_blank"
@@ -361,7 +366,8 @@ export const ProfileSettings = () => {
                           value={inputVal}
                           onChange={(e) => handleInputChange(p.id, e.target.value)}
                           placeholder={isConfigured ? '••••••••••••••••••••••••••••••••' : p.placeholder}
-                          className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2 pl-10 pr-16 text-xs font-mono text-slate-200 placeholder-slate-600 focus:border-indigo-500 focus:outline-none"
+                          disabled={isProcessing}
+                          className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2 pl-10 pr-16 text-xs font-mono text-slate-200 placeholder-slate-600 focus:border-indigo-500 focus:outline-none disabled:opacity-50"
                         />
                         <button
                           type="button"
@@ -381,33 +387,35 @@ export const ProfileSettings = () => {
                             </span>
                             <button
                               type="button"
-                              onClick={() => handleDeleteSingleKey(p.id)}
-                              disabled={isLoading}
-                              className="rounded-xl border border-slate-800 bg-slate-950 p-2 text-slate-400 hover:bg-rose-500/10 hover:text-rose-400 hover:border-rose-500/20 transition-all"
-                              title="Delete stored key"
+                              onClick={() => handleDeleteSingleKey(p.id, p.name)}
+                              disabled={isProcessing}
+                              className="rounded-xl border border-slate-800 bg-slate-950 p-2 text-slate-400 hover:bg-rose-500/10 hover:text-rose-400 hover:border-rose-500/20 transition-all disabled:opacity-50"
+                              title={`Remove ${p.name} key`}
                             >
-                              <Trash2 className="h-4 w-4" />
+                              {isProcessing ? <Loader2 className="h-4 w-4 animate-spin text-rose-400" /> : <Trash2 className="h-4 w-4" />}
                             </button>
                           </div>
                         ) : (
                           <button
                             type="button"
-                            onClick={() => handleSaveSingleKey(p.id)}
-                            disabled={isLoading || !inputVal.trim()}
-                            className="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-md hover:bg-indigo-500 transition-all disabled:opacity-40"
+                            onClick={() => handleSaveSingleKey(p.id, p.name)}
+                            disabled={isProcessing || !inputVal.trim()}
+                            className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-md hover:bg-indigo-500 transition-all disabled:opacity-40"
                           >
-                            Save Key
+                            {isProcessing && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                            <span>Save Key</span>
                           </button>
                         )}
 
                         {isConfigured && inputVal.trim() && (
                           <button
                             type="button"
-                            onClick={() => handleSaveSingleKey(p.id)}
-                            disabled={isLoading}
-                            className="rounded-xl bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white shadow-md hover:bg-indigo-500 transition-all"
+                            onClick={() => handleSaveSingleKey(p.id, p.name)}
+                            disabled={isProcessing}
+                            className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white shadow-md hover:bg-indigo-500 transition-all disabled:opacity-50"
                           >
-                            Update
+                            {isProcessing && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                            <span>Update</span>
                           </button>
                         )}
                       </div>

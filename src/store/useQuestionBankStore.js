@@ -402,6 +402,25 @@ export const useQuestionBankStore = create((set, get) => ({
     }
   },
 
+  downloadSolvedPdf: async (answerSetId, filename = 'Solved_Question_Bank.pdf') => {
+    try {
+      const res = await api.get(`/answer-sets/${answerSetId}/pdf`, {
+        responseType: 'blob',
+      });
+      const blob = new Blob([res.data], { type: 'application/pdf' });
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.setAttribute('download', filename.endsWith('.pdf') ? filename : `${filename}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => window.URL.revokeObjectURL(blobUrl), 2000);
+    } catch (err) {
+      set({ error: err.response?.data?.detail || 'Failed to download solved PDF.' });
+    }
+  },
+
   downloadDirectPdf: async (url, filename = 'document.pdf') => {
     try {
       const response = await fetch(url);
@@ -444,15 +463,20 @@ export const useQuestionBankStore = create((set, get) => ({
     }
   },
 
+  fetchCommunityData: async () => {
+    return get().fetchCommunityFeed();
+  },
+
   toggleResourceShare: async (resourceId) => {
     try {
-      const res = await api.post(`/resources/${resourceId}/share`);
+      const res = await api.post(`/community/resources/${resourceId}/share`);
       set((state) => ({
         resources: state.resources.map((r) =>
           r.id === resourceId ? { ...r, visibility: res.data.visibility } : r
         ),
         successMessage: `Resource visibility set to ${res.data.visibility}.`,
       }));
+      get().fetchCommunityFeed();
     } catch (err) {
       set({ error: err.response?.data?.detail || 'Failed to toggle resource sharing.' });
     }
@@ -460,13 +484,17 @@ export const useQuestionBankStore = create((set, get) => ({
 
   toggleAnswerSetShare: async (answerSetId) => {
     try {
-      const res = await api.post(`/answer-sets/${answerSetId}/share`);
+      const res = await api.post(`/community/answer-sets/${answerSetId}/share`);
       set((state) => ({
+        answerSetsList: state.answerSetsList.map((a) =>
+          a.id === answerSetId ? { ...a, visibility: res.data.visibility } : a
+        ),
         currentAnswerSet: state.currentAnswerSet?.id === answerSetId
           ? { ...state.currentAnswerSet, visibility: res.data.visibility }
           : state.currentAnswerSet,
         successMessage: `Answer set visibility set to ${res.data.visibility}.`,
       }));
+      get().fetchCommunityFeed();
     } catch (err) {
       set({ error: err.response?.data?.detail || 'Failed to toggle answer set sharing.' });
     }
