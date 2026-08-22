@@ -4,10 +4,8 @@ import {
   AlertCircleIcon,
   CheckCircle2Icon,
   ChevronDownIcon,
-  DownloadIcon,
   FileCheck2Icon,
   FileTextIcon,
-  GlobeIcon,
   LayersIcon,
   RotateCwIcon,
   SearchIcon,
@@ -33,6 +31,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { CountChip } from "@/components/shared/status-badge"
 import { Input } from "@/components/ui/input"
+import { PdfExportActions } from "@/components/pdf-export"
 import { useQuestionBankStore } from "@/store/useQuestionBankStore"
 import { useReducedMotion } from "@/lib/motion"
 import { parseResourceIds } from "@/components/question-banks/question-bank-meta"
@@ -331,28 +330,16 @@ export function SolutionsWorkspace() {
       {currentQuestionBank && (
         <div className="flex flex-wrap items-center justify-end gap-2.5">
           {currentAnswerSet && answers.length > 0 && (
-            <>
-              <Button
-                variant="gold"
-                onClick={() =>
-                  downloadSolvedPdf(
-                    currentAnswerSet.id,
-                    `AcademicStack_${(currentQuestionBank?.subject || "Subject").replace(/\s+/g, "_")}_${(currentQuestionBank?.name || "QB").replace(/\s+/g, "_")}_Solved.pdf`
-                  )
-                }
-              >
-                <DownloadIcon aria-hidden="true" />
-                Download Solved PDF
-              </Button>
-
-              <Button
-                variant={isShared ? "gold" : "outline"}
-                onClick={() => toggleAnswerSetShare(currentAnswerSet.id)}
-              >
-                <GlobeIcon aria-hidden="true" />
-                {isShared ? "Shared in Community" : "Share with Community"}
-              </Button>
-            </>
+            <PdfExportActions
+              answerSetId={currentAnswerSet.id}
+              questionBankName={currentQuestionBank?.name}
+              subject={currentQuestionBank?.subject}
+              isShared={isShared}
+              onDownload={(filename) =>
+                downloadSolvedPdf(currentAnswerSet.id, filename)
+              }
+              onToggleShare={() => toggleAnswerSetShare(currentAnswerSet.id)}
+            />
           )}
 
           <Button
