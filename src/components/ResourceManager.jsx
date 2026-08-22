@@ -18,6 +18,8 @@ import {
 } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
 import { useAuthStore } from '../store/useAuthStore';
+import { ConfirmationModal } from './ConfirmationModal';
+import { AiProgressModal } from './AiProgressModal';
 
 export const ResourceManager = () => {
   const {
@@ -39,6 +41,8 @@ export const ResourceManager = () => {
   const { user, isAuthenticated, openAuthModal } = useAuthStore();
 
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [deleteCandidate, setDeleteCandidate] = useState(null);
+  const [indexCandidate, setIndexCandidate] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSubject, setSelectedSubject] = useState('ALL');
 
@@ -292,11 +296,7 @@ export const ResourceManager = () => {
                         </button>
 
                         <button
-                          onClick={() => {
-                            if (window.confirm(`Delete resource "${res.name}"?`)) {
-                              deleteResource(res.id);
-                            }
-                          }}
+                          onClick={() => setDeleteCandidate(res)}
                           title="Delete"
                           className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-500/10 hover:text-rose-400 transition-colors"
                         >
@@ -325,6 +325,32 @@ export const ResourceManager = () => {
             </div>
           )}
         </div>
+
+        {/* Delete Confirmation Modal */}
+        <ConfirmationModal
+          isOpen={!!deleteCandidate}
+          title="Delete Study Resource?"
+          message={`Are you sure you want to delete "${deleteCandidate?.name}"? Its vector embeddings in Qdrant will also be deleted.`}
+          confirmText="Yes, Delete Resource"
+          cancelText="Cancel"
+          confirmVariant="danger"
+          iconType="trash"
+          onConfirm={() => {
+            if (deleteCandidate) {
+              deleteResource(deleteCandidate.id);
+              setDeleteCandidate(null);
+            }
+          }}
+          onCancel={() => setDeleteCandidate(null)}
+        />
+
+        {/* Live Vector Indexing Progress Modal */}
+        <AiProgressModal
+          isOpen={Object.values(isIndexingResource).some(Boolean)}
+          type="indexing"
+          title="Vector Indexing in Progress"
+          subtitle="AcademicStack is extracting text chunks and computing 3072-dim embeddings for Qdrant vector search."
+        />
 
         {/* Upload Modal */}
         {isUploadModalOpen && (

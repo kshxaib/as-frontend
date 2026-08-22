@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
 import { Trash2, Edit3, Check, X, Sparkles, FileText, UserCheck } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
+import { ConfirmationModal } from './ConfirmationModal';
 
 const MARK_PRESETS = [2, 5, 10];
 
 export const QuestionCard = ({ question, index }) => {
   const { updateQuestion, deleteQuestion } = useQuestionBankStore();
   const [isEditing, setIsEditing] = useState(false);
+  const [isDeleteConfirmOpen, setIsDeleteConfirmOpen] = useState(false);
   const [editText, setEditText] = useState(question.question_text);
   const [editMarks, setEditMarks] = useState(question.marks);
 
@@ -59,7 +61,8 @@ export const QuestionCard = ({ question, index }) => {
   };
 
   return (
-    <div className="group relative overflow-hidden rounded-xl border border-slate-800/80 bg-slate-900/60 p-5 shadow-lg backdrop-blur-sm transition-all duration-200 hover:border-slate-700 hover:shadow-xl hover:shadow-indigo-500/5">
+    <>
+      <div className="group relative overflow-hidden rounded-xl border border-slate-800/80 bg-slate-900/60 p-5 shadow-lg backdrop-blur-sm transition-all duration-200 hover:border-slate-700 hover:shadow-xl hover:shadow-indigo-500/5">
       {/* Card Header */}
       <div className="flex items-start justify-between gap-4 pb-3 border-b border-slate-800/60">
         <div className="flex items-center gap-3">
@@ -99,7 +102,7 @@ export const QuestionCard = ({ question, index }) => {
                 <Edit3 className="h-4 w-4" />
               </button>
               <button
-                onClick={() => deleteQuestion(question.id)}
+                onClick={() => setIsDeleteConfirmOpen(true)}
                 className="rounded-lg p-1.5 text-slate-400 hover:bg-rose-500/20 hover:text-rose-400 transition-colors"
                 title="Delete Question"
               >
@@ -168,5 +171,22 @@ export const QuestionCard = ({ question, index }) => {
         </div>
       </div>
     </div>
+
+    {/* Delete Question Confirmation Modal */}
+    <ConfirmationModal
+      isOpen={isDeleteConfirmOpen}
+      title={`Delete Question ${question.question_number || index + 1}?`}
+      message={`Are you sure you want to remove this question (${question.marks} marks)? It will be removed from this question bank.`}
+      confirmText="Yes, Delete Question"
+      cancelText="Cancel"
+      confirmVariant="danger"
+      iconType="trash"
+      onConfirm={() => {
+        setIsDeleteConfirmOpen(false);
+        deleteQuestion(question.id);
+      }}
+      onCancel={() => setIsDeleteConfirmOpen(false)}
+    />
+  </>
   );
 };

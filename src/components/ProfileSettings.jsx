@@ -19,6 +19,7 @@ import {
   Loader2,
 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
+import { ConfirmationModal } from './ConfirmationModal';
 
 export const ProfileSettings = () => {
   const {
@@ -63,7 +64,9 @@ export const ProfileSettings = () => {
     openai: false,
   });
 
+  const [deleteKeyCandidate, setDeleteKeyCandidate] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
+  const [validationError, setValidationError] = useState(null);
 
   if (!isAuthenticated || !user) {
     return (
@@ -87,16 +90,51 @@ export const ProfileSettings = () => {
 
   const handleInputChange = (provider, value) => {
     setKeysInput((prev) => ({ ...prev, [provider]: value }));
+    setValidationError(null);
   };
 
   const toggleShowKey = (provider) => {
     setShowKey((prev) => ({ ...prev, [provider]: !prev[provider] }));
   };
 
+  const validateKeyFormat = (provider, key) => {
+    const clean = key.trim();
+    if (provider === 'gemini') {
+      if (clean.startsWith('gsk_') || clean.startsWith('nvapi-') || clean.startsWith('sk-or-') || clean.length < 25) {
+        return "Invalid Google Gemini API key. Gemini keys usually start with 'AIzaSy' or 'AQ.' and must be at least 25 characters.";
+      }
+    } else if (provider === 'groq') {
+      if (!clean.startsWith('gsk_') || clean.length < 20) {
+        return "Invalid Groq API key format. Keys must start with 'gsk_' and be at least 20 characters long.";
+      }
+    } else if (provider === 'openrouter') {
+      if (!clean.startsWith('sk-or-') || clean.length < 20) {
+        return "Invalid OpenRouter API key format. Keys must start with 'sk-or-' and be at least 20 characters long.";
+      }
+    } else if (provider === 'nvidia') {
+      if (!clean.startsWith('nvapi-') || clean.length < 20) {
+        return "Invalid NVIDIA NIM API key format. Keys must start with 'nvapi-' and be at least 20 characters long.";
+      }
+    } else if (provider === 'openai') {
+      if (!clean.startsWith('sk-') || clean.startsWith('sk-or-') || clean.length < 20) {
+        return "Invalid OpenAI API key format. Keys must start with 'sk-' and be at least 20 characters long.";
+      }
+    }
+    return null;
+  };
+
   const handleSaveSingleKey = async (provider, providerName) => {
     const val = keysInput[provider]?.trim();
     if (!val) return;
 
+    // Instant format validation
+    const formatErr = validateKeyFormat(provider, val);
+    if (formatErr) {
+      setValidationError(formatErr);
+      return;
+    }
+
+    setValidationError(null);
     setSuccessMsg(null);
     clearError();
     setActionLoading((prev) => ({ ...prev, [provider]: true }));
@@ -117,8 +155,10 @@ export const ProfileSettings = () => {
     }
   };
 
-  const handleDeleteSingleKey = async (provider, providerName) => {
-    if (!window.confirm(`Are you sure you want to remove your ${providerName} API key?`)) return;
+  const handleConfirmDelete = async () => {
+    if (!deleteKeyCandidate) return;
+    const { provider, providerName } = deleteKeyCandidate;
+    setDeleteKeyCandidate(null);
 
     setSuccessMsg(null);
     clearError();
@@ -221,6 +261,16 @@ export const ProfileSettings = () => {
         </div>
 
         {/* Feedback Banners */}
+        {validationError && (
+          <div className="mt-6 flex items-center justify-between rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-xs text-amber-300 animate-in fade-in">
+            <div className="flex items-center gap-2.5">
+              <AlertCircle className="h-5 w-5 text-amber-400 shrink-0" />
+              <span className="font-medium">{validationError}</span>
+            </div>
+            <button onClick={() => setValidationError(null)} className="text-amber-400 hover:underline font-semibold">Dismiss</button>
+          </div>
+        )}
+
         {error && (
           <div className="mt-6 flex items-center justify-between rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-xs text-rose-300 animate-in fade-in">
             <div className="flex items-center gap-2.5">
@@ -387,7 +437,7 @@ export const ProfileSettings = () => {
                             </span>
                             <button
                               type="button"
-                              onClick={() => handleDeleteSingleKey(p.id, p.name)}
+                              onClick={() => setDeleteKeyCandidate({ provider: p.id, providerName: p.name })}
                               disabled={isProcessing}
                               className="rounded-xl border border-slate-800 bg-slate-950 p-2 text-slate-400 hover:bg-rose-500/10 hover:text-rose-400 hover:border-rose-500/20 transition-all disabled:opacity-50"
                               title={`Remove ${p.name} key`}
@@ -426,6 +476,19 @@ export const ProfileSettings = () => {
             </div>
           </div>
         </div>
+
+        {/* Delete API Key Confirmation Modal */}
+        <ConfirmationModal
+          isOpen={!!deleteKeyCandidate}
+          title={`Remove ${deleteKeyCandidate?.providerName} API Key?`}
+          message={`Are you sure you want to remove your stored ${deleteKeyCandidate?.providerName} API key? Tasks relying on this provider will fall back to other configured keys.`}
+          confirmText="Yes, Remove Key"
+          cancelText="Cancel"
+          confirmVariant="danger"
+          iconType="trash"
+          onConfirm={handleConfirmDelete}
+          onCancel={() => setDeleteKeyCandidate(null)}
+        />
       </div>
     </div>
   );

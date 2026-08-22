@@ -15,6 +15,8 @@ import {
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
 import { QuestionCard } from './QuestionCard';
 import { AddQuestionModal } from './AddQuestionModal';
+import { ConfirmationModal } from './ConfirmationModal';
+import { AiProgressModal } from './AiProgressModal';
 
 export const QuestionReview = () => {
   const {
@@ -24,7 +26,6 @@ export const QuestionReview = () => {
     isLoading,
     extractingQBs,
     isGeneratingAnswers,
-
     error,
     successMessage,
     fetchQuestionBanks,
@@ -35,6 +36,8 @@ export const QuestionReview = () => {
   } = useQuestionBankStore();
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isGenerateConfirmOpen, setIsGenerateConfirmOpen] = useState(false);
+  const [isReExtractConfirmOpen, setIsReExtractConfirmOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMarkFilter, setSelectedMarkFilter] = useState('ALL');
   const [selectedSourceFilter, setSelectedSourceFilter] = useState('ALL');
@@ -131,8 +134,14 @@ export const QuestionReview = () => {
 
             {/* AI Extract / Re-extract Button */}
             {currentQuestionBank && (
-            <button
-                onClick={() => extractQuestions(currentQuestionBank.id)}
+              <button
+                onClick={() => {
+                  if (currentQuestionBank.status === 'extracted') {
+                    setIsReExtractConfirmOpen(true);
+                  } else {
+                    extractQuestions(currentQuestionBank.id);
+                  }
+                }}
                 disabled={!!extractingQBs[currentQuestionBank.id]}
                 className="flex items-center gap-2 rounded-xl bg-slate-800 px-4 py-2.5 text-xs font-semibold text-slate-200 border border-slate-700 hover:bg-slate-700 hover:text-white transition-all disabled:opacity-50"
               >
@@ -326,7 +335,7 @@ export const QuestionReview = () => {
             </div>
 
             <button
-              onClick={() => generateAnswers(currentQuestionBank.id)}
+              onClick={() => setIsGenerateConfirmOpen(true)}
               disabled={isGeneratingAnswers}
               className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-6 py-3 text-xs font-bold text-slate-950 shadow-lg shadow-emerald-500/20 hover:from-emerald-400 hover:to-teal-400 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
             >
@@ -337,6 +346,57 @@ export const QuestionReview = () => {
           </div>
         </div>
       )}
+
+      {/* Re-extract Confirmation Modal */}
+      {currentQuestionBank && (
+        <ConfirmationModal
+          isOpen={isReExtractConfirmOpen}
+          title="Re-extract Question Bank?"
+          message={`Existing extracted questions for "${currentQuestionBank.name}" will be replaced with fresh AI extraction. Any custom edits will be lost.`}
+          confirmText="Yes, Re-extract Questions"
+          cancelText="Cancel"
+          confirmVariant="warning"
+          iconType="sparkles"
+          onConfirm={() => {
+            setIsReExtractConfirmOpen(false);
+            extractQuestions(currentQuestionBank.id);
+          }}
+          onCancel={() => setIsReExtractConfirmOpen(false)}
+        />
+      )}
+
+      {/* Generate Solutions Confirmation Modal */}
+      {currentQuestionBank && (
+        <ConfirmationModal
+          isOpen={isGenerateConfirmOpen}
+          title="Generate AI Solutions & Academic Review?"
+          message={`AcademicStack will retrieve grounded notes from Qdrant, draft complete examination answers for all ${totalQuestions} questions (${totalMarks} marks total), and run an Academic AI Review pass with LaTeX math verification.`}
+          confirmText="Start Solution Generation"
+          cancelText="Cancel"
+          confirmVariant="emerald"
+          iconType="sparkles"
+          onConfirm={() => {
+            setIsGenerateConfirmOpen(false);
+            generateAnswers(currentQuestionBank.id);
+          }}
+          onCancel={() => setIsGenerateConfirmOpen(false)}
+        />
+      )}
+
+      {/* Live AI Progress Modal (Extraction & Generation) */}
+      <AiProgressModal
+        isOpen={Object.values(extractingQBs).some(Boolean)}
+        type="extraction"
+        title="AI Question Extraction in Progress"
+        subtitle="AcademicStack is scanning exam paper layout, parsing questions, and resolving marks with AI router."
+      />
+
+      <AiProgressModal
+        isOpen={isGeneratingAnswers}
+        type="generation"
+        title="Generating Exam Solutions with AI"
+        subtitle={`Solving all ${totalQuestions} questions with Qdrant vector retrieval, multi-provider drafting, and Academic Review.`}
+      />
 
       {/* Add Question Modal */}
       {currentQuestionBank && (

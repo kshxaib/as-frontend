@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
 import { useAuthStore } from '../store/useAuthStore';
+import { ConfirmationModal } from './ConfirmationModal';
+import { AiProgressModal } from './AiProgressModal';
 
 export const QuestionBankManager = () => {
   const {
@@ -24,7 +26,6 @@ export const QuestionBankManager = () => {
     isUploadingQuestionBank,
     extractingQBs,
     error,
-
     successMessage,
     fetchQuestionBanks,
     fetchResources,
@@ -39,6 +40,7 @@ export const QuestionBankManager = () => {
   const { user, isAuthenticated, openAuthModal } = useAuthStore();
 
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
+  const [reExtractCandidate, setReExtractCandidate] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Form state
@@ -197,10 +199,16 @@ export const QuestionBankManager = () => {
                     </div>
                   </div>
 
-                  <div className="mt-6 flex items-center justify-between border-t border-slate-800/80 pt-4">
+                    <div className="mt-6 flex items-center justify-between border-t border-slate-800/80 pt-4">
                     <div className="flex items-center gap-2">
                       <button
-                        onClick={() => extractQuestions(qb.id)}
+                        onClick={() => {
+                          if (qb.status === 'extracted') {
+                            setReExtractCandidate(qb);
+                          } else {
+                            extractQuestions(qb.id);
+                          }
+                        }}
                         disabled={!!extractingQBs[qb.id] || isUploadingQuestionBank}
                         className="inline-flex items-center gap-1.5 rounded-xl bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-200 border border-slate-700 hover:bg-slate-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                       >
@@ -245,6 +253,32 @@ export const QuestionBankManager = () => {
             </div>
           )}
         </div>
+
+        {/* Re-extract Confirmation Modal */}
+        <ConfirmationModal
+          isOpen={!!reExtractCandidate}
+          title="Re-extract Question Bank?"
+          message={`Existing extracted questions for "${reExtractCandidate?.name}" will be replaced with fresh AI extraction. Any custom modifications will be reset.`}
+          confirmText="Yes, Re-extract Questions"
+          cancelText="Cancel"
+          confirmVariant="warning"
+          iconType="sparkles"
+          onConfirm={() => {
+            if (reExtractCandidate) {
+              extractQuestions(reExtractCandidate.id);
+              setReExtractCandidate(null);
+            }
+          }}
+          onCancel={() => setReExtractCandidate(null)}
+        />
+
+        {/* Live Question Extraction Progress Modal */}
+        <AiProgressModal
+          isOpen={Object.values(extractingQBs).some(Boolean)}
+          type="extraction"
+          title="AI Question Extraction in Progress"
+          subtitle="AcademicStack is scanning exam paper layout, parsing questions, and resolving marks with AI router."
+        />
 
         {/* Upload Modal */}
         {isUploadModalOpen && (

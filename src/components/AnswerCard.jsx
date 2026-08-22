@@ -5,6 +5,7 @@ import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
 import { BookOpen, CheckCircle, AlertCircle, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
+import { ConfirmationModal } from './ConfirmationModal';
 
 // ─── LaTeX & Markdown Preprocessor ──────────────────────────────────────────
 function formatMarkdownMath(content) {
@@ -45,8 +46,10 @@ export const AnswerCard = ({ answer, index }) => {
   const { retryAnswer } = useQuestionBankStore();
   const [isRetrying, setIsRetrying] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isRetryConfirmOpen, setIsRetryConfirmOpen] = useState(false);
 
   const handleRetry = async () => {
+    setIsRetryConfirmOpen(false);
     setIsRetrying(true);
     await retryAnswer(answer.id);
     setIsRetrying(false);
@@ -59,56 +62,57 @@ export const AnswerCard = ({ answer, index }) => {
   }, [answer.content]);
 
   return (
-    <div className="group overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/80 shadow-xl backdrop-blur-md transition-all duration-200 hover:border-slate-700">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-4 border-b border-slate-800 bg-slate-950/60 p-5">
-        <div className="flex items-start gap-3.5">
-          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-600 to-cyan-500 text-xs font-bold text-white shadow-md shadow-indigo-500/20">
-            Q{answer.question_number || index + 1}
-          </span>
-          <div>
-            <h3 className="text-base font-bold text-slate-100 leading-snug">
-              {answer.question_text}
-            </h3>
-            <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs">
-              <span className="rounded-md bg-indigo-500/10 px-2.5 py-0.5 font-semibold text-indigo-300 border border-indigo-500/20">
-                {answer.marks} Marks
-              </span>
-              {answer.status === 'completed' && (
-                <span className="inline-flex items-center gap-1 text-emerald-400 font-medium">
-                  <CheckCircle className="h-3.5 w-3.5" />
-                  Generated via RAG
+    <>
+      <div className="group overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/80 shadow-xl backdrop-blur-md transition-all duration-200 hover:border-slate-700">
+        {/* Header */}
+        <div className="flex items-start justify-between gap-4 border-b border-slate-800 bg-slate-950/60 p-5">
+          <div className="flex items-start gap-3.5">
+            <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-gradient-to-tr from-indigo-600 to-cyan-500 text-xs font-bold text-white shadow-md shadow-indigo-500/20">
+              Q{answer.question_number || index + 1}
+            </span>
+            <div>
+              <h3 className="text-base font-bold text-slate-100 leading-snug">
+                {answer.question_text}
+              </h3>
+              <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs">
+                <span className="rounded-md bg-indigo-500/10 px-2.5 py-0.5 font-semibold text-indigo-300 border border-indigo-500/20">
+                  {answer.marks} Marks
                 </span>
-              )}
-              {answer.status === 'failed' && (
-                <span className="inline-flex items-center gap-1 text-rose-400 font-medium">
-                  <AlertCircle className="h-3.5 w-3.5" />
-                  Generation Failed
-                </span>
-              )}
+                {answer.status === 'completed' && (
+                  <span className="inline-flex items-center gap-1 text-emerald-400 font-medium">
+                    <CheckCircle className="h-3.5 w-3.5" />
+                    Generated via RAG
+                  </span>
+                )}
+                {answer.status === 'failed' && (
+                  <span className="inline-flex items-center gap-1 text-rose-400 font-medium">
+                    <AlertCircle className="h-3.5 w-3.5" />
+                    Generation Failed
+                  </span>
+                )}
+              </div>
             </div>
           </div>
-        </div>
 
-        {/* Right Controls */}
-        <div className="flex items-center gap-2 shrink-0">
-          <button
-            onClick={handleRetry}
-            disabled={isRetrying}
-            className="flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800/80 px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-700 hover:text-white transition-all disabled:opacity-50"
-            title="Regenerate this answer"
-          >
-            <RefreshCw className={`h-3.5 w-3.5 text-indigo-400 ${isRetrying ? 'animate-spin' : ''}`} />
-            <span className="hidden sm:inline">Regenerate</span>
-          </button>
-          <button
-            onClick={() => setIsCollapsed(!isCollapsed)}
-            className="rounded-xl border border-slate-800 bg-slate-950 p-1.5 text-slate-400 hover:text-slate-200"
-          >
-            {isCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
-          </button>
+          {/* Right Controls */}
+          <div className="flex items-center gap-2 shrink-0">
+            <button
+              onClick={() => setIsRetryConfirmOpen(true)}
+              disabled={isRetrying}
+              className="flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-800/80 px-3 py-1.5 text-xs font-medium text-slate-300 hover:bg-slate-700 hover:text-white transition-all disabled:opacity-50"
+              title="Regenerate this answer"
+            >
+              <RefreshCw className={`h-3.5 w-3.5 text-indigo-400 ${isRetrying ? 'animate-spin' : ''}`} />
+              <span className="hidden sm:inline">Regenerate</span>
+            </button>
+            <button
+              onClick={() => setIsCollapsed(!isCollapsed)}
+              className="rounded-xl border border-slate-800 bg-slate-950 p-1.5 text-slate-400 hover:text-slate-200"
+            >
+              {isCollapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+            </button>
+          </div>
         </div>
-      </div>
 
       {/* Answer Content */}
       {!isCollapsed && (
@@ -164,5 +168,19 @@ export const AnswerCard = ({ answer, index }) => {
         </div>
       )}
     </div>
+
+    {/* Retry / Regenerate Confirmation Modal */}
+    <ConfirmationModal
+      isOpen={isRetryConfirmOpen}
+      title={`Regenerate Solution for Q${answer.question_number || index + 1}?`}
+      message={`AcademicStack will perform a fresh RAG query on your study notes and generate a new verified answer with AI review.`}
+      confirmText="Yes, Regenerate Answer"
+      cancelText="Cancel"
+      confirmVariant="primary"
+      iconType="sparkles"
+      onConfirm={handleRetry}
+      onCancel={() => setIsRetryConfirmOpen(false)}
+    />
+  </>
   );
 };

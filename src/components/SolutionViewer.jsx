@@ -17,6 +17,8 @@ import {
 } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
 import { AnswerCard } from './AnswerCard';
+import { ConfirmationModal } from './ConfirmationModal';
+import { AiProgressModal } from './AiProgressModal';
 
 export const SolutionViewer = () => {
   const {
@@ -37,6 +39,7 @@ export const SolutionViewer = () => {
   } = useQuestionBankStore();
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [isRegenerateConfirmOpen, setIsRegenerateConfirmOpen] = useState(false);
 
   // 1. On mount: Fetch question banks if list is empty or ensure current is selected
   useEffect(() => {
@@ -242,7 +245,13 @@ export const SolutionViewer = () => {
               </div>
 
               <button
-                onClick={() => generateAnswers(currentQuestionBank.id)}
+                onClick={() => {
+                  if (answers.length > 0) {
+                    setIsRegenerateConfirmOpen(true);
+                  } else {
+                    generateAnswers(currentQuestionBank.id);
+                  }
+                }}
                 disabled={isGeneratingAnswers}
                 className="flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-semibold text-white shadow-lg shadow-indigo-500/25 hover:bg-indigo-500 transition-all disabled:opacity-50"
               >
@@ -346,6 +355,32 @@ export const SolutionViewer = () => {
             </div>
           )}
         </div>
+
+        {/* Regenerate Confirmation Modal */}
+        {currentQuestionBank && (
+          <ConfirmationModal
+            isOpen={isRegenerateConfirmOpen}
+            title="Regenerate All Exam Solutions?"
+            message={`All existing answers for "${currentQuestionBank.name}" will be regenerated from scratch using Qdrant vector retrieval and Academic AI Review.`}
+            confirmText="Yes, Regenerate Answers"
+            cancelText="Cancel"
+            confirmVariant="warning"
+            iconType="sparkles"
+            onConfirm={() => {
+              setIsRegenerateConfirmOpen(false);
+              generateAnswers(currentQuestionBank.id);
+            }}
+            onCancel={() => setIsRegenerateConfirmOpen(false)}
+          />
+        )}
+
+        {/* Live Answer Generation Progress Modal */}
+        <AiProgressModal
+          isOpen={isGeneratingAnswers}
+          type="generation"
+          title="Generating Exam Solutions with AI"
+          subtitle={`Solving questions with Qdrant vector retrieval, multi-provider drafting, and Academic Review.`}
+        />
       </div>
     </div>
   );
