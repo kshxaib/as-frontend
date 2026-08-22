@@ -1,6 +1,5 @@
 import { useMediaQuery } from "@/hooks/use-media-query"
 import { SidebarNav } from "./SidebarNav"
-import { PipelineSteps } from "./PipelineSteps"
 import { KeyStatus } from "./KeyStatus"
 
 /**

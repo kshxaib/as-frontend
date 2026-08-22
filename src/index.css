@@ -71,6 +71,9 @@
 }
 
 /* ── KaTeX & Math Styling ──────────────────────────────────────────────────── */
+/* Token-driven (Phase 5): renders correctly in Reading Room AND Midnight
+   Library. The MathML twin stays visually clipped to avoid duplicated
+   characters while remaining available to assistive tech. */
 
 /* Ensure KaTeX MathML is visually hidden so characters aren't duplicated */
 .katex-mathml {
@@ -91,12 +94,11 @@
 .katex-display {
   margin: 1rem 0 !important;
   padding: 0.75rem 1.25rem !important;
-  background-color: rgba(15, 23, 42, 0.75) !important;
-  border: 1px solid rgba(99, 102, 241, 0.25) !important;
+  background-color: color-mix(in oklab, var(--muted) 55%, transparent) !important;
+  border: 1px solid var(--border) !important;
   border-radius: 0.75rem !important;
   overflow-x: auto !important;
   overflow-y: hidden !important;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25) !important;
 }
 
 .katex-display > .katex {
@@ -106,56 +108,80 @@
 
 .katex {
   font-size: 1.05em !important;
-  color: #c7d2fe !important; /* soft indigo */
+  color: var(--foreground) !important;
 }
 
-/* ── Markdown Answer Body Styling ─────────────────────────────────────────── */
-.markdown-answer-body {
-  color: #cbd5e1;
+/* ── Answer Manuscript Body Styling (§9.3) ────────────────────────────────── */
+/* Replaces the legacy dark-only .markdown-answer-body; consumed by the
+   solutions workspace Markdown renderer. */
+
+.answer-manuscript {
+  color: var(--foreground);
   line-height: 1.65;
   font-size: 0.9375rem;
 }
 
-.markdown-answer-body h1,
-.markdown-answer-body h2,
-.markdown-answer-body h3,
-.markdown-answer-body h4 {
-  color: #f8fafc;
-  font-weight: 700;
+.answer-manuscript h1,
+.answer-manuscript h2,
+.answer-manuscript h3,
+.answer-manuscript h4 {
+  color: var(--foreground);
+  font-weight: 600;
+  letter-spacing: -0.01em;
   margin-top: 1.25rem;
   margin-bottom: 0.5rem;
-  letter-spacing: -0.01em;
 }
 
-.markdown-answer-body h1 { font-size: 1.25rem; }
-.markdown-answer-body h2 { font-size: 1.15rem; }
-.markdown-answer-body h3 { font-size: 1.05rem; }
+.answer-manuscript h1 { font-size: 1.25rem; }
+.answer-manuscript h2 { font-size: 1.15rem; }
+.answer-manuscript h3 { font-size: 1.05rem; }
 
-.markdown-answer-body p {
+.answer-manuscript p {
   margin-bottom: 0.875rem;
 }
 
-.markdown-answer-body ul,
-.markdown-answer-body ol {
+.answer-manuscript ul,
+.answer-manuscript ol {
   margin-top: 0.35rem;
   margin-bottom: 0.875rem;
   padding-left: 1.25rem;
 }
 
-.markdown-answer-body li {
+.answer-manuscript li {
   margin-bottom: 0.35rem;
 }
 
-.markdown-answer-body strong {
-  color: #a5b4fc;
+.answer-manuscript strong {
+  color: var(--foreground);
   font-weight: 600;
 }
 
-.markdown-answer-body blockquote {
-  border-left: 3px solid #6366f1;
+.answer-manuscript code {
+  background-color: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 0.0625rem 0.3125rem;
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+}
+
+.answer-manuscript hr {
+  border: 0;
+  border-top: 1px solid var(--border);
+  margin: 1.25rem 0;
+}
+
+.answer-manuscript a {
+  color: var(--primary);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.answer-manuscript blockquote {
+  border-left: 3px solid var(--border);
   padding-left: 0.875rem;
   margin: 1rem 0;
-  color: #94a3b8;
+  color: var(--muted-foreground);
   font-style: italic;
 }
 
