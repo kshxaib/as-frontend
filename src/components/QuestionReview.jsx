@@ -22,8 +22,9 @@ export const QuestionReview = () => {
     currentQuestionBank,
     questions,
     isLoading,
-    isExtracting,
+    extractingQBs,
     isGeneratingAnswers,
+
     error,
     successMessage,
     fetchQuestionBanks,
@@ -130,14 +131,14 @@ export const QuestionReview = () => {
 
             {/* AI Extract / Re-extract Button */}
             {currentQuestionBank && (
-              <button
+            <button
                 onClick={() => extractQuestions(currentQuestionBank.id)}
-                disabled={isExtracting}
+                disabled={!!extractingQBs[currentQuestionBank.id]}
                 className="flex items-center gap-2 rounded-xl bg-slate-800 px-4 py-2.5 text-xs font-semibold text-slate-200 border border-slate-700 hover:bg-slate-700 hover:text-white transition-all disabled:opacity-50"
               >
-                <Sparkles className={`h-4 w-4 text-indigo-400 ${isExtracting ? 'animate-spin' : ''}`} />
-                {isExtracting
-                  ? 'Extracting with OpenAI...'
+                <Sparkles className={`h-4 w-4 text-indigo-400 ${extractingQBs[currentQuestionBank.id] ? 'animate-spin' : ''}`} />
+                {extractingQBs[currentQuestionBank.id]
+                  ? 'Extracting with AI...'
                   : currentQuestionBank.status === 'extracted'
                   ? 'Re-extract Questions'
                   : 'Extract Questions (AI)'}

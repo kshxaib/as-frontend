@@ -39,9 +39,10 @@ export const Navbar = () => {
     setActiveTab(item.id);
   };
 
-  const requiredKeys = ['has_gemini_key', 'has_groq_key', 'has_cerebras_key', 'has_nvidia_key'];
+  const requiredKeys = ['has_gemini_key', 'has_groq_key', 'has_openrouter_key', 'has_nvidia_key'];
   const configuredRequiredCount = requiredKeys.filter((k) => user?.[k]).length;
   const allRequiredPresent = configuredRequiredCount === 4;
+
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-xl">

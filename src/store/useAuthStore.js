@@ -143,29 +143,29 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
-  // Update Cerebras Key
-  updateCerebrasKey: async (cerebrasKey) => {
+  // Update OpenRouter Key
+  updateOpenRouterKey: async (openrouterKey) => {
     set({ isLoading: true, error: null });
     try {
-      const res = await api.put('/auth/profile/cerebras-key', { cerebras_api_key: cerebrasKey });
+      const res = await api.put('/auth/profile/openrouter-key', { openrouter_api_key: openrouterKey });
       set({ user: res.data, isLoading: false });
       return { success: true };
     } catch (err) {
-      const msg = err.response?.data?.detail || 'Failed to update Cerebras key.';
+      const msg = err.response?.data?.detail || 'Failed to update OpenRouter key.';
       set({ error: msg, isLoading: false });
       return { success: false, error: msg };
     }
   },
 
-  // Delete Cerebras Key
-  deleteCerebrasKey: async () => {
+  // Delete OpenRouter Key
+  deleteOpenRouterKey: async () => {
     set({ isLoading: true, error: null });
     try {
-      const res = await api.delete('/auth/profile/cerebras-key');
+      const res = await api.delete('/auth/profile/openrouter-key');
       set({ user: res.data, isLoading: false });
       return { success: true };
     } catch (err) {
-      const msg = err.response?.data?.detail || 'Failed to remove Cerebras key.';
+      const msg = err.response?.data?.detail || 'Failed to remove OpenRouter key.';
       set({ error: msg, isLoading: false });
       return { success: false, error: msg };
     }

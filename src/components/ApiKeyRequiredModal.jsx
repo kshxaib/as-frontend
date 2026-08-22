@@ -17,7 +17,7 @@ export const ApiKeyRequiredModal = () => {
   const keyList = [
     { name: 'Google Gemini', isSet: !!user?.has_gemini_key, role: 'Vector Embeddings & RAG' },
     { name: 'Groq Cloud', isSet: !!user?.has_groq_key, role: 'Fast RAG Generation' },
-    { name: 'Cerebras Cloud', isSet: !!user?.has_cerebras_key, role: 'Question Extraction (14.4k RPD)' },
+    { name: 'OpenRouter', isSet: !!user?.has_openrouter_key, role: 'Question Extraction (free models)' },
     { name: 'NVIDIA NIM', isSet: !!user?.has_nvidia_key, role: 'Academic Reviewer (10k RPD)' },
   ];
 

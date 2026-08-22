@@ -29,10 +29,11 @@ export const ProfileSettings = () => {
     deleteGeminiKey,
     updateGroqKey,
     deleteGroqKey,
-    updateCerebrasKey,
-    deleteCerebrasKey,
+    updateOpenRouterKey,
+    deleteOpenRouterKey,
     updateNvidiaKey,
     deleteNvidiaKey,
+
     updateOpenAIKey,
     deleteOpenAIKey,
     openAuthModal,
@@ -42,18 +43,20 @@ export const ProfileSettings = () => {
   const [keysInput, setKeysInput] = useState({
     gemini: '',
     groq: '',
-    cerebras: '',
+    openrouter: '',
     nvidia: '',
     openai: '',
   });
 
+
   const [showKey, setShowKey] = useState({
     gemini: false,
     groq: false,
-    cerebras: false,
+    openrouter: false,
     nvidia: false,
     openai: false,
   });
+
 
   const [successMsg, setSuccessMsg] = useState(null);
 
@@ -95,7 +98,8 @@ export const ProfileSettings = () => {
     let res;
     if (provider === 'gemini') res = await updateGeminiKey(val);
     else if (provider === 'groq') res = await updateGroqKey(val);
-    else if (provider === 'cerebras') res = await updateCerebrasKey(val);
+    else if (provider === 'openrouter') res = await updateOpenRouterKey(val);
+
     else if (provider === 'nvidia') res = await updateNvidiaKey(val);
     else if (provider === 'openai') res = await updateOpenAIKey(val);
 
@@ -115,7 +119,8 @@ export const ProfileSettings = () => {
     let res;
     if (provider === 'gemini') res = await deleteGeminiKey();
     else if (provider === 'groq') res = await deleteGroqKey();
-    else if (provider === 'cerebras') res = await deleteCerebrasKey();
+    else if (provider === 'openrouter') res = await deleteOpenRouterKey();
+
     else if (provider === 'nvidia') res = await deleteNvidiaKey();
     else if (provider === 'openai') res = await deleteOpenAIKey();
 
@@ -151,14 +156,14 @@ export const ProfileSettings = () => {
       iconColor: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
     },
     {
-      id: 'cerebras',
-      name: 'Cerebras Cloud',
+      id: 'openrouter',
+      name: 'OpenRouter',
       tag: 'Required (100% Free)',
       tagColor: 'text-cyan-300 bg-cyan-500/10 border-cyan-500/20',
-      description: 'High-Volume Question Extraction & AI Reviewer (14,400 Requests/day free!).',
-      placeholder: 'csk-...',
-      hasKey: user.has_cerebras_key,
-      getKeyUrl: 'https://cloud.cerebras.ai/platform/org_x4tk2yfxf9j2m3j4kyf8hxdc/project/prj_3355h68j2dwwcmex8rmxrtrt/apikeys',
+      description: 'Free access to top models (GPT-4o 120B, Qwen 3). Used for Question Extraction & AI Review.',
+      placeholder: 'sk-or-v1-...',
+      hasKey: user.has_openrouter_key,
+      getKeyUrl: 'https://openrouter.ai/workspaces/default/keys',
       icon: Cpu,
       iconColor: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20',
     },
@@ -268,7 +273,8 @@ export const ProfileSettings = () => {
 
             {/* Required Keys Progress Status Banner */}
             {(() => {
-              const requiredCount = [user.has_gemini_key, user.has_groq_key, user.has_cerebras_key, user.has_nvidia_key].filter(Boolean).length;
+              const requiredCount = [user.has_gemini_key, user.has_groq_key, user.has_openrouter_key, user.has_nvidia_key].filter(Boolean).length;
+
               const isFullyConfigured = requiredCount === 4;
               return (
                 <div className={`flex items-center justify-between rounded-2xl p-4 border ${
@@ -291,7 +297,8 @@ export const ProfileSettings = () => {
                       <p className="text-[11px] text-slate-400 mt-0.5">
                         {isFullyConfigured
                           ? 'Multi-provider automatic failover is active. You can now extract questions, index notes, and generate answers.'
-                          : 'Please add all 4 free provider keys below (Gemini, Groq, Cerebras, and NVIDIA NIM) to unlock AI pipeline features.'}
+                          : 'Please add all 4 free provider keys below (Gemini, Groq, OpenRouter, and NVIDIA NIM) to unlock AI pipeline features.'}
+
                       </p>
                     </div>
                   </div>

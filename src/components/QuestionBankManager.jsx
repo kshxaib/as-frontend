@@ -22,8 +22,9 @@ export const QuestionBankManager = () => {
     resources,
     isLoading,
     isUploadingQuestionBank,
-    isExtracting,
+    extractingQBs,
     error,
+
     successMessage,
     fetchQuestionBanks,
     fetchResources,
@@ -200,11 +201,11 @@ export const QuestionBankManager = () => {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => extractQuestions(qb.id)}
-                        disabled={isExtracting || isUploadingQuestionBank}
+                        disabled={!!extractingQBs[qb.id] || isUploadingQuestionBank}
                         className="inline-flex items-center gap-1.5 rounded-xl bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-200 border border-slate-700 hover:bg-slate-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <Sparkles className={`h-3.5 w-3.5 text-indigo-400 ${isExtracting ? 'animate-spin' : ''}`} />
-                        <span>{isExtracting ? 'Extracting...' : qb.status === 'extracted' ? 'Re-extract' : 'AI Extract'}</span>
+                        <Sparkles className={`h-3.5 w-3.5 text-indigo-400 ${extractingQBs[qb.id] ? 'animate-spin' : ''}`} />
+                        <span>{extractingQBs[qb.id] ? 'Extracting...' : qb.status === 'extracted' ? 'Re-extract' : 'AI Extract'}</span>
                       </button>
 
                       <button

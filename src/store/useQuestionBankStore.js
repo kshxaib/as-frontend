@@ -28,8 +28,9 @@ export const useQuestionBankStore = create((set, get) => ({
   currentQuestionBank: null,
   questions: [],
   isUploadingQuestionBank: false,
-  isExtracting: false,
+  extractingQBs: {}, // map of questionBankId -> boolean for per-QB extraction state
   isSavingQuestions: false,
+
 
   // Answers State (Phase 6, 7, 8)
   currentAnswerSet: null,
@@ -48,10 +49,11 @@ export const useQuestionBankStore = create((set, get) => ({
     return !!(
       user?.has_gemini_key &&
       user?.has_groq_key &&
-      user?.has_cerebras_key &&
+      user?.has_openrouter_key &&
       user?.has_nvidia_key
     );
   },
+
 
   // Helper: check if user has embedding key (Gemini or OpenAI)
   hasEmbeddingKey: () => {
@@ -223,20 +225,20 @@ export const useQuestionBankStore = create((set, get) => ({
       return;
     }
 
-    set({ isExtracting: true, error: null, successMessage: null });
+    set((state) => ({ extractingQBs: { ...state.extractingQBs, [id]: true }, error: null, successMessage: null }));
     try {
       const res = await api.post(`/question-banks/${id}/extract`);
       await get().selectQuestionBank(id);
-      set({
-        isExtracting: false,
+      set((state) => ({
+        extractingQBs: { ...state.extractingQBs, [id]: false },
         successMessage: `Successfully extracted ${res.data.questions_extracted || 0} questions!`,
-      });
+      }));
     } catch (err) {
-      const msg = err.response?.data?.detail || 'Extraction failed. Check your Cerebras/Groq/Gemini keys in Profile.';
-      set({
+      const msg = err.response?.data?.detail || 'Extraction failed. Check your OpenRouter/Groq/Gemini keys in Profile.';
+      set((state) => ({
         error: msg,
-        isExtracting: false,
-      });
+        extractingQBs: { ...state.extractingQBs, [id]: false },
+      }));
     }
   },
 
@@ -299,7 +301,7 @@ export const useQuestionBankStore = create((set, get) => ({
         successMessage: `Successfully generated ${res.data.completed_questions} answers with AI Review & citations!`,
       });
     } catch (err) {
-      const msg = err.response?.data?.detail || 'Answer generation failed. Check your Groq/Gemini/Cerebras keys in Profile.';
+      const msg = err.response?.data?.detail || 'Answer generation failed. Check your Groq/Gemini/OpenRouter keys in Profile.';
       set({
         error: msg,
         isGeneratingAnswers: false,
