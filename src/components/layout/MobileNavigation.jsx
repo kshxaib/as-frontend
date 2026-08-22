@@ -7,7 +7,6 @@ import {
   SheetDescription,
 } from "@/components/ui/sheet"
 import { SidebarNav } from "./SidebarNav"
-import { PipelineSteps } from "./PipelineSteps"
 import { KeyStatus } from "./KeyStatus"
 
 /**
@@ -33,8 +32,6 @@ export function MobileNavigation({ open, onOpenChange }) {
         </SheetHeader>
 
         <SidebarNav showLabels onNavigate={() => onOpenChange(false)} />
-
-        <PipelineSteps />
 
         <div className="mt-auto border-t border-border p-4">
           <KeyStatus />

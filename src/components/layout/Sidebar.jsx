@@ -39,7 +39,6 @@ export function Sidebar() {
 
       <SidebarNav showLabels={isDesktop} />
 
-      {isDesktop && <PipelineSteps className="mt-auto" />}
 
       {/* Footer zone */}
       <div className="shrink-0 border-t border-sidebar-border p-3 lg:p-4">
