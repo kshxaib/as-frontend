@@ -258,13 +258,49 @@ export const ProfileSettings = () => {
               <div>
                 <h2 className="text-base font-bold text-white flex items-center gap-2">
                   <ShieldCheck className="h-5 w-5 text-indigo-400" />
-                  AI Provider Keys & Routing
+                  AI Provider Keys & Failover Setup
                 </h2>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Enter your free keys below. All keys are encrypted at rest with Fernet.
+                  Enter all 4 free keys below. OpenAI is optional backup. All keys are encrypted at rest.
                 </p>
               </div>
             </div>
+
+            {/* Required Keys Progress Status Banner */}
+            {(() => {
+              const requiredCount = [user.has_gemini_key, user.has_groq_key, user.has_cerebras_key, user.has_nvidia_key].filter(Boolean).length;
+              const isFullyConfigured = requiredCount === 4;
+              return (
+                <div className={`flex items-center justify-between rounded-2xl p-4 border ${
+                  isFullyConfigured
+                    ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
+                    : 'bg-amber-500/10 border-amber-500/20 text-amber-300'
+                }`}>
+                  <div className="flex items-center gap-2.5">
+                    {isFullyConfigured ? (
+                      <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0" />
+                    ) : (
+                      <AlertCircle className="h-5 w-5 text-amber-400 shrink-0" />
+                    )}
+                    <div>
+                      <span className="font-bold text-xs">
+                        {isFullyConfigured
+                          ? 'All 4 Required AI Keys Active — Pipeline Ready!'
+                          : `Setup Incomplete (${requiredCount}/4 Required Keys Configured)`}
+                      </span>
+                      <p className="text-[11px] text-slate-400 mt-0.5">
+                        {isFullyConfigured
+                          ? 'Multi-provider automatic failover is active. You can now extract questions, index notes, and generate answers.'
+                          : 'Please add all 4 free provider keys below (Gemini, Groq, Cerebras, and NVIDIA NIM) to unlock AI pipeline features.'}
+                      </p>
+                    </div>
+                  </div>
+                  <span className="font-mono text-xs font-bold px-2.5 py-1 rounded-xl bg-slate-950/60 border border-slate-800 shrink-0 ml-3">
+                    {requiredCount}/4
+                  </span>
+                </div>
+              );
+            })()}
 
             {/* Provider Cards List */}
             <div className="space-y-4">

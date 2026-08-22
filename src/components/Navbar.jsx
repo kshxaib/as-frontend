@@ -39,7 +39,9 @@ export const Navbar = () => {
     setActiveTab(item.id);
   };
 
-  const hasAnyKey = user?.has_gemini_key || user?.has_groq_key || user?.has_cerebras_key || user?.has_nvidia_key || user?.has_openai_key;
+  const requiredKeys = ['has_gemini_key', 'has_groq_key', 'has_cerebras_key', 'has_nvidia_key'];
+  const configuredRequiredCount = requiredKeys.filter((k) => user?.[k]).length;
+  const allRequiredPresent = configuredRequiredCount === 4;
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-xl">
@@ -96,13 +98,13 @@ export const Navbar = () => {
               <button
                 onClick={() => setActiveTab('profile')}
                 className={`hidden sm:flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-semibold border transition-all ${
-                  hasAnyKey
+                  allRequiredPresent
                     ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20 hover:bg-emerald-500/20'
                     : 'bg-amber-500/10 text-amber-400 border-amber-500/20 hover:bg-amber-500/20'
                 }`}
               >
                 <ShieldCheck className="h-3 w-3" />
-                <span>{hasAnyKey ? 'Keys Active' : 'Setup Keys'}</span>
+                <span>{allRequiredPresent ? 'Keys Ready (4/4)' : `Setup Keys (${configuredRequiredCount}/4)`}</span>
               </button>
 
               {/* User Profile Pill */}

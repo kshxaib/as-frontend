@@ -21,7 +21,7 @@ export const CommunityHub = () => {
     isLoadingCommunity,
     fetchCommunityData,
     downloadSolvedPdf,
-    downloadDirectPdf,
+    downloadResourceFile,
   } = useQuestionBankStore();
 
   const [activeSubTab, setActiveSubTab] = useState('resources'); // 'resources' | 'solved_sets'
@@ -188,7 +188,7 @@ export const CommunityHub = () => {
                       </span>
 
                       <button
-                        onClick={() => downloadDirectPdf(res.cloudinary_url, `${res.name.replace(/\s+/g, '_')}.pdf`)}
+                        onClick={() => downloadResourceFile(res.id, `${res.name.replace(/\s+/g, '_')}.pdf`)}
                         className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600/90 px-3.5 py-2 text-xs font-semibold text-white hover:bg-indigo-500 transition-all shadow-md"
                       >
                         <Download className="h-3.5 w-3.5" />

@@ -42,15 +42,14 @@ export const useQuestionBankStore = create((set, get) => ({
   communityAnswerSets: [],
   isLoadingCommunity: false,
 
-  // Helper: check if user has configured at least one AI key
-  hasAnyKey: () => {
+  // Helper: check if user has configured ALL 4 required free AI keys (Gemini, Groq, Cerebras, NVIDIA)
+  hasAllRequiredKeys: () => {
     const user = useAuthStore.getState().user;
     return !!(
-      user?.has_gemini_key ||
-      user?.has_groq_key ||
-      user?.has_cerebras_key ||
-      user?.has_nvidia_key ||
-      user?.has_openai_key
+      user?.has_gemini_key &&
+      user?.has_groq_key &&
+      user?.has_cerebras_key &&
+      user?.has_nvidia_key
     );
   },
 
@@ -98,8 +97,8 @@ export const useQuestionBankStore = create((set, get) => ({
   },
 
   indexResource: async (resourceId) => {
-    // Check if user has Gemini or OpenAI key for embeddings
-    if (!get().hasEmbeddingKey()) {
+    // Check if user has configured all 4 required AI keys
+    if (!get().hasAllRequiredKeys()) {
       get().triggerKeyModal('PDF Vector Indexing (Gemini Embeddings)');
       return;
     }
@@ -218,8 +217,8 @@ export const useQuestionBankStore = create((set, get) => ({
   },
 
   extractQuestions: async (id) => {
-    // Check if user has at least one AI key
-    if (!get().hasAnyKey()) {
+    // Check if user has configured all 4 required AI keys
+    if (!get().hasAllRequiredKeys()) {
       get().triggerKeyModal('AI Question Bank Extraction');
       return;
     }
@@ -282,8 +281,8 @@ export const useQuestionBankStore = create((set, get) => ({
   // Answer Generation & Solutions
   // ----------------------------------------------------
   generateAnswers: async (questionBankId) => {
-    // Check if user has configured AI keys
-    if (!get().hasAnyKey()) {
+    // Check if user has configured all 4 required AI keys
+    if (!get().hasAllRequiredKeys()) {
       get().triggerKeyModal('RAG Answer Generation & AI Review');
       return;
     }
@@ -309,7 +308,7 @@ export const useQuestionBankStore = create((set, get) => ({
   },
 
   retryAnswer: async (answerId) => {
-    if (!get().hasAnyKey()) {
+    if (!get().hasAllRequiredKeys()) {
       get().triggerKeyModal('Answer Regeneration');
       return;
     }
@@ -360,6 +359,44 @@ export const useQuestionBankStore = create((set, get) => ({
       setTimeout(() => window.URL.revokeObjectURL(blobUrl), 2000);
     } catch (err) {
       set({ error: err.response?.data?.detail || 'Failed to download solved PDF.' });
+    }
+  },
+
+  downloadResourceFile: async (resourceId, filename = 'Resource.pdf') => {
+    try {
+      const res = await api.get(`/resources/${resourceId}/download`, {
+        responseType: 'blob',
+      });
+      const blob = new Blob([res.data], { type: 'application/pdf' });
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.setAttribute('download', filename.endsWith('.pdf') ? filename : `${filename}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => window.URL.revokeObjectURL(blobUrl), 2000);
+    } catch (err) {
+      set({ error: err.response?.data?.detail || 'Failed to download study resource.' });
+    }
+  },
+
+  downloadQuestionBankFile: async (qbId, filename = 'QuestionBank.pdf') => {
+    try {
+      const res = await api.get(`/question-banks/${qbId}/download`, {
+        responseType: 'blob',
+      });
+      const blob = new Blob([res.data], { type: 'application/pdf' });
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.setAttribute('download', filename.endsWith('.pdf') ? filename : `${filename}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => window.URL.revokeObjectURL(blobUrl), 2000);
+    } catch (err) {
+      set({ error: err.response?.data?.detail || 'Failed to download question bank paper.' });
     }
   },
 

@@ -31,7 +31,7 @@ export const QuestionBankManager = () => {
     selectQuestionBank,
     extractQuestions,
     setActiveTab,
-    downloadDirectPdf,
+    downloadQuestionBankFile,
     clearFeedback,
   } = useQuestionBankStore();
 
@@ -208,7 +208,7 @@ export const QuestionBankManager = () => {
                       </button>
 
                       <button
-                        onClick={() => downloadDirectPdf(qb.cloudinary_url, `${qb.name.replace(/\s+/g, '_')}.pdf`)}
+                        onClick={() => downloadQuestionBankFile(qb.id, `${qb.name.replace(/\s+/g, '_')}.pdf`)}
                         title="Download Original Exam Paper PDF"
                         className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
                       >

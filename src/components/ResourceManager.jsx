@@ -32,7 +32,7 @@ export const ResourceManager = () => {
     indexResource,
     deleteResource,
     toggleResourceShare,
-    downloadDirectPdf,
+    downloadResourceFile,
     clearFeedback,
   } = useQuestionBankStore();
 
@@ -284,7 +284,7 @@ export const ResourceManager = () => {
                         </button>
 
                         <button
-                          onClick={() => downloadDirectPdf(res.cloudinary_url, `${res.name.replace(/\s+/g, '_')}.pdf`)}
+                          onClick={() => downloadResourceFile(res.id, `${res.name.replace(/\s+/g, '_')}.pdf`)}
                           title="Download Original Study Material PDF"
                           className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
                         >
