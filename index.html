@@ -11,8 +11,22 @@
       href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css"
       crossorigin="anonymous"
     />
+    <script>
+      // Theme init — Reading Room (light) / Midnight Library (dark).
+      // Stored preference > system preference; signed-in users (token present)
+      // default to the dark workspace theme. Applied before first paint.
+      (function () {
+        try {
+          var stored = localStorage.getItem('academicstack_theme');
+          var systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          var signedIn = !!localStorage.getItem('academicstack_token');
+          var theme = stored || (signedIn || systemDark ? 'dark' : 'light');
+          if (theme === 'dark') document.documentElement.classList.add('dark');
+        } catch (e) {}
+      })();
+    </script>
   </head>
-  <body class="bg-slate-950 text-slate-100 antialiased selection:bg-indigo-500 selection:text-white">
+  <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
   </body>
