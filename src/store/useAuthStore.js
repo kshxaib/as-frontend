@@ -87,7 +87,119 @@ export const useAuthStore = create((set, get) => ({
     });
   },
 
-  // Update OpenAI Key
+  // Update Gemini Key
+  updateGeminiKey: async (geminiKey) => {
+    set({ isLoading: true, error: null });
+    try {
+      const res = await api.put('/auth/profile/gemini-key', { gemini_api_key: geminiKey });
+      set({ user: res.data, isLoading: false });
+      return { success: true };
+    } catch (err) {
+      const msg = err.response?.data?.detail || 'Failed to update Gemini key.';
+      set({ error: msg, isLoading: false });
+      return { success: false, error: msg };
+    }
+  },
+
+  // Delete Gemini Key
+  deleteGeminiKey: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const res = await api.delete('/auth/profile/gemini-key');
+      set({ user: res.data, isLoading: false });
+      return { success: true };
+    } catch (err) {
+      const msg = err.response?.data?.detail || 'Failed to remove Gemini key.';
+      set({ error: msg, isLoading: false });
+      return { success: false, error: msg };
+    }
+  },
+
+  // Update Groq Key
+  updateGroqKey: async (groqKey) => {
+    set({ isLoading: true, error: null });
+    try {
+      const res = await api.put('/auth/profile/groq-key', { groq_api_key: groqKey });
+      set({ user: res.data, isLoading: false });
+      return { success: true };
+    } catch (err) {
+      const msg = err.response?.data?.detail || 'Failed to update Groq key.';
+      set({ error: msg, isLoading: false });
+      return { success: false, error: msg };
+    }
+  },
+
+  // Delete Groq Key
+  deleteGroqKey: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const res = await api.delete('/auth/profile/groq-key');
+      set({ user: res.data, isLoading: false });
+      return { success: true };
+    } catch (err) {
+      const msg = err.response?.data?.detail || 'Failed to remove Groq key.';
+      set({ error: msg, isLoading: false });
+      return { success: false, error: msg };
+    }
+  },
+
+  // Update Cerebras Key
+  updateCerebrasKey: async (cerebrasKey) => {
+    set({ isLoading: true, error: null });
+    try {
+      const res = await api.put('/auth/profile/cerebras-key', { cerebras_api_key: cerebrasKey });
+      set({ user: res.data, isLoading: false });
+      return { success: true };
+    } catch (err) {
+      const msg = err.response?.data?.detail || 'Failed to update Cerebras key.';
+      set({ error: msg, isLoading: false });
+      return { success: false, error: msg };
+    }
+  },
+
+  // Delete Cerebras Key
+  deleteCerebrasKey: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const res = await api.delete('/auth/profile/cerebras-key');
+      set({ user: res.data, isLoading: false });
+      return { success: true };
+    } catch (err) {
+      const msg = err.response?.data?.detail || 'Failed to remove Cerebras key.';
+      set({ error: msg, isLoading: false });
+      return { success: false, error: msg };
+    }
+  },
+
+  // Update NVIDIA NIM Key
+  updateNvidiaKey: async (nvidiaKey) => {
+    set({ isLoading: true, error: null });
+    try {
+      const res = await api.put('/auth/profile/nvidia-key', { nvidia_api_key: nvidiaKey });
+      set({ user: res.data, isLoading: false });
+      return { success: true };
+    } catch (err) {
+      const msg = err.response?.data?.detail || 'Failed to update NVIDIA NIM key.';
+      set({ error: msg, isLoading: false });
+      return { success: false, error: msg };
+    }
+  },
+
+  // Delete NVIDIA NIM Key
+  deleteNvidiaKey: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const res = await api.delete('/auth/profile/nvidia-key');
+      set({ user: res.data, isLoading: false });
+      return { success: true };
+    } catch (err) {
+      const msg = err.response?.data?.detail || 'Failed to remove NVIDIA NIM key.';
+      set({ error: msg, isLoading: false });
+      return { success: false, error: msg };
+    }
+  },
+
+  // Update OpenAI Key (optional - last backup)
   updateOpenAIKey: async (openaiKey) => {
     set({ isLoading: true, error: null });
     try {
@@ -115,5 +227,6 @@ export const useAuthStore = create((set, get) => ({
     }
   },
 
+  // Clear error
   clearError: () => set({ error: null }),
 }));

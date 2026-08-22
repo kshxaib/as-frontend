@@ -6,6 +6,7 @@ import {
   Layers,
   ArrowRight,
   ExternalLink,
+  Download,
   RefreshCw,
   Search,
   CheckCircle2,
@@ -30,6 +31,7 @@ export const QuestionBankManager = () => {
     selectQuestionBank,
     extractQuestions,
     setActiveTab,
+    downloadDirectPdf,
     clearFeedback,
   } = useQuestionBankStore();
 
@@ -198,22 +200,20 @@ export const QuestionBankManager = () => {
                     <div className="flex items-center gap-2">
                       <button
                         onClick={() => extractQuestions(qb.id)}
-                        disabled={isExtracting}
-                        className="inline-flex items-center gap-1.5 rounded-xl bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-200 border border-slate-700 hover:bg-slate-700 transition-all disabled:opacity-50"
+                        disabled={isExtracting || isUploadingQuestionBank}
+                        className="inline-flex items-center gap-1.5 rounded-xl bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-200 border border-slate-700 hover:bg-slate-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                       >
-                        <Sparkles className="h-3.5 w-3.5 text-indigo-400" />
-                        {qb.status === 'extracted' ? 'Re-extract' : 'AI Extract'}
+                        <Sparkles className={`h-3.5 w-3.5 text-indigo-400 ${isExtracting ? 'animate-spin' : ''}`} />
+                        <span>{isExtracting ? 'Extracting...' : qb.status === 'extracted' ? 'Re-extract' : 'AI Extract'}</span>
                       </button>
 
-                      <a
-                        href={qb.cloudinary_url}
-                        target="_blank"
-                        rel="noreferrer"
-                        title="View Original Paper"
+                      <button
+                        onClick={() => downloadDirectPdf(qb.cloudinary_url, `${qb.name.replace(/\s+/g, '_')}.pdf`)}
+                        title="Download Original Exam Paper PDF"
                         className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
                       >
-                        <ExternalLink className="h-4 w-4" />
-                      </a>
+                        <Download className="h-4 w-4" />
+                      </button>
                     </div>
 
                     <button

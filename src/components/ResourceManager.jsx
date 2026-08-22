@@ -6,6 +6,7 @@ import {
   Layers,
   Database,
   ExternalLink,
+  Download,
   Trash2,
   Share2,
   CheckCircle2,
@@ -31,6 +32,7 @@ export const ResourceManager = () => {
     indexResource,
     deleteResource,
     toggleResourceShare,
+    downloadDirectPdf,
     clearFeedback,
   } = useQuestionBankStore();
 
@@ -259,19 +261,20 @@ export const ResourceManager = () => {
                       ) : (
                         <button
                           onClick={() => indexResource(res.id)}
-                          disabled={isIndexing}
-                          className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600/90 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 transition-all disabled:opacity-50"
+                          disabled={isIndexing || Object.values(isIndexingResource).some(Boolean) || isUploadingResource}
+                          className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600/90 px-3 py-1.5 text-xs font-semibold text-white hover:bg-indigo-500 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <Sparkles className="h-3.5 w-3.5" />
-                          {isIndexing ? 'Indexing...' : 'Index with AI'}
+                          {isIndexing ? 'Vectorizing...' : 'Index with AI'}
                         </button>
                       )}
 
                       <div className="flex items-center gap-1">
                         <button
                           onClick={() => toggleResourceShare(res.id)}
+                          disabled={isIndexing || isUploadingResource}
                           title={res.visibility === 'community' ? 'Make Private' : 'Share with Community'}
-                          className={`rounded-lg p-1.5 transition-colors ${
+                          className={`rounded-lg p-1.5 transition-colors disabled:opacity-40 ${
                             res.visibility === 'community'
                               ? 'text-emerald-400 hover:bg-emerald-500/10'
                               : 'text-slate-400 hover:bg-slate-800 hover:text-white'
@@ -280,15 +283,13 @@ export const ResourceManager = () => {
                           <Share2 className="h-4 w-4" />
                         </button>
 
-                        <a
-                          href={res.cloudinary_url}
-                          target="_blank"
-                          rel="noreferrer"
-                          title="Open Original PDF"
+                        <button
+                          onClick={() => downloadDirectPdf(res.cloudinary_url, `${res.name.replace(/\s+/g, '_')}.pdf`)}
+                          title="Download Original Study Material PDF"
                           className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
                         >
-                          <ExternalLink className="h-4 w-4" />
-                        </a>
+                          <Download className="h-4 w-4" />
+                        </button>
 
                         <button
                           onClick={() => {

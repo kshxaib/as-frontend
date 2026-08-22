@@ -1,5 +1,5 @@
 import React from 'react';
-import { KeyRound, ArrowRight, X, ShieldAlert, Sparkles, CheckCircle2 } from 'lucide-react';
+import { KeyRound, ArrowRight, X, Sparkles, CheckCircle2, ShieldCheck } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
 
 export const ApiKeyRequiredModal = () => {
@@ -25,12 +25,12 @@ export const ApiKeyRequiredModal = () => {
 
         {/* Icon Header */}
         <div className="flex items-center gap-3">
-          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-400">
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
             <KeyRound className="h-6 w-6" />
           </div>
           <div>
-            <h3 className="text-xl font-bold text-white tracking-tight">OpenAI API Key Required</h3>
-            <p className="text-xs text-slate-400">AI Operation: <span className="font-semibold text-indigo-300">{keyModalFeature || 'AI Pipeline'}</span></p>
+            <h3 className="text-xl font-bold text-white tracking-tight">Configure AI Provider Keys</h3>
+            <p className="text-xs text-slate-400">Feature: <span className="font-semibold text-indigo-300">{keyModalFeature || 'AI Pipeline'}</span></p>
           </div>
         </div>
 
@@ -39,19 +39,19 @@ export const ApiKeyRequiredModal = () => {
           <div className="flex items-start gap-2.5">
             <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
             <span>
-              <strong>Free & Public Access:</strong> You can view all study notes, preview questions, explore the Community Hub, and download shared solved PDFs without an API key.
+              <strong>100% Free AI Providers:</strong> AcademicStack connects with free Gemini (1.5k RPD), Groq (1k RPD), Cerebras (14.4k RPD), and NVIDIA NIM (10k RPD) APIs.
             </span>
           </div>
           <div className="flex items-start gap-2.5">
             <Sparkles className="h-4 w-4 text-indigo-400 shrink-0 mt-0.5" />
             <span>
-              <strong>AI-Powered Features:</strong> PDF Indexing (Qdrant vectors), Question Bank extraction, and RAG answer generation use your OpenAI account credentials.
+              <strong>Automatic Failover:</strong> Set your free keys in your Profile so extraction and answer generation never stall or hit rate limits.
             </span>
           </div>
         </div>
 
         <p className="mt-4 text-xs text-slate-400 text-center">
-          Add your key in your Profile section. Keys are encrypted at rest with Fernet cryptography and never exposed.
+          Keys are encrypted at rest with Fernet cryptography and never exposed to other users.
         </p>
 
         {/* Action Buttons */}
@@ -66,7 +66,7 @@ export const ApiKeyRequiredModal = () => {
             onClick={handleGoToProfile}
             className="w-full sm:w-1/2 flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 py-2.5 text-xs font-bold text-white shadow-lg shadow-indigo-500/25 hover:from-indigo-500 hover:to-indigo-400 transition-all"
           >
-            <span>Set Key in Profile</span>
+            <span>Set Keys in Profile</span>
             <ArrowRight className="h-4 w-4" />
           </button>
         </div>

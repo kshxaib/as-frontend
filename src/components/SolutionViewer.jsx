@@ -213,7 +213,12 @@ export const SolutionViewer = () => {
                   <>
                     {/* Download PDF Button */}
                     <button
-                      onClick={() => downloadSolvedPdf(currentAnswerSet.id)}
+                      onClick={() =>
+                        downloadSolvedPdf(
+                          currentAnswerSet.id,
+                          `AcademicStack_${(currentQuestionBank?.subject || 'Subject').replace(/\s+/g, '_')}_${(currentQuestionBank?.name || 'QB').replace(/\s+/g, '_')}_Solved.pdf`
+                        )
+                      }
                       className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-emerald-500/20 hover:from-emerald-500 hover:to-teal-500 transition-all hover:scale-[1.02]"
                     >
                       <Download className="h-4 w-4" />

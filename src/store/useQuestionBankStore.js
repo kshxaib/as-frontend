@@ -10,41 +10,58 @@ export const useQuestionBankStore = create((set, get) => ({
   isKeyModalOpen: false,
   keyModalFeature: '',
   triggerKeyModal: (featureName) => set({ isKeyModalOpen: true, keyModalFeature: featureName }),
-  closeKeyModal: () => set({ isKeyModalOpen: false }),
+  closeKeyModal: () => set({ isKeyModalOpen: false, keyModalFeature: '' }),
 
-  // Resources State
+  // Global Feedback
+  error: null,
+  successMessage: null,
+  clearFeedback: () => set({ error: null, successMessage: null }),
+
+  // Resources State (Phase 2 & 3)
   resources: [],
+  isLoading: false,
   isUploadingResource: false,
-  isIndexingResource: {},
+  isIndexingResource: {}, // map of resourceId -> boolean
 
-  // Question Banks State
+  // Question Banks State (Phase 4 & 5)
   questionBanks: [],
   currentQuestionBank: null,
   questions: [],
   isUploadingQuestionBank: false,
   isExtracting: false,
+  isSavingQuestions: false,
 
-  // Answer Sets State
+  // Answers State (Phase 6, 7, 8)
   currentAnswerSet: null,
   answerSetsList: [],
   isGeneratingAnswers: false,
-  isRetryingAnswer: {},
+  isRetryingAnswer: {}, // map of answerId -> boolean
 
-  // Community Hub State
+  // Community State (Phase 10 & 11)
   communityResources: [],
   communityAnswerSets: [],
   isLoadingCommunity: false,
 
-  // General Status
-  isLoading: false,
-  error: null,
-  successMessage: null,
+  // Helper: check if user has configured at least one AI key
+  hasAnyKey: () => {
+    const user = useAuthStore.getState().user;
+    return !!(
+      user?.has_gemini_key ||
+      user?.has_groq_key ||
+      user?.has_cerebras_key ||
+      user?.has_nvidia_key ||
+      user?.has_openai_key
+    );
+  },
 
-  // Clear feedback messages
-  clearFeedback: () => set({ error: null, successMessage: null }),
+  // Helper: check if user has embedding key (Gemini or OpenAI)
+  hasEmbeddingKey: () => {
+    const user = useAuthStore.getState().user;
+    return !!(user?.has_gemini_key || user?.has_openai_key);
+  },
 
   // ----------------------------------------------------
-  // Resources Operations (Phase 2 & 3)
+  // Resources Operations
   // ----------------------------------------------------
   fetchResources: async () => {
     set({ isLoading: true, error: null });
@@ -55,7 +72,7 @@ export const useQuestionBankStore = create((set, get) => ({
       set({ resources: res.data.resources || [], isLoading: false });
     } catch (err) {
       set({
-        error: err.response?.data?.detail || 'Failed to fetch study resources',
+        error: err.response?.data?.detail || 'Failed to load study resources',
         isLoading: false,
       });
     }
@@ -81,9 +98,9 @@ export const useQuestionBankStore = create((set, get) => ({
   },
 
   indexResource: async (resourceId) => {
-    const user = useAuthStore.getState().user;
-    if (!user?.has_openai_key) {
-      get().triggerKeyModal('Resource Vector Indexing (Qdrant & Embeddings)');
+    // Check if user has Gemini or OpenAI key for embeddings
+    if (!get().hasEmbeddingKey()) {
+      get().triggerKeyModal('PDF Vector Indexing (Gemini Embeddings)');
       return;
     }
 
@@ -103,10 +120,7 @@ export const useQuestionBankStore = create((set, get) => ({
         successMessage: `Resource indexed! ${res.data.chunks_indexed || 0} searchable vectors embedded into Qdrant.`,
       }));
     } catch (err) {
-      const msg = err.response?.data?.detail || 'Indexing failed. Verify your OpenAI API key.';
-      if (msg.toLowerCase().includes('openai api key') || err.response?.status === 400) {
-        get().triggerKeyModal('Resource Vector Indexing');
-      }
+      const msg = err.response?.data?.detail || 'Indexing failed. Check your Gemini API key in Profile.';
       set((state) => ({
         resources: state.resources.map((r) =>
           r.id === resourceId ? { ...r, status: 'indexing_failed' } : r
@@ -130,7 +144,7 @@ export const useQuestionBankStore = create((set, get) => ({
   },
 
   // ----------------------------------------------------
-  // Question Bank Operations (Phase 4 & 5)
+  // Question Bank Operations
   // ----------------------------------------------------
   fetchQuestionBanks: async () => {
     set({ isLoading: true, error: null });
@@ -145,7 +159,7 @@ export const useQuestionBankStore = create((set, get) => ({
       }
     } catch (err) {
       set({
-        error: err.response?.data?.detail || 'Failed to fetch question banks',
+        error: err.response?.data?.detail || 'Failed to load question banks',
         isLoading: false,
       });
     }
@@ -159,11 +173,10 @@ export const useQuestionBankStore = create((set, get) => ({
       });
       set((state) => ({
         questionBanks: [res.data, ...state.questionBanks],
-        isUploadingQuestionBank: false,
         currentQuestionBank: res.data,
-        successMessage: `Question Bank "${res.data.name}" created!`,
+        isUploadingQuestionBank: false,
+        successMessage: `Question Bank "${res.data.name}" uploaded successfully!`,
       }));
-      await get().selectQuestionBank(res.data.id);
       return { success: true, questionBank: res.data };
     } catch (err) {
       const msg = err.response?.data?.detail || 'Failed to upload question bank';
@@ -205,9 +218,9 @@ export const useQuestionBankStore = create((set, get) => ({
   },
 
   extractQuestions: async (id) => {
-    const user = useAuthStore.getState().user;
-    if (!user?.has_openai_key) {
-      get().triggerKeyModal('AI Question Bank Extraction (LLM)');
+    // Check if user has at least one AI key
+    if (!get().hasAnyKey()) {
+      get().triggerKeyModal('AI Question Bank Extraction');
       return;
     }
 
@@ -220,10 +233,7 @@ export const useQuestionBankStore = create((set, get) => ({
         successMessage: `Successfully extracted ${res.data.questions_extracted || 0} questions!`,
       });
     } catch (err) {
-      const msg = err.response?.data?.detail || 'Extraction failed. Make sure OpenAI API key is valid.';
-      if (msg.toLowerCase().includes('openai api key') || err.response?.status === 400) {
-        get().triggerKeyModal('AI Question Bank Extraction');
-      }
+      const msg = err.response?.data?.detail || 'Extraction failed. Check your Cerebras/Groq/Gemini keys in Profile.';
       set({
         error: msg,
         isExtracting: false,
@@ -231,34 +241,28 @@ export const useQuestionBankStore = create((set, get) => ({
     }
   },
 
-  addQuestion: async (questionBankId, questionData) => {
-    set({ isLoading: true, error: null });
+  updateQuestion: async (questionId, payload) => {
     try {
-      const res = await api.post(`/question-banks/${questionBankId}/questions`, questionData);
+      const res = await api.put(`/questions/${questionId}`, payload);
       set((state) => ({
-        questions: [...state.questions, res.data],
-        isLoading: false,
-        successMessage: 'Question added successfully!',
+        questions: state.questions.map((q) =>
+          q.id === questionId ? res.data : q
+        ),
       }));
     } catch (err) {
-      set({
-        error: err.response?.data?.detail || 'Failed to add question',
-        isLoading: false,
-      });
+      set({ error: err.response?.data?.detail || 'Failed to update question' });
     }
   },
 
-  updateQuestion: async (questionId, updateData) => {
+  addQuestion: async (questionBankId, payload) => {
     try {
-      const res = await api.put(`/questions/${questionId}`, updateData);
+      const res = await api.post(`/question-banks/${questionBankId}/questions`, payload);
       set((state) => ({
-        questions: state.questions.map((q) => (q.id === questionId ? res.data : q)),
-        successMessage: 'Question updated!',
+        questions: [...state.questions, res.data],
+        successMessage: 'Question added successfully!',
       }));
     } catch (err) {
-      set({
-        error: err.response?.data?.detail || 'Failed to update question',
-      });
+      set({ error: err.response?.data?.detail || 'Failed to add question' });
     }
   },
 
@@ -267,21 +271,19 @@ export const useQuestionBankStore = create((set, get) => ({
       await api.delete(`/questions/${questionId}`);
       set((state) => ({
         questions: state.questions.filter((q) => q.id !== questionId),
-        successMessage: 'Question removed!',
+        successMessage: 'Question removed from question bank.',
       }));
     } catch (err) {
-      set({
-        error: err.response?.data?.detail || 'Failed to delete question',
-      });
+      set({ error: err.response?.data?.detail || 'Failed to delete question' });
     }
   },
 
   // ----------------------------------------------------
-  // Answer Generation & Solutions (Phase 6, 7, 8)
+  // Answer Generation & Solutions
   // ----------------------------------------------------
   generateAnswers: async (questionBankId) => {
-    const user = useAuthStore.getState().user;
-    if (!user?.has_openai_key) {
+    // Check if user has configured AI keys
+    if (!get().hasAnyKey()) {
       get().triggerKeyModal('RAG Answer Generation & AI Review');
       return;
     }
@@ -290,7 +292,6 @@ export const useQuestionBankStore = create((set, get) => ({
     try {
       const res = await api.post('/answer-sets/generate', {
         question_bank_id: questionBankId,
-        user_id: user?.id,
       });
       set({
         currentAnswerSet: res.data,
@@ -299,10 +300,7 @@ export const useQuestionBankStore = create((set, get) => ({
         successMessage: `Successfully generated ${res.data.completed_questions} answers with AI Review & citations!`,
       });
     } catch (err) {
-      const msg = err.response?.data?.detail || 'Answer generation failed. Verify Qdrant indexing & OpenAI key.';
-      if (msg.toLowerCase().includes('openai api key') || err.response?.status === 400) {
-        get().triggerKeyModal('RAG Answer Generation');
-      }
+      const msg = err.response?.data?.detail || 'Answer generation failed. Check your Groq/Gemini/Cerebras keys in Profile.';
       set({
         error: msg,
         isGeneratingAnswers: false,
@@ -311,8 +309,7 @@ export const useQuestionBankStore = create((set, get) => ({
   },
 
   retryAnswer: async (answerId) => {
-    const user = useAuthStore.getState().user;
-    if (!user?.has_openai_key) {
+    if (!get().hasAnyKey()) {
       get().triggerKeyModal('Answer Regeneration');
       return;
     }
@@ -326,8 +323,8 @@ export const useQuestionBankStore = create((set, get) => ({
       const res = await api.post(`/answers/${answerId}/retry`);
       set((state) => {
         if (!state.currentAnswerSet) return state;
-        const updatedAnswers = state.currentAnswerSet.answers.map((a) =>
-          a.id === answerId ? res.data : a
+        const updatedAnswers = (state.currentAnswerSet.answers || []).map((ans) =>
+          ans.id === answerId ? res.data : ans
         );
         return {
           currentAnswerSet: {
@@ -335,30 +332,60 @@ export const useQuestionBankStore = create((set, get) => ({
             answers: updatedAnswers,
           },
           isRetryingAnswer: { ...state.isRetryingAnswer, [answerId]: false },
-          successMessage: 'Answer regenerated with AI Reviewer!',
+          successMessage: `Answer for Question ${res.data.question_number} regenerated successfully!`,
         };
       });
     } catch (err) {
-      const msg = err.response?.data?.detail || 'Failed to retry answer';
-      if (msg.toLowerCase().includes('openai api key') || err.response?.status === 400) {
-        get().triggerKeyModal('Answer Regeneration');
-      }
       set((state) => ({
         isRetryingAnswer: { ...state.isRetryingAnswer, [answerId]: false },
-        error: msg,
+        error: err.response?.data?.detail || 'Failed to retry answer',
       }));
     }
   },
 
-  downloadSolvedPdf: (answerSetId) => {
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
-    window.open(`${baseUrl}/answer-sets/${answerSetId}/pdf`, '_blank');
+  downloadSolvedPdf: async (answerSetId, customFilename) => {
+    try {
+      const res = await api.get(`/answer-sets/${answerSetId}/pdf`, {
+        responseType: 'blob',
+      });
+      const blob = new Blob([res.data], { type: 'application/pdf' });
+      const blobUrl = window.URL.createObjectURL(blob);
+      const filename = customFilename || `AcademicStack_Solved_QB_${answerSetId}.pdf`;
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.setAttribute('download', filename.endsWith('.pdf') ? filename : `${filename}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => window.URL.revokeObjectURL(blobUrl), 2000);
+    } catch (err) {
+      set({ error: err.response?.data?.detail || 'Failed to download solved PDF.' });
+    }
+  },
+
+  downloadDirectPdf: async (url, filename = 'document.pdf') => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const pdfBlob = new Blob([blob], { type: 'application/pdf' });
+      const blobUrl = window.URL.createObjectURL(pdfBlob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.setAttribute('download', filename.endsWith('.pdf') ? filename : `${filename}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => window.URL.revokeObjectURL(blobUrl), 2000);
+    } catch (err) {
+      // Fallback: open in new tab
+      window.open(url, '_blank');
+    }
   },
 
   // ----------------------------------------------------
-  // Community Hub Operations (Phase 10 & 11)
+  // Community Hub Operations
   // ----------------------------------------------------
-  fetchCommunityData: async () => {
+  fetchCommunityFeed: async () => {
     set({ isLoadingCommunity: true, error: null });
     try {
       const [resResources, resAnswerSets] = await Promise.all([
@@ -380,14 +407,13 @@ export const useQuestionBankStore = create((set, get) => ({
 
   toggleResourceShare: async (resourceId) => {
     try {
-      const res = await api.post(`/community/resources/${resourceId}/share`);
+      const res = await api.post(`/resources/${resourceId}/share`);
       set((state) => ({
         resources: state.resources.map((r) =>
           r.id === resourceId ? { ...r, visibility: res.data.visibility } : r
         ),
-        successMessage: `Resource visibility changed to ${res.data.visibility}`,
+        successMessage: `Resource visibility set to ${res.data.visibility}.`,
       }));
-      get().fetchCommunityData();
     } catch (err) {
       set({ error: err.response?.data?.detail || 'Failed to toggle resource sharing.' });
     }
@@ -395,17 +421,13 @@ export const useQuestionBankStore = create((set, get) => ({
 
   toggleAnswerSetShare: async (answerSetId) => {
     try {
-      const res = await api.post(`/community/answer-sets/${answerSetId}/share`);
-      set((state) => {
-        const updatedCurrent = state.currentAnswerSet?.id === answerSetId
+      const res = await api.post(`/answer-sets/${answerSetId}/share`);
+      set((state) => ({
+        currentAnswerSet: state.currentAnswerSet?.id === answerSetId
           ? { ...state.currentAnswerSet, visibility: res.data.visibility }
-          : state.currentAnswerSet;
-        return {
-          currentAnswerSet: updatedCurrent,
-          successMessage: `Answer set visibility changed to ${res.data.visibility}`,
-        };
-      });
-      get().fetchCommunityData();
+          : state.currentAnswerSet,
+        successMessage: `Answer set visibility set to ${res.data.visibility}.`,
+      }));
     } catch (err) {
       set({ error: err.response?.data?.detail || 'Failed to toggle answer set sharing.' });
     }

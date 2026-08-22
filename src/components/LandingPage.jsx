@@ -179,7 +179,7 @@ export const LandingPage = ({ justLoggedOut }) => {
       {/* ══════════════════════════════════════════════════════
           SECTION 1 — HERO
       ══════════════════════════════════════════════════════ */}
-      <section className="relative flex flex-col items-center justify-center px-4 pt-28 pb-20 text-center">
+      <section className="relative flex flex-col items-center justify-center px-4 pt-10 pb-20 text-center">
         {/* Logged out notice */}
         {justLoggedOut && (
           <div className="mb-8 flex items-center gap-2.5 rounded-xl border border-slate-700/60 bg-slate-900/80 px-5 py-3 text-xs text-slate-300 backdrop-blur-sm animate-fade-in-down">
@@ -188,12 +188,7 @@ export const LandingPage = ({ justLoggedOut }) => {
           </div>
         )}
 
-        {/* Badge */}
-        <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-indigo-500/25 bg-indigo-500/8 px-4 py-1.5 text-xs font-semibold text-indigo-300 backdrop-blur-sm">
-          <Sparkles className="h-3.5 w-3.5" />
-          <span>OpenAI-Powered Exam Preparation Platform</span>
-        </div>
-
+        
         {/* Headline */}
         <h1 className="max-w-4xl text-4xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-tight">
           <span className="text-white">Study Smarter,</span>
@@ -282,202 +277,7 @@ export const LandingPage = ({ justLoggedOut }) => {
             ))}
           </div>
         </div>
-      </section>
-
-      {/* ══════════════════════════════════════════════════════
-          SECTION 3 — HOW IT WORKS
-      ══════════════════════════════════════════════════════ */}
-      <section className="relative px-4 py-20">
-        <div className="mx-auto max-w-4xl">
-          {/* Glassmorphism container */}
-          <div className="relative rounded-3xl border border-white/5 bg-white/[0.02] p-8 sm:p-12 backdrop-blur-sm overflow-hidden">
-            {/* inner glow */}
-            <div className="absolute inset-0 bg-gradient-to-br from-indigo-600/5 via-transparent to-cyan-600/5 pointer-events-none rounded-3xl" />
-
-            <div className="text-center mb-12">
-              <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-slate-700/60 bg-slate-900/60 px-4 py-1.5 text-xs font-semibold text-slate-400 backdrop-blur-sm">
-                <Brain className="h-3 w-3 text-violet-400" />
-                <span>Simple 3-step workflow</span>
-              </div>
-              <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-                From Notes to Answers in Minutes
-              </h2>
-            </div>
-
-            <div className="relative grid grid-cols-1 sm:grid-cols-3 gap-8 sm:gap-4">
-              {/* Connecting lines (desktop) */}
-              <div className="absolute top-8 left-[33%] right-[33%] hidden sm:block h-px bg-gradient-to-r from-indigo-500/30 via-violet-500/30 to-emerald-500/30" />
-
-              <Step
-                num="1"
-                icon={Upload}
-                title="Upload Materials"
-                desc="Upload your PDFs, lecture notes, and past exam papers to Cloudinary."
-                color="#6366f1"
-              />
-              <Step
-                num="2"
-                icon={Search}
-                title="AI Indexes & Extracts"
-                desc="OpenAI embeddings index your notes into Qdrant. Questions are extracted from exam papers."
-                color="#8b5cf6"
-              />
-              <Step
-                num="3"
-                icon={Sparkles}
-                title="Generate & Export"
-                desc="RAG pipeline generates comprehensive, cited answers. Export as a polished PDF."
-                color="#10b981"
-              />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ══════════════════════════════════════════════════════
-          SECTION 4 — ACCESS TIERS
-      ══════════════════════════════════════════════════════ */}
-      <section className="relative px-4 py-20">
-        <div className="mx-auto max-w-4xl">
-          <div className="text-center mb-12">
-            <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-slate-700/60 bg-slate-900/60 px-4 py-1.5 text-xs font-semibold text-slate-400 backdrop-blur-sm">
-              <KeyRound className="h-3 w-3 text-amber-400" />
-              <span>Access levels</span>
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-black tracking-tight text-white">
-              Start Free. Unlock AI When Ready.
-            </h2>
-            <p className="mt-3 text-sm text-slate-400">
-              No subscription required. Bring your own OpenAI API key for AI features.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <TierCard
-              title="Guest"
-              icon={Eye}
-              iconColor="#64748b"
-              borderColor="rgba(100,116,139,0.2)"
-              bgColor="rgba(15,23,42,0.6)"
-              items={[
-                'Browse Community Hub',
-                'Download shared resources',
-                'Download shared solved papers',
-                'No registration needed',
-              ]}
-              cta="Browse Community"
-              onCta={() => setActiveTab('community')}
-            />
-            <TierCard
-              title="Registered"
-              icon={Lock}
-              iconColor="#6366f1"
-              borderColor="rgba(99,102,241,0.2)"
-              bgColor="rgba(15,23,42,0.6)"
-              items={[
-                'Everything in Guest',
-                'Upload study resources',
-                'Upload question banks',
-                'Manage your content',
-                'Share to community',
-              ]}
-              cta="Create Account"
-              onCta={() => openAuthModal('register')}
-            />
-            <TierCard
-              title="AI Powered"
-              icon={Sparkles}
-              iconColor="#6366f1"
-              borderColor="rgba(99,102,241,0.35)"
-              bgColor="rgba(99,102,241,0.04)"
-              highlighted
-              items={[
-                'Everything in Registered',
-                'PDF indexing (Qdrant vectors)',
-                'AI question extraction',
-                'RAG answer generation',
-                'AI academic review pass',
-                'PDF export of solved papers',
-              ]}
-              cta="Add OpenAI Key"
-              onCta={() => openAuthModal('register')}
-            />
-          </div>
-        </div>
-      </section>
-
-      {/* ══════════════════════════════════════════════════════
-          SECTION 5 — TECH STACK
-      ══════════════════════════════════════════════════════ */}
-      <section className="relative px-4 py-16">
-        <div className="mx-auto max-w-4xl">
-          <div className="text-center mb-8">
-            <p className="text-xs font-semibold uppercase tracking-widest text-slate-600">Powered by</p>
-          </div>
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            {[
-              { name: 'OpenAI', color: '#10b981', desc: 'Embeddings & GPT' },
-              { name: 'Qdrant', color: '#6366f1', desc: 'Vector Search' },
-              { name: 'PostgreSQL', color: '#06b6d4', desc: 'Data Storage' },
-              { name: 'Cloudinary', color: '#f59e0b', desc: 'File Storage' },
-              { name: 'FastAPI', color: '#8b5cf6', desc: 'Backend API' },
-              { name: 'React', color: '#38bdf8', desc: 'Frontend' },
-            ].map(({ name, color, desc }) => (
-              <div
-                key={name}
-                className="flex flex-col items-center gap-1.5 rounded-2xl border border-white/5 bg-white/[0.02] px-5 py-3.5 backdrop-blur-sm hover:border-white/10 transition-all"
-              >
-                <div className="h-2 w-2 rounded-full" style={{ background: color, boxShadow: `0 0 6px ${color}` }} />
-                <span className="text-xs font-bold text-white">{name}</span>
-                <span className="text-[10px] text-slate-500">{desc}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ══════════════════════════════════════════════════════
-          SECTION 6 — BOTTOM CTA
-      ══════════════════════════════════════════════════════ */}
-      <section className="relative px-4 py-24">
-        <div className="mx-auto max-w-2xl text-center">
-          <div className="relative rounded-3xl border border-indigo-500/20 bg-gradient-to-br from-indigo-900/30 via-slate-900/60 to-violet-900/20 p-10 sm:p-14 backdrop-blur-sm overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-tr from-indigo-600/10 via-transparent to-cyan-600/5 pointer-events-none rounded-3xl" />
-            <div className="absolute -top-20 left-1/2 -translate-x-1/2 h-40 w-40 rounded-full bg-indigo-500/20 blur-3xl pointer-events-none" />
-
-            <div className="relative">
-              <div className="mb-4 inline-flex h-14 w-14 items-center justify-center rounded-2xl bg-indigo-600/15 border border-indigo-500/25">
-                <BookOpen className="h-7 w-7 text-indigo-400" />
-              </div>
-              <h2 className="text-2xl sm:text-3xl font-black text-white tracking-tight">
-                Ready to ace your exams?
-              </h2>
-              <p className="mt-3 text-sm text-slate-400">
-                Join AcademicStack and turn your study materials into AI-powered exam preparation.
-                Free to start, scales with your needs.
-              </p>
-              <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-4">
-                <button
-                  id="cta-get-started-btn"
-                  onClick={() => openAuthModal('register')}
-                  className="group flex items-center gap-2 rounded-2xl bg-gradient-to-r from-indigo-600 to-indigo-500 px-8 py-3.5 text-sm font-bold text-white shadow-2xl shadow-indigo-500/30 hover:from-indigo-500 hover:to-cyan-500 transition-all duration-300 hover:-translate-y-0.5"
-                >
-                  <Sparkles className="h-4 w-4 group-hover:rotate-12 transition-transform" />
-                  <span>Create Free Account</span>
-                </button>
-                <button
-                  id="cta-sign-in-btn"
-                  onClick={() => openAuthModal('login')}
-                  className="flex items-center gap-2 rounded-2xl border border-slate-700 bg-slate-900/80 px-8 py-3.5 text-sm font-semibold text-slate-300 hover:border-indigo-500/40 hover:text-white transition-all duration-300 backdrop-blur-sm hover:-translate-y-0.5"
-                >
-                  Already have an account? Sign in
-                  <ArrowRight className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
+      </section>      
 
       {/* ── Footer ── */}
       <footer className="relative border-t border-white/5 px-4 py-8">

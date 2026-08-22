@@ -21,6 +21,7 @@ export const CommunityHub = () => {
     isLoadingCommunity,
     fetchCommunityData,
     downloadSolvedPdf,
+    downloadDirectPdf,
   } = useQuestionBankStore();
 
   const [activeSubTab, setActiveSubTab] = useState('resources'); // 'resources' | 'solved_sets'
@@ -186,15 +187,13 @@ export const CommunityHub = () => {
                         {new Date(res.created_at).toLocaleDateString()}
                       </span>
 
-                      <a
-                        href={res.cloudinary_url}
-                        target="_blank"
-                        rel="noreferrer"
+                      <button
+                        onClick={() => downloadDirectPdf(res.cloudinary_url, `${res.name.replace(/\s+/g, '_')}.pdf`)}
                         className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600/90 px-3.5 py-2 text-xs font-semibold text-white hover:bg-indigo-500 transition-all shadow-md"
                       >
                         <Download className="h-3.5 w-3.5" />
                         <span>Download PDF</span>
-                      </a>
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -254,7 +253,12 @@ export const CommunityHub = () => {
                       </span>
 
                       <button
-                        onClick={() => downloadSolvedPdf(set.id)}
+                        onClick={() =>
+                          downloadSolvedPdf(
+                            set.id,
+                            `AcademicStack_${(set.subject || 'Subject').replace(/\s+/g, '_')}_${(set.question_bank_name || 'Solved_QB').replace(/\s+/g, '_')}.pdf`
+                          )
+                        }
                         className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-3.5 py-2 text-xs font-semibold text-white shadow-lg shadow-emerald-500/20 hover:from-emerald-500 hover:to-teal-500 transition-all"
                       >
                         <Download className="h-3.5 w-3.5" />

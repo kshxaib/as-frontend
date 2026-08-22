@@ -10,10 +10,12 @@ import {
   Trash2,
   Sparkles,
   Lock,
-  Layers,
-  Database,
-  FileCheck,
   Calendar,
+  ExternalLink,
+  Zap,
+  Cpu,
+  Flame,
+  Layers,
 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 
@@ -23,14 +25,36 @@ export const ProfileSettings = () => {
     isAuthenticated,
     isLoading,
     error,
+    updateGeminiKey,
+    deleteGeminiKey,
+    updateGroqKey,
+    deleteGroqKey,
+    updateCerebrasKey,
+    deleteCerebrasKey,
+    updateNvidiaKey,
+    deleteNvidiaKey,
     updateOpenAIKey,
     deleteOpenAIKey,
     openAuthModal,
     clearError,
   } = useAuthStore();
 
-  const [apiKeyInput, setApiKeyInput] = useState('');
-  const [showKey, setShowKey] = useState(false);
+  const [keysInput, setKeysInput] = useState({
+    gemini: '',
+    groq: '',
+    cerebras: '',
+    nvidia: '',
+    openai: '',
+  });
+
+  const [showKey, setShowKey] = useState({
+    gemini: false,
+    groq: false,
+    cerebras: false,
+    nvidia: false,
+    openai: false,
+  });
+
   const [successMsg, setSuccessMsg] = useState(null);
 
   if (!isAuthenticated || !user) {
@@ -41,7 +65,7 @@ export const ProfileSettings = () => {
         </div>
         <h2 className="text-xl font-bold text-white">Sign In to Manage Your Profile</h2>
         <p className="mt-1 text-xs text-slate-400 max-w-md mx-auto">
-          Create an account or login to configure your OpenAI API key, manage your personal resources, and solve exam question banks.
+          Create an account or login to configure your API keys and unlock high-speed RAG and Question Bank tools.
         </p>
         <button
           onClick={() => openAuthModal('login')}
@@ -53,46 +77,132 @@ export const ProfileSettings = () => {
     );
   }
 
-  const handleSaveKey = async (e) => {
-    e.preventDefault();
+  const handleInputChange = (provider, value) => {
+    setKeysInput((prev) => ({ ...prev, [provider]: value }));
+  };
+
+  const toggleShowKey = (provider) => {
+    setShowKey((prev) => ({ ...prev, [provider]: !prev[provider] }));
+  };
+
+  const handleSaveSingleKey = async (provider) => {
+    const val = keysInput[provider]?.trim();
+    if (!val) return;
+
     setSuccessMsg(null);
     clearError();
 
-    if (!apiKeyInput.trim()) return;
+    let res;
+    if (provider === 'gemini') res = await updateGeminiKey(val);
+    else if (provider === 'groq') res = await updateGroqKey(val);
+    else if (provider === 'cerebras') res = await updateCerebrasKey(val);
+    else if (provider === 'nvidia') res = await updateNvidiaKey(val);
+    else if (provider === 'openai') res = await updateOpenAIKey(val);
 
-    const res = await updateOpenAIKey(apiKeyInput.trim());
-    if (res.success) {
-      setApiKeyInput('');
-      setSuccessMsg('OpenAI API key encrypted & saved successfully! All AI features are now unlocked.');
-      setTimeout(() => setSuccessMsg(null), 5000);
+    if (res?.success) {
+      setKeysInput((prev) => ({ ...prev, [provider]: '' }));
+      setSuccessMsg(`${provider.toUpperCase()} API key saved successfully!`);
+      setTimeout(() => setSuccessMsg(null), 4000);
     }
   };
 
-  const handleDeleteKey = async () => {
-    if (window.confirm('Are you sure you want to remove your stored OpenAI API key? AI indexing, extraction, and generation will be locked.')) {
-      setSuccessMsg(null);
-      const res = await deleteOpenAIKey();
-      if (res.success) {
-        setSuccessMsg('OpenAI API key removed. Your account is now in View-Only mode.');
-        setTimeout(() => setSuccessMsg(null), 5000);
-      }
+  const handleDeleteSingleKey = async (provider) => {
+    if (!window.confirm(`Are you sure you want to remove your ${provider.toUpperCase()} API key?`)) return;
+
+    setSuccessMsg(null);
+    clearError();
+
+    let res;
+    if (provider === 'gemini') res = await deleteGeminiKey();
+    else if (provider === 'groq') res = await deleteGroqKey();
+    else if (provider === 'cerebras') res = await deleteCerebrasKey();
+    else if (provider === 'nvidia') res = await deleteNvidiaKey();
+    else if (provider === 'openai') res = await deleteOpenAIKey();
+
+    if (res?.success) {
+      setSuccessMsg(`${provider.toUpperCase()} API key removed.`);
+      setTimeout(() => setSuccessMsg(null), 4000);
     }
   };
+
+  const providers = [
+    {
+      id: 'gemini',
+      name: 'Google Gemini',
+      tag: 'Required (100% Free)',
+      tagColor: 'text-amber-300 bg-amber-500/10 border-amber-500/20',
+      description: 'Used for Free Vector Embeddings (text-embedding-004) and RAG fallback generation (1,500 RPD).',
+      placeholder: 'AIzaSy...',
+      hasKey: user.has_gemini_key,
+      getKeyUrl: 'https://aistudio.google.com/app/api-keys?project=gen-lang-client-0528736665',
+      icon: Sparkles,
+      iconColor: 'text-amber-400 bg-amber-500/10 border-amber-500/20',
+    },
+    {
+      id: 'groq',
+      name: 'Groq Cloud',
+      tag: 'Required (100% Free)',
+      tagColor: 'text-emerald-300 bg-emerald-500/10 border-emerald-500/20',
+      description: 'Ultra-fast RAG Generation (Llama 3.3 70B, 300+ tokens/sec, 1,000 RPD).',
+      placeholder: 'gsk_...',
+      hasKey: user.has_groq_key,
+      getKeyUrl: 'https://console.groq.com/keys',
+      icon: Zap,
+      iconColor: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
+    },
+    {
+      id: 'cerebras',
+      name: 'Cerebras Cloud',
+      tag: 'Required (100% Free)',
+      tagColor: 'text-cyan-300 bg-cyan-500/10 border-cyan-500/20',
+      description: 'High-Volume Question Extraction & AI Reviewer (14,400 Requests/day free!).',
+      placeholder: 'csk-...',
+      hasKey: user.has_cerebras_key,
+      getKeyUrl: 'https://cloud.cerebras.ai/platform/org_x4tk2yfxf9j2m3j4kyf8hxdc/project/prj_3355h68j2dwwcmex8rmxrtrt/apikeys',
+      icon: Cpu,
+      iconColor: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20',
+    },
+    {
+      id: 'nvidia',
+      name: 'NVIDIA NIM',
+      tag: 'Required (100% Free)',
+      tagColor: 'text-lime-300 bg-lime-500/10 border-lime-500/20',
+      description: 'Heavy Academic Reviewer & High-Grade RAG Verification (10,000 RPD free).',
+      placeholder: 'nvapi-...',
+      hasKey: user.has_nvidia_key,
+      getKeyUrl: 'https://build.nvidia.com/',
+      icon: Flame,
+      iconColor: 'text-lime-400 bg-lime-500/10 border-lime-500/20',
+    },
+    {
+      id: 'openai',
+      name: 'OpenAI API',
+      tag: 'Optional (Emergency Backup)',
+      tagColor: 'text-slate-400 bg-slate-800 border-slate-700',
+      description: 'Optional final safety net (gpt-4o-mini). Used only if all 4 free providers above are exhausted.',
+      placeholder: 'sk-proj-...',
+      hasKey: user.has_openai_key,
+      getKeyUrl: 'https://platform.openai.com/api-keys',
+      icon: Layers,
+      iconColor: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20',
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-slate-950 pb-24 text-slate-100">
       <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
+        
         {/* Header */}
         <div className="border-b border-slate-800 pb-6">
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-indigo-400">
             <User className="h-4 w-4" />
-            Account & Governance
+            Account & API Configuration
           </div>
           <h1 className="mt-1 text-2xl font-bold tracking-tight text-white sm:text-3xl">
-            User Profile & OpenAI Settings
+            User Profile & Multi-Provider Keys
           </h1>
           <p className="mt-1 text-sm text-slate-400">
-            Manage your personal credentials, OpenAI API key encryption, and feature access permissions.
+            Configure your free AI API keys with automatic failover. Tasks will never stall midway.
           </p>
         </div>
 
@@ -103,6 +213,7 @@ export const ProfileSettings = () => {
               <AlertCircle className="h-5 w-5 text-rose-400 shrink-0" />
               <span>{error}</span>
             </div>
+            <button onClick={clearError} className="text-rose-400 hover:underline">Dismiss</button>
           </div>
         )}
 
@@ -112,13 +223,14 @@ export const ProfileSettings = () => {
               <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0" />
               <span>{successMsg}</span>
             </div>
+            <button onClick={() => setSuccessMsg(null)} className="text-emerald-400 hover:underline">Dismiss</button>
           </div>
         )}
 
-        <div className="mt-8 space-y-6">
+        <div className="mt-8 space-y-8">
           {/* User Info Card */}
           <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-6 backdrop-blur-sm">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-slate-400 mb-4">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-4">
               Profile Details
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -140,111 +252,126 @@ export const ProfileSettings = () => {
             </div>
           </div>
 
-          {/* OpenAI API Key Card */}
-          <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-6 backdrop-blur-sm">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-800 pb-4">
+          {/* AI Providers Section */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
               <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-base font-bold text-white">OpenAI API Key Configuration</h2>
-                  {user.has_openai_key ? (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-400 border border-emerald-500/20">
-                      <CheckCircle2 className="h-3.5 w-3.5" />
-                      Active & Encrypted
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-semibold text-amber-400 border border-amber-500/20">
-                      <AlertCircle className="h-3.5 w-3.5" />
-                      Key Missing (View-Only Mode)
-                    </span>
-                  )}
-                </div>
-                <p className="mt-1 text-xs text-slate-400">
-                  Required to execute PDF Vector Indexing, Question Bank Extraction, and RAG Answer Generation.
+                <h2 className="text-base font-bold text-white flex items-center gap-2">
+                  <ShieldCheck className="h-5 w-5 text-indigo-400" />
+                  AI Provider Keys & Routing
+                </h2>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Enter your free keys below. All keys are encrypted at rest with Fernet.
                 </p>
               </div>
-
-              {user.has_openai_key && (
-                <button
-                  onClick={handleDeleteKey}
-                  disabled={isLoading}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-rose-500/30 bg-rose-500/10 px-3.5 py-2 text-xs font-semibold text-rose-300 hover:bg-rose-500/20 transition-colors disabled:opacity-50"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                  Remove Key
-                </button>
-              )}
             </div>
 
-            {/* Input Form */}
-            <form onSubmit={handleSaveKey} className="mt-6 space-y-4">
-              <div>
-                <label className="block text-xs font-medium text-slate-300 mb-1.5">
-                  {user.has_openai_key ? 'Update OpenAI API Key' : 'Enter OpenAI API Key'}
-                </label>
-                <div className="relative flex items-center">
-                  <KeyRound className="absolute left-3.5 h-4 w-4 text-slate-500" />
-                  <input
-                    type={showKey ? 'text' : 'password'}
-                    value={apiKeyInput}
-                    onChange={(e) => setApiKeyInput(e.target.value)}
-                    placeholder={user.has_openai_key ? '••••••••••••••••••••••••••••••••' : 'sk-proj-...'}
-                    className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2.5 pl-10 pr-24 text-xs font-mono text-slate-200 placeholder-slate-600 focus:border-indigo-500 focus:outline-none"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowKey(!showKey)}
-                    className="absolute right-3 text-slate-500 hover:text-slate-300 text-xs flex items-center gap-1"
+            {/* Provider Cards List */}
+            <div className="space-y-4">
+              {providers.map((p) => {
+                const Icon = p.icon;
+                const isConfigured = p.hasKey;
+                const inputVal = keysInput[p.id];
+                const isShowing = showKey[p.id];
+
+                return (
+                  <div
+                    key={p.id}
+                    className="rounded-3xl border border-slate-800 bg-slate-900/60 p-5 sm:p-6 backdrop-blur-sm hover:border-slate-700/80 transition-all"
                   >
-                    {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    <span>{showKey ? 'Hide' : 'Show'}</span>
-                  </button>
-                </div>
-              </div>
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-800/80 pb-4">
+                      <div className="flex items-start gap-3.5">
+                        <div className={`p-2.5 rounded-2xl border ${p.iconColor} shrink-0`}>
+                          <Icon className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-sm font-bold text-white">{p.name}</h3>
+                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold border ${p.tagColor}`}>
+                              {p.tag}
+                            </span>
+                          </div>
+                          <p className="text-xs text-slate-400 mt-1 max-w-xl">
+                            {p.description}
+                          </p>
+                        </div>
+                      </div>
 
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2 text-[11px] text-slate-500">
-                  <Lock className="h-3.5 w-3.5 text-emerald-400" />
-                  <span>Encrypted at rest with Fernet. Never exposed in API responses.</span>
-                </div>
+                      {/* Get Key Link */}
+                      <a
+                        href={p.getKeyUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 self-start sm:self-center text-xs font-semibold text-indigo-400 hover:text-indigo-300 hover:underline shrink-0"
+                      >
+                        <span>Get Free Key</span>
+                        <ExternalLink className="h-3.5 w-3.5" />
+                      </a>
+                    </div>
 
-                <button
-                  type="submit"
-                  disabled={isLoading || !apiKeyInput.trim()}
-                  className="rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-semibold text-white shadow-lg shadow-indigo-500/25 hover:bg-indigo-500 transition-all disabled:opacity-40"
-                >
-                  {isLoading ? 'Saving...' : user.has_openai_key ? 'Update Key' : 'Save & Unlock AI'}
-                </button>
-              </div>
-            </form>
+                    {/* Key Input / Status Row */}
+                    <div className="mt-4 flex flex-col sm:flex-row sm:items-center gap-3">
+                      <div className="relative flex-1">
+                        <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+                        <input
+                          type={isShowing ? 'text' : 'password'}
+                          value={inputVal}
+                          onChange={(e) => handleInputChange(p.id, e.target.value)}
+                          placeholder={isConfigured ? '••••••••••••••••••••••••••••••••' : p.placeholder}
+                          className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2 pl-10 pr-16 text-xs font-mono text-slate-200 placeholder-slate-600 focus:border-indigo-500 focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => toggleShowKey(p.id)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 text-xs"
+                        >
+                          {isShowing ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
 
-            {/* Feature Unlock Grid */}
-            <div className="mt-8 rounded-2xl bg-slate-950/60 border border-slate-800/80 p-5">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-1.5">
-                <Sparkles className="h-3.5 w-3.5 text-indigo-400" />
-                Feature Access Matrix
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                <div className="flex items-center justify-between rounded-xl bg-slate-900/60 p-3 border border-slate-800/60">
-                  <span className="text-slate-300">View Resources & Solved Sets</span>
-                  <span className="text-emerald-400 font-bold">Free (Always Open)</span>
-                </div>
-                <div className="flex items-center justify-between rounded-xl bg-slate-900/60 p-3 border border-slate-800/60">
-                  <span className="text-slate-300">Download Community & Solved PDFs</span>
-                  <span className="text-emerald-400 font-bold">Free (Always Open)</span>
-                </div>
-                <div className="flex items-center justify-between rounded-xl bg-slate-900/60 p-3 border border-slate-800/60">
-                  <span className="text-slate-300">PyMuPDF Text & Vector Indexing</span>
-                  <span className={user.has_openai_key ? 'text-emerald-400 font-bold' : 'text-amber-400 font-semibold'}>
-                    {user.has_openai_key ? 'Unlocked' : 'Requires API Key'}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between rounded-xl bg-slate-900/60 p-3 border border-slate-800/60">
-                  <span className="text-slate-300">RAG Generation & AI Academic Review</span>
-                  <span className={user.has_openai_key ? 'text-emerald-400 font-bold' : 'text-amber-400 font-semibold'}>
-                    {user.has_openai_key ? 'Unlocked' : 'Requires API Key'}
-                  </span>
-                </div>
-              </div>
+                      <div className="flex items-center gap-2">
+                        {isConfigured ? (
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-3 py-2 text-xs font-semibold text-emerald-400">
+                              <CheckCircle2 className="h-3.5 w-3.5" />
+                              <span>Active</span>
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteSingleKey(p.id)}
+                              disabled={isLoading}
+                              className="rounded-xl border border-slate-800 bg-slate-950 p-2 text-slate-400 hover:bg-rose-500/10 hover:text-rose-400 hover:border-rose-500/20 transition-all"
+                              title="Delete stored key"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleSaveSingleKey(p.id)}
+                            disabled={isLoading || !inputVal.trim()}
+                            className="rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-md hover:bg-indigo-500 transition-all disabled:opacity-40"
+                          >
+                            Save Key
+                          </button>
+                        )}
+
+                        {isConfigured && inputVal.trim() && (
+                          <button
+                            type="button"
+                            onClick={() => handleSaveSingleKey(p.id)}
+                            disabled={isLoading}
+                            className="rounded-xl bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white shadow-md hover:bg-indigo-500 transition-all"
+                          >
+                            Update
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>
