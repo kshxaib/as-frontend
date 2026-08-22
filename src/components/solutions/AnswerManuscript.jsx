@@ -16,6 +16,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { formatMarkdownMath } from "./solutions-meta"
+import { AnswerReviewNote } from "./AnswerReviewNote"
 import { AnswerStatusBadge } from "./AnswerStatus"
 import { SourceList } from "./SourceList"
 
@@ -149,6 +150,9 @@ export function AnswerManuscript({ answer, displayNumber, onRetry }) {
                 </ReactMarkdown>
               </div>
             )}
+
+            {/* Real pipeline provenance — completed answers only */}
+            {answer.status === "completed" && <AnswerReviewNote />}
 
             <SourceList sources={sources} />
           </div>
