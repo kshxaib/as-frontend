@@ -39,7 +39,7 @@ export const Navbar = () => {
       return;
     }
     setActiveTab(item.id);
-  };
+  }; 
 
   return (
     <header className="sticky top-0 z-40 w-full border-b border-slate-800 bg-slate-950/85 backdrop-blur-md">
@@ -47,7 +47,7 @@ export const Navbar = () => {
 
         {/* ── Brand ── */}
         <div
-          onClick={() => isAuthenticated ? setActiveTab('resources') : setActiveTab('community')}
+          onClick={() => setActiveTab(isAuthenticated ? 'resources' : '')}
           className="flex items-center gap-3 cursor-pointer select-none flex-shrink-0"
         >
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-cyan-400 text-white shadow-lg shadow-indigo-500/20">

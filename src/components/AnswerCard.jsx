@@ -1,7 +1,45 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { BookOpen, CheckCircle, AlertCircle, RefreshCw, ChevronDown, ChevronUp, Sparkles, ExternalLink } from 'lucide-react';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import remarkGfm from 'remark-gfm';
+import { BookOpen, CheckCircle, AlertCircle, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
+
+// ─── LaTeX & Markdown Preprocessor ──────────────────────────────────────────
+function formatMarkdownMath(content) {
+  if (!content) return '';
+
+  let text = content;
+
+  // 1. Fix isolated single dollars on their own lines: $\n\n[formula]\n\n$ -> $$\n[formula]\n$$
+  text = text.replace(/(?:^|\n)\s*\$\s*\n+([\s\S]*?)\n+\s*\$\s*(?=\n|$)/g, (match, formula) => {
+    return `\n\n$$\n${formula.trim()}\n$$\n\n`;
+  });
+
+  // 2. Convert standard bracketed display math \[ ... \] to $$ ... $$
+  text = text.replace(/\\\[([\s\S]*?)\\\]/g, (match, formula) => `\n\n$$\n${formula.trim()}\n$$\n\n`);
+
+  // 3. Convert \( ... \) to $ ... $ (inline)
+  text = text.replace(/\\\(([\s\S]*?)\\\)/g, (match, formula) => `$${formula.replace(/\s+/g, ' ').trim()}$`);
+
+  // 4. Convert bracketed LaTeX environments like [ \mu... ], [ \begin{cases}... ] to $$ ... $$
+  text = text.replace(/\[\s*(\\mu|\\max|\\min|\\begin\{cases\}|\\neg|\\text|\\sum|\\frac|\\int|\\lim|\\sigma|\\alpha|\\beta|\\gamma|\\delta|\\theta)([\s\S]*?)\]/g, 
+    (match, prefix, rest) => `\n\n$$\n${prefix}${rest.trim()}\n$$\n\n`
+  );
+
+  // 5. Fix any broken inline math split across multiple newlines: $\n A \n$ -> $A$
+  text = text.replace(/\$([^$\n]+)\$/g, (match, inner) => `$${inner.trim()}$`);
+
+  // 6. Clean up excessive consecutive blank lines (limit to max 2 newlines = 1 blank line)
+  text = text.replace(/\n{3,}/g, '\n\n');
+
+  // 7. Ensure clean spacing before subquestions / numbered topics
+  text = text.replace(/([^\n])\n(\d+\.\s+[A-Za-z])/g, '$1\n\n$2');
+  text = text.replace(/([^\n])\n(###?\s+)/g, '$1\n\n$2');
+
+  return text.trim();
+}
 
 export const AnswerCard = ({ answer, index }) => {
   const { retryAnswer } = useQuestionBankStore();
@@ -15,6 +53,10 @@ export const AnswerCard = ({ answer, index }) => {
   };
 
   const sources = answer.sources || [];
+
+  const formattedContent = useMemo(() => {
+    return formatMarkdownMath(answer.content);
+  }, [answer.content]);
 
   return (
     <div className="group overflow-hidden rounded-2xl border border-slate-800 bg-slate-900/80 shadow-xl backdrop-blur-md transition-all duration-200 hover:border-slate-700">
@@ -83,14 +125,19 @@ export const AnswerCard = ({ answer, index }) => {
               </button>
             </div>
           ) : (
-            <div className="prose prose-invert max-w-none prose-p:text-sm prose-p:leading-relaxed prose-p:text-slate-300 prose-headings:text-slate-100 prose-strong:text-indigo-200 prose-code:text-amber-300 prose-code:bg-slate-950 prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-pre:bg-slate-950 prose-pre:border prose-pre:border-slate-800 prose-li:text-sm prose-li:text-slate-300">
-              <ReactMarkdown>{answer.content || '_No answer generated yet._'}</ReactMarkdown>
+            <div className="markdown-answer-body">
+              <ReactMarkdown
+                remarkPlugins={[remarkGfm, remarkMath]}
+                rehypePlugins={[rehypeKatex]}
+              >
+                {formattedContent || '_No answer generated yet._'}
+              </ReactMarkdown>
             </div>
           )}
 
           {/* Source Citations Section */}
           {sources.length > 0 && (
-            <div className="mt-6 pt-5 border-t border-slate-800/80">
+            <div className="mt-8 pt-5 border-t border-slate-800/80">
               <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">
                 <BookOpen className="h-3.5 w-3.5 text-indigo-400" />
                 Verified Study Material Sources ({sources.length})

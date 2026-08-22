@@ -100,13 +100,13 @@ export const QuestionReview = () => {
           <div>
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-indigo-400">
               <Layers className="h-4 w-4" />
-              Phase 5 Workspace
+              Question Review & Verification
             </div>
             <h1 className="mt-1 text-2xl font-bold tracking-tight text-white sm:text-3xl">
               Question Review & Marks Tuning
             </h1>
             <p className="mt-1 text-sm text-slate-400">
-              Review extracted questions, adjust marks, and approve before triggering RAG answer generation.
+              Review extracted questions, adjust marks, and approve before triggering AI answer generation.
             </p>
           </div>
 
@@ -227,7 +227,7 @@ export const QuestionReview = () => {
             <FileText className="mx-auto h-12 w-12 text-slate-600" />
             <h3 className="mt-4 text-base font-semibold text-slate-300">No Question Bank Selected</h3>
             <p className="mt-1 text-xs text-slate-500">
-              Upload a question bank PDF via API or select one to begin reviewing questions.
+              Upload a question bank PDF or select one to begin reviewing questions.
             </p>
           </div>
         )}
@@ -308,7 +308,7 @@ export const QuestionReview = () => {
         )}
       </div>
 
-      {/* Sticky Bottom Action Bar (Proceed to Phase 6) */}
+      {/* Sticky Bottom Action Bar */}
       {currentQuestionBank && questions.length > 0 && (
         <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-slate-800 bg-slate-950/90 backdrop-blur-md p-4">
           <div className="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
@@ -319,7 +319,7 @@ export const QuestionReview = () => {
                   {totalQuestions} Questions Approved ({totalMarks} Total Marks)
                 </p>
                 <p className="text-[11px] text-slate-400">
-                  Ready for Phase 6 RAG Answer Generation using linked resources
+                  Ready for AI Answer Generation using linked study resources
                 </p>
               </div>
             </div>

@@ -239,7 +239,7 @@ export const ProfileSettings = () => {
                   </span>
                 </div>
                 <div className="flex items-center justify-between rounded-xl bg-slate-900/60 p-3 border border-slate-800/60">
-                  <span className="text-slate-300">RAG Generation & Phase 7 Review</span>
+                  <span className="text-slate-300">RAG Generation & AI Academic Review</span>
                   <span className={user.has_openai_key ? 'text-emerald-400 font-bold' : 'text-amber-400 font-semibold'}>
                     {user.has_openai_key ? 'Unlocked' : 'Requires API Key'}
                   </span>

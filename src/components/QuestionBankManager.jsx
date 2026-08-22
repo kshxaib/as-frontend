@@ -115,7 +115,7 @@ export const QuestionBankManager = () => {
           <div>
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-indigo-400">
               <Layers className="h-4 w-4" />
-              Phase 4 Workspace
+              Exam Paper Management
             </div>
             <h1 className="mt-1 text-2xl font-bold tracking-tight text-white sm:text-3xl">
               Question Banks & AI Extraction

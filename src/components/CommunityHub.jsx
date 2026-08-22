@@ -63,7 +63,7 @@ export const CommunityHub = () => {
           <div>
             <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-emerald-400">
               <Globe className="h-4 w-4" />
-              Phase 10 & 11 Community Hub
+              Community Knowledge Hub
             </div>
             <h1 className="mt-1 text-2xl font-bold tracking-tight text-white sm:text-3xl">
               Shared Academic Knowledge & Solved Papers

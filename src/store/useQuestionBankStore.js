@@ -296,7 +296,7 @@ export const useQuestionBankStore = create((set, get) => ({
         currentAnswerSet: res.data,
         isGeneratingAnswers: false,
         activeTab: 'solutions',
-        successMessage: `Successfully generated ${res.data.completed_questions} answers with Phase 7 AI Review & citations!`,
+        successMessage: `Successfully generated ${res.data.completed_questions} answers with AI Review & citations!`,
       });
     } catch (err) {
       const msg = err.response?.data?.detail || 'Answer generation failed. Verify Qdrant indexing & OpenAI key.';
