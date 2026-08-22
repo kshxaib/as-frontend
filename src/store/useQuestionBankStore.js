@@ -1,26 +1,142 @@
 import { create } from 'zustand';
 import api from '../api/client';
+import { useAuthStore } from './useAuthStore';
 
 export const useQuestionBankStore = create((set, get) => ({
+  activeTab: 'resources', // 'resources' | 'question_banks' | 'review' | 'solutions' | 'community' | 'profile'
+  setActiveTab: (tab) => set({ activeTab: tab, error: null, successMessage: null }),
+
+  // Key Required Modal State
+  isKeyModalOpen: false,
+  keyModalFeature: '',
+  triggerKeyModal: (featureName) => set({ isKeyModalOpen: true, keyModalFeature: featureName }),
+  closeKeyModal: () => set({ isKeyModalOpen: false }),
+
+  // Resources State
+  resources: [],
+  isUploadingResource: false,
+  isIndexingResource: {},
+
+  // Question Banks State
   questionBanks: [],
   currentQuestionBank: null,
   questions: [],
+  isUploadingQuestionBank: false,
+  isExtracting: false,
+
+  // Answer Sets State
   currentAnswerSet: null,
   answerSetsList: [],
-  activeTab: 'review', // 'review' | 'solutions'
-  isLoading: false,
-  isExtracting: false,
   isGeneratingAnswers: false,
+  isRetryingAnswer: {},
+
+  // Community Hub State
+  communityResources: [],
+  communityAnswerSets: [],
+  isLoadingCommunity: false,
+
+  // General Status
+  isLoading: false,
   error: null,
   successMessage: null,
 
-  setActiveTab: (tab) => set({ activeTab: tab }),
+  // Clear feedback messages
+  clearFeedback: () => set({ error: null, successMessage: null }),
 
-  // Fetch all question banks
-  fetchQuestionBanks: async (userId = null) => {
+  // ----------------------------------------------------
+  // Resources Operations (Phase 2 & 3)
+  // ----------------------------------------------------
+  fetchResources: async () => {
     set({ isLoading: true, error: null });
     try {
-      const params = userId ? { user_id: userId } : {};
+      const user = useAuthStore.getState().user;
+      const params = user ? { user_id: user.id } : {};
+      const res = await api.get('/resources', { params });
+      set({ resources: res.data.resources || [], isLoading: false });
+    } catch (err) {
+      set({
+        error: err.response?.data?.detail || 'Failed to fetch study resources',
+        isLoading: false,
+      });
+    }
+  },
+
+  uploadResource: async (formData) => {
+    set({ isUploadingResource: true, error: null, successMessage: null });
+    try {
+      const res = await api.post('/resources', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      set((state) => ({
+        resources: [res.data, ...state.resources],
+        isUploadingResource: false,
+        successMessage: `Resource "${res.data.name}" uploaded successfully!`,
+      }));
+      return { success: true, resource: res.data };
+    } catch (err) {
+      const msg = err.response?.data?.detail || 'Failed to upload study resource';
+      set({ error: msg, isUploadingResource: false });
+      return { success: false, error: msg };
+    }
+  },
+
+  indexResource: async (resourceId) => {
+    const user = useAuthStore.getState().user;
+    if (!user?.has_openai_key) {
+      get().triggerKeyModal('Resource Vector Indexing (Qdrant & Embeddings)');
+      return;
+    }
+
+    set((state) => ({
+      isIndexingResource: { ...state.isIndexingResource, [resourceId]: true },
+      error: null,
+      successMessage: null,
+    }));
+
+    try {
+      const res = await api.post(`/resources/${resourceId}/index`);
+      set((state) => ({
+        resources: state.resources.map((r) =>
+          r.id === resourceId ? { ...r, status: 'indexed' } : r
+        ),
+        isIndexingResource: { ...state.isIndexingResource, [resourceId]: false },
+        successMessage: `Resource indexed! ${res.data.chunks_indexed || 0} searchable vectors embedded into Qdrant.`,
+      }));
+    } catch (err) {
+      const msg = err.response?.data?.detail || 'Indexing failed. Verify your OpenAI API key.';
+      if (msg.toLowerCase().includes('openai api key') || err.response?.status === 400) {
+        get().triggerKeyModal('Resource Vector Indexing');
+      }
+      set((state) => ({
+        resources: state.resources.map((r) =>
+          r.id === resourceId ? { ...r, status: 'indexing_failed' } : r
+        ),
+        isIndexingResource: { ...state.isIndexingResource, [resourceId]: false },
+        error: msg,
+      }));
+    }
+  },
+
+  deleteResource: async (resourceId) => {
+    try {
+      await api.delete(`/resources/${resourceId}`);
+      set((state) => ({
+        resources: state.resources.filter((r) => r.id !== resourceId),
+        successMessage: 'Resource deleted successfully.',
+      }));
+    } catch (err) {
+      set({ error: err.response?.data?.detail || 'Failed to delete resource.' });
+    }
+  },
+
+  // ----------------------------------------------------
+  // Question Bank Operations (Phase 4 & 5)
+  // ----------------------------------------------------
+  fetchQuestionBanks: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const user = useAuthStore.getState().user;
+      const params = user ? { user_id: user.id } : {};
       const res = await api.get('/question-banks', { params });
       const banks = res.data.question_banks || [];
       set({ questionBanks: banks, isLoading: false });
@@ -35,7 +151,27 @@ export const useQuestionBankStore = create((set, get) => ({
     }
   },
 
-  // Select a question bank and load its questions and existing answer sets
+  uploadQuestionBank: async (formData) => {
+    set({ isUploadingQuestionBank: true, error: null, successMessage: null });
+    try {
+      const res = await api.post('/question-banks', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      set((state) => ({
+        questionBanks: [res.data, ...state.questionBanks],
+        isUploadingQuestionBank: false,
+        currentQuestionBank: res.data,
+        successMessage: `Question Bank "${res.data.name}" created!`,
+      }));
+      await get().selectQuestionBank(res.data.id);
+      return { success: true, questionBank: res.data };
+    } catch (err) {
+      const msg = err.response?.data?.detail || 'Failed to upload question bank';
+      set({ error: msg, isUploadingQuestionBank: false });
+      return { success: false, error: msg };
+    }
+  },
+
   selectQuestionBank: async (id) => {
     set({ isLoading: true, error: null });
     try {
@@ -68,8 +204,13 @@ export const useQuestionBankStore = create((set, get) => ({
     }
   },
 
-  // Trigger AI extraction for current question bank
   extractQuestions: async (id) => {
+    const user = useAuthStore.getState().user;
+    if (!user?.has_openai_key) {
+      get().triggerKeyModal('AI Question Bank Extraction (LLM)');
+      return;
+    }
+
     set({ isExtracting: true, error: null, successMessage: null });
     try {
       const res = await api.post(`/question-banks/${id}/extract`);
@@ -79,14 +220,17 @@ export const useQuestionBankStore = create((set, get) => ({
         successMessage: `Successfully extracted ${res.data.questions_extracted || 0} questions!`,
       });
     } catch (err) {
+      const msg = err.response?.data?.detail || 'Extraction failed. Make sure OpenAI API key is valid.';
+      if (msg.toLowerCase().includes('openai api key') || err.response?.status === 400) {
+        get().triggerKeyModal('AI Question Bank Extraction');
+      }
       set({
-        error: err.response?.data?.detail || 'Extraction failed. Make sure OpenAI API key is valid.',
+        error: msg,
         isExtracting: false,
       });
     }
   },
 
-  // Add a manual question
   addQuestion: async (questionBankId, questionData) => {
     set({ isLoading: true, error: null });
     try {
@@ -104,7 +248,6 @@ export const useQuestionBankStore = create((set, get) => ({
     }
   },
 
-  // Update a question (text and/or marks)
   updateQuestion: async (questionId, updateData) => {
     try {
       const res = await api.put(`/questions/${questionId}`, updateData);
@@ -119,7 +262,6 @@ export const useQuestionBankStore = create((set, get) => ({
     }
   },
 
-  // Delete a single question
   deleteQuestion: async (questionId) => {
     try {
       await api.delete(`/questions/${questionId}`);
@@ -134,31 +276,54 @@ export const useQuestionBankStore = create((set, get) => ({
     }
   },
 
-  // Phase 6: Generate Full Answer Set using RAG
+  // ----------------------------------------------------
+  // Answer Generation & Solutions (Phase 6, 7, 8)
+  // ----------------------------------------------------
   generateAnswers: async (questionBankId) => {
+    const user = useAuthStore.getState().user;
+    if (!user?.has_openai_key) {
+      get().triggerKeyModal('RAG Answer Generation & AI Review');
+      return;
+    }
+
     set({ isGeneratingAnswers: true, error: null, successMessage: null });
     try {
       const res = await api.post('/answer-sets/generate', {
         question_bank_id: questionBankId,
+        user_id: user?.id,
       });
       set({
         currentAnswerSet: res.data,
         isGeneratingAnswers: false,
         activeTab: 'solutions',
-        successMessage: `Successfully generated ${res.data.completed_questions} answers with citations!`,
+        successMessage: `Successfully generated ${res.data.completed_questions} answers with Phase 7 AI Review & citations!`,
       });
     } catch (err) {
+      const msg = err.response?.data?.detail || 'Answer generation failed. Verify Qdrant indexing & OpenAI key.';
+      if (msg.toLowerCase().includes('openai api key') || err.response?.status === 400) {
+        get().triggerKeyModal('RAG Answer Generation');
+      }
       set({
-        error: err.response?.data?.detail || 'Answer generation failed. Verify Qdrant indexing & OpenAI API key.',
+        error: msg,
         isGeneratingAnswers: false,
       });
     }
   },
 
-  // Phase 6: Retry a single answer
   retryAnswer: async (answerId) => {
+    const user = useAuthStore.getState().user;
+    if (!user?.has_openai_key) {
+      get().triggerKeyModal('Answer Regeneration');
+      return;
+    }
+
+    set((state) => ({
+      isRetryingAnswer: { ...state.isRetryingAnswer, [answerId]: true },
+      error: null,
+    }));
+
     try {
-      const res = await api.put ? api.post(`/answers/${answerId}/retry`) : api.post(`/answers/${answerId}/retry`);
+      const res = await api.post(`/answers/${answerId}/retry`);
       set((state) => {
         if (!state.currentAnswerSet) return state;
         const updatedAnswers = state.currentAnswerSet.answers.map((a) =>
@@ -169,16 +334,80 @@ export const useQuestionBankStore = create((set, get) => ({
             ...state.currentAnswerSet,
             answers: updatedAnswers,
           },
-          successMessage: 'Answer regenerated successfully!',
+          isRetryingAnswer: { ...state.isRetryingAnswer, [answerId]: false },
+          successMessage: 'Answer regenerated with AI Reviewer!',
         };
       });
     } catch (err) {
+      const msg = err.response?.data?.detail || 'Failed to retry answer';
+      if (msg.toLowerCase().includes('openai api key') || err.response?.status === 400) {
+        get().triggerKeyModal('Answer Regeneration');
+      }
+      set((state) => ({
+        isRetryingAnswer: { ...state.isRetryingAnswer, [answerId]: false },
+        error: msg,
+      }));
+    }
+  },
+
+  downloadSolvedPdf: (answerSetId) => {
+    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+    window.open(`${baseUrl}/answer-sets/${answerSetId}/pdf`, '_blank');
+  },
+
+  // ----------------------------------------------------
+  // Community Hub Operations (Phase 10 & 11)
+  // ----------------------------------------------------
+  fetchCommunityData: async () => {
+    set({ isLoadingCommunity: true, error: null });
+    try {
+      const [resResources, resAnswerSets] = await Promise.all([
+        api.get('/community/resources'),
+        api.get('/community/answer-sets'),
+      ]);
       set({
-        error: err.response?.data?.detail || 'Failed to retry answer',
+        communityResources: resResources.data.resources || [],
+        communityAnswerSets: resAnswerSets.data.answer_sets || [],
+        isLoadingCommunity: false,
+      });
+    } catch (err) {
+      set({
+        error: err.response?.data?.detail || 'Failed to load community hub data',
+        isLoadingCommunity: false,
       });
     }
   },
 
-  // Clear messages
-  clearFeedback: () => set({ error: null, successMessage: null }),
+  toggleResourceShare: async (resourceId) => {
+    try {
+      const res = await api.post(`/community/resources/${resourceId}/share`);
+      set((state) => ({
+        resources: state.resources.map((r) =>
+          r.id === resourceId ? { ...r, visibility: res.data.visibility } : r
+        ),
+        successMessage: `Resource visibility changed to ${res.data.visibility}`,
+      }));
+      get().fetchCommunityData();
+    } catch (err) {
+      set({ error: err.response?.data?.detail || 'Failed to toggle resource sharing.' });
+    }
+  },
+
+  toggleAnswerSetShare: async (answerSetId) => {
+    try {
+      const res = await api.post(`/community/answer-sets/${answerSetId}/share`);
+      set((state) => {
+        const updatedCurrent = state.currentAnswerSet?.id === answerSetId
+          ? { ...state.currentAnswerSet, visibility: res.data.visibility }
+          : state.currentAnswerSet;
+        return {
+          currentAnswerSet: updatedCurrent,
+          successMessage: `Answer set visibility changed to ${res.data.visibility}`,
+        };
+      });
+      get().fetchCommunityData();
+    } catch (err) {
+      set({ error: err.response?.data?.detail || 'Failed to toggle answer set sharing.' });
+    }
+  },
 }));
