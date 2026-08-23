@@ -297,27 +297,22 @@ export const QuestionBankManager = () => {
         {/* Upload Modal */}
         {isUploadModalOpen && (
           <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[var(--overlay)] p-4 pt-16 sm:pt-24 backdrop-blur-sm animate-in fade-in duration-150">
-            <div className="relative w-full max-w-lg rounded-[20px] border border-[var(--border)] bg-[var(--surface-elevated)] p-6 sm:p-7 shadow-[var(--shadow-lg)]">
+            <div className="relative w-full max-w-lg rounded-[16px] border border-[var(--border)] bg-[var(--surface-elevated)] p-6 sm:p-7 shadow-[var(--shadow-lg)]">
               
               <button
                 onClick={() => setIsUploadModalOpen(false)}
-                className="absolute right-4 top-4 rounded-[8px] p-2 text-[var(--text-muted)] hover:bg-[var(--surface-well)] hover:text-[var(--text-primary)] transition-colors"
+                className="absolute right-4 top-4 rounded-[6px] p-1.5 text-[var(--text-muted)] hover:bg-[var(--surface-well)] hover:text-[var(--text-primary)] transition-colors"
               >
                 <X className="h-4 w-4 stroke-[1.5]" />
               </button>
 
-              <div className="flex items-start gap-3.5 mb-5">
-                <div className="flex h-10 w-10 items-center justify-center rounded-[10px] border border-[var(--border)] bg-[var(--surface-well)] text-[var(--primary)] shrink-0">
-                  <FileText className="h-5 w-5 stroke-[1.5]" />
-                </div>
-                <div>
-                  <h3 className="font-display text-lg font-normal text-[var(--text-primary)] tracking-tight">
-                    Upload Question Bank PDF
-                  </h3>
-                  <p className="mt-0.5 text-xs text-[var(--text-muted)]">
-                    Link specific study resources to ground the examination answer generation pipeline.
-                  </p>
-                </div>
+              <div className="pb-4 border-b border-[var(--border-subtle)] pr-6 mb-5">
+                <h3 className="font-display text-lg font-normal text-[var(--text-primary)] tracking-tight">
+                  Upload Question Bank PDF
+                </h3>
+                <p className="mt-1 text-xs text-[var(--text-muted)]">
+                  Link specific study resources to ground the examination answer generation pipeline.
+                </p>
               </div>
 
               <form onSubmit={handleUploadSubmit} className="space-y-4">
