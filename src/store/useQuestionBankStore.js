@@ -43,6 +43,12 @@ export const useQuestionBankStore = create((set, get) => ({
   communityAnswerSets: [],
   isLoadingCommunity: false,
 
+  // Community Answer Viewer State
+  communityViewerOpen: false,
+  communityViewerMeta: null,   // { answer_set_id, question_bank_name, subject, author_name, total_questions, created_at }
+  communityViewerAnswers: [],
+  isLoadingCommunityViewer: false,
+
   // Helper: check if user has configured ALL 4 required free AI keys (Gemini, Groq, Cerebras, NVIDIA)
   hasAllRequiredKeys: () => {
     const user = useAuthStore.getState().user;
@@ -499,4 +505,42 @@ export const useQuestionBankStore = create((set, get) => ({
       set({ error: err.response?.data?.detail || 'Failed to toggle answer set sharing.' });
     }
   },
-}));
+
+  // ----------------------------------------------------
+  // Community Answer Viewer Actions
+  // ----------------------------------------------------
+  openCommunityViewer: async (answerSetId) => {
+    set({ communityViewerOpen: true, isLoadingCommunityViewer: true, communityViewerAnswers: [], communityViewerMeta: null });
+    try {
+      const res = await api.get(`/community/answer-sets/${answerSetId}/answers`);
+      const data = res.data;
+      set({
+        communityViewerMeta: {
+          answer_set_id: data.answer_set_id,
+          question_bank_name: data.question_bank_name,
+          subject: data.subject,
+          author_name: data.author_name,
+          total_questions: data.total_questions,
+          completed_questions: data.completed_questions,
+          created_at: data.created_at,
+        },
+        communityViewerAnswers: data.answers || [],
+        isLoadingCommunityViewer: false,
+      });
+    } catch (err) {
+      set({
+        error: err.response?.data?.detail || 'Failed to load solved answers.',
+        isLoadingCommunityViewer: false,
+        communityViewerOpen: false,
+      });
+    }
+  },
+
+  closeCommunityViewer: () => {
+    set({
+      communityViewerOpen: false,
+      communityViewerMeta: null,
+      communityViewerAnswers: [],
+    });
+  },
+}));

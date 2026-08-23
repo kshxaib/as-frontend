@@ -58,13 +58,14 @@ function formatMarkdownMath(content) {
   return processed.join('').trim();
 }
 
-export const AnswerCard = ({ answer, index }) => {
+export const AnswerCard = ({ answer, index, readOnly = false }) => {
   const { retryAnswer } = useQuestionBankStore();
   const [isRetrying, setIsRetrying] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isRetryConfirmOpen, setIsRetryConfirmOpen] = useState(false);
 
   const handleRetry = async () => {
+    if (readOnly) return;
     setIsRetryConfirmOpen(false);
     setIsRetrying(true);
     await retryAnswer(answer.id);
@@ -113,15 +114,17 @@ export const AnswerCard = ({ answer, index }) => {
 
           {/* Controls */}
           <div className="flex items-center gap-1.5 shrink-0">
-            <button
-              onClick={() => setIsRetryConfirmOpen(true)}
-              disabled={isRetrying}
-              className="flex items-center gap-1 rounded-[6px] border border-[rgba(245,158,11,0.3)] bg-[rgba(245,158,11,0.08)] px-2.5 py-1 font-mono text-[11px] font-medium text-[var(--ai)] hover:bg-[rgba(245,158,11,0.15)] transition-all disabled:opacity-40"
-              title="Regenerate this answer"
-            >
-              <RefreshCw className={`h-3 w-3 stroke-[1.5] ${isRetrying ? 'animate-spin' : ''}`} />
-              <span className="hidden sm:inline">Regenerate</span>
-            </button>
+            {!readOnly && (
+              <button
+                onClick={() => setIsRetryConfirmOpen(true)}
+                disabled={isRetrying}
+                className="flex items-center gap-1 rounded-[6px] border border-[rgba(245,158,11,0.3)] bg-[rgba(245,158,11,0.08)] px-2.5 py-1 font-mono text-[11px] font-medium text-[var(--ai)] hover:bg-[rgba(245,158,11,0.15)] transition-all disabled:opacity-40"
+                title="Regenerate this answer"
+              >
+                <RefreshCw className={`h-3 w-3 stroke-[1.5] ${isRetrying ? 'animate-spin' : ''}`} />
+                <span className="hidden sm:inline">Regenerate</span>
+              </button>
+            )}
             <button
               onClick={() => setIsCollapsed(!isCollapsed)}
               className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] p-1 text-[var(--text-muted)] hover:text-[var(--text-primary)]"
@@ -131,6 +134,7 @@ export const AnswerCard = ({ answer, index }) => {
             </button>
           </div>
         </div>
+
 
         {/* Answer Content */}
         {!isCollapsed && (

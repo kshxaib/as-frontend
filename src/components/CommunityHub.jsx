@@ -9,10 +9,12 @@ import {
   User,
   Calendar,
   Layers,
+  Eye,
 } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
 import { StatusBadge } from './ui/StatusBadge';
 import { EmptyState } from './ui/EmptyState';
+import { CommunityAnswerViewer } from './CommunityAnswerViewer';
 
 export const CommunityHub = () => {
   const {
@@ -22,6 +24,7 @@ export const CommunityHub = () => {
     fetchCommunityData,
     downloadSolvedPdf,
     downloadResourceFile,
+    openCommunityViewer,
   } = useQuestionBankStore();
 
   const [activeSubTab, setActiveSubTab] = useState('resources'); // 'resources' | 'solved_sets'
@@ -246,23 +249,33 @@ export const CommunityHub = () => {
                       </div>
                     </div>
 
-                    <div className="mt-5 flex items-center justify-between border-t border-[var(--border-subtle)] pt-3">
-                      <span className="font-mono text-[10px] text-[var(--text-muted)]">
+                    <div className="mt-5 flex items-center justify-between border-t border-[var(--border-subtle)] pt-3 gap-2">
+                      <span className="font-mono text-[10px] text-[var(--text-muted)] shrink-0">
                         {new Date(set.created_at).toLocaleDateString()}
                       </span>
 
-                      <button
-                        onClick={() =>
-                          downloadSolvedPdf(
-                            set.id,
-                            `AcademicStack_${(set.subject || 'Subject').replace(/\s+/g, '_')}_${(set.question_bank_name || 'Solved_QB').replace(/\s+/g, '_')}.pdf`
-                          )
-                        }
-                        className="inline-flex items-center gap-1.5 rounded-[6px] bg-[var(--community)] px-3 py-1 font-mono text-[11px] font-semibold text-[var(--community-foreground)] hover:opacity-90 transition-all shadow-xs"
-                      >
-                        <Download className="h-3 w-3 stroke-[2]" />
-                        <span>Download PDF</span>
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => openCommunityViewer(set.id)}
+                          className="inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface-well)] px-2.5 py-1 font-mono text-[11px] font-medium text-[var(--text-primary)] hover:bg-[var(--surface-muted)] hover:border-[var(--primary)] transition-all"
+                        >
+                          <Eye className="h-3 w-3 stroke-[1.5] text-[var(--primary)]" />
+                          <span>View Answers</span>
+                        </button>
+
+                        <button
+                          onClick={() =>
+                            downloadSolvedPdf(
+                              set.id,
+                              `AcademicStack_${(set.subject || 'Subject').replace(/\s+/g, '_')}_${(set.question_bank_name || 'Solved_QB').replace(/\s+/g, '_')}.pdf`
+                            )
+                          }
+                          className="inline-flex items-center gap-1.5 rounded-[6px] bg-[var(--community)] px-2.5 py-1 font-mono text-[11px] font-semibold text-[var(--community-foreground)] hover:opacity-90 transition-all shadow-xs"
+                        >
+                          <Download className="h-3 w-3 stroke-[2]" />
+                          <span>Download PDF</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -277,6 +290,10 @@ export const CommunityHub = () => {
           )}
         </div>
       </div>
+
+      {/* In-Browser Solved Answers Viewer Modal */}
+      <CommunityAnswerViewer />
     </div>
   );
 };
+
