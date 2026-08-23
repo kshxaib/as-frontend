@@ -1,11 +1,10 @@
 import React from 'react';
 import {
   AlertTriangle,
-  Sparkles,
+  FileQuestion,
   Trash2,
   LogOut,
   RefreshCw,
-  HelpCircle,
   X,
   Loader2,
 } from 'lucide-react';
@@ -27,84 +26,86 @@ export const ConfirmationModal = ({
   const renderIcon = () => {
     switch (iconType) {
       case 'trash':
-        return <Trash2 className="h-6 w-6 text-rose-400" />;
+        return <Trash2 className="h-5 w-5 text-[var(--error)] stroke-[1.5]" />;
       case 'sparkles':
-        return <Sparkles className="h-6 w-6 text-indigo-400" />;
+      case 'ai':
+        return <FileQuestion className="h-5 w-5 text-[var(--ai)] stroke-[1.5]" />;
       case 'logout':
-        return <LogOut className="h-6 w-6 text-amber-400" />;
+        return <LogOut className="h-5 w-5 text-[var(--warning)] stroke-[1.5]" />;
       case 'refresh':
-        return <RefreshCw className="h-6 w-6 text-cyan-400" />;
+        return <RefreshCw className="h-5 w-5 text-[var(--primary)] stroke-[1.5]" />;
       case 'alert':
       default:
-        return <AlertTriangle className="h-6 w-6 text-amber-400" />;
+        return <AlertTriangle className="h-5 w-5 text-[var(--warning)] stroke-[1.5]" />;
     }
   };
 
   const getIconBg = () => {
     switch (iconType) {
       case 'trash':
-        return 'bg-rose-500/10 border-rose-500/20';
+        return 'bg-[rgba(248,113,113,0.1)] border-[rgba(248,113,113,0.25)]';
       case 'sparkles':
-        return 'bg-indigo-500/10 border-indigo-500/20';
+      case 'ai':
+        return 'bg-[rgba(245,158,11,0.1)] border-[rgba(245,158,11,0.25)]';
       case 'logout':
-        return 'bg-amber-500/10 border-amber-500/20';
+        return 'bg-[rgba(224,169,43,0.1)] border-[rgba(224,169,43,0.25)]';
       case 'refresh':
-        return 'bg-cyan-500/10 border-cyan-500/20';
+        return 'bg-[rgba(20,184,166,0.1)] border-[rgba(20,184,166,0.25)]';
       default:
-        return 'bg-amber-500/10 border-amber-500/20';
+        return 'bg-[rgba(224,169,43,0.1)] border-[rgba(224,169,43,0.25)]';
     }
   };
 
   const getConfirmButtonClasses = () => {
     switch (confirmVariant) {
       case 'danger':
-        return 'bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white shadow-lg shadow-rose-500/25';
+        return 'bg-[var(--error)] text-[var(--error-foreground)] hover:opacity-90 shadow-sm';
       case 'warning':
-        return 'bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white shadow-lg shadow-amber-500/25';
+        return 'bg-[var(--warning)] text-[var(--warning-foreground)] hover:opacity-90 shadow-sm';
       case 'emerald':
-        return 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg shadow-emerald-500/25';
+        return 'bg-[var(--success)] text-[var(--success-foreground)] hover:opacity-90 shadow-sm';
       case 'primary':
       default:
-        return 'bg-gradient-to-r from-indigo-600 to-cyan-600 hover:from-indigo-500 hover:to-cyan-500 text-white shadow-lg shadow-indigo-500/25';
+        return 'bg-[var(--primary)] text-[var(--primary-foreground)] hover:opacity-90 shadow-sm';
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-slate-950/80 p-4 pt-20 sm:pt-28 backdrop-blur-md animate-in fade-in duration-150">
-      <div className="relative w-full max-w-md rounded-3xl border border-slate-800 bg-gradient-to-b from-slate-900 via-slate-900 to-slate-950 p-6 sm:p-7 shadow-2xl shadow-black/60">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[var(--overlay)] p-4 pt-20 sm:pt-28 backdrop-blur-sm animate-in fade-in duration-150">
+      <div className="relative w-full max-w-md rounded-[20px] border border-[var(--border)] bg-[var(--surface-elevated)] p-6 sm:p-7 shadow-[var(--shadow-lg)]">
         
         {/* Close Button */}
         {!isLoading && (
           <button
             onClick={onCancel}
-            className="absolute right-4 top-4 rounded-xl p-2 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
+            className="absolute right-4 top-4 rounded-[8px] p-2 text-[var(--text-muted)] hover:bg-[var(--surface-well)] hover:text-[var(--text-primary)] transition-colors"
           >
-            <X className="h-5 w-5" />
+            <X className="h-4 w-4 stroke-[1.5]" />
           </button>
         )}
 
         {/* Icon & Title */}
         <div className="flex items-start gap-4">
-          <div className={`flex h-12 w-12 items-center justify-center rounded-2xl border ${getIconBg()} shrink-0`}>
+          <div className={`flex h-11 w-11 items-center justify-center rounded-[12px] border ${getIconBg()} shrink-0 mt-0.5`}>
             {renderIcon()}
           </div>
           <div>
-            <h3 className="text-lg font-bold text-white tracking-tight">
+            <h3 className="font-display text-lg font-normal text-[var(--text-primary)] tracking-tight">
               {title}
             </h3>
-            <p className="mt-1.5 text-xs text-slate-400 leading-relaxed">
+            <p className="mt-1.5 text-xs text-[var(--text-muted)] leading-relaxed">
               {message}
             </p>
           </div>
         </div>
 
         {/* Action Buttons */}
-        <div className="mt-6 flex items-center justify-end gap-3 pt-4 border-t border-slate-800/80">
+        <div className="mt-6 flex items-center justify-end gap-3 pt-4 border-t border-[var(--border-subtle)]">
           <button
             type="button"
             onClick={onCancel}
             disabled={isLoading}
-            className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-2.5 text-xs font-semibold text-slate-300 hover:bg-slate-800 hover:text-white transition-all disabled:opacity-50"
+            className="rounded-[8px] border border-[var(--border)] bg-[var(--surface-well)] px-4 py-2 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)] transition-all disabled:opacity-50"
           >
             {cancelText}
           </button>
@@ -113,7 +114,7 @@ export const ConfirmationModal = ({
             type="button"
             onClick={onConfirm}
             disabled={isLoading}
-            className={`inline-flex items-center gap-2 rounded-xl px-5 py-2.5 text-xs font-bold transition-all disabled:opacity-50 ${getConfirmButtonClasses()}`}
+            className={`inline-flex items-center gap-2 rounded-[8px] px-5 py-2 text-xs font-semibold transition-all disabled:opacity-50 ${getConfirmButtonClasses()}`}
           >
             {isLoading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
             <span>{isLoading ? 'Processing...' : confirmText}</span>

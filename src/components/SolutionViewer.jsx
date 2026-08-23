@@ -1,24 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import {
   FileCheck2,
-  Sparkles,
   RefreshCw,
   Search,
   BookOpen,
-  ArrowLeft,
-  Award,
   Download,
   Share2,
   CheckCircle2,
   AlertCircle,
   Layers,
-  ChevronRight,
-  FileText,
+  Workflow,
+  Check,
 } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
 import { AnswerCard } from './AnswerCard';
 import { ConfirmationModal } from './ConfirmationModal';
 import { AiProgressModal } from './AiProgressModal';
+import { StatusBadge } from './ui/StatusBadge';
+import { EmptyState } from './ui/EmptyState';
 
 export const SolutionViewer = () => {
   const {
@@ -71,22 +70,15 @@ export const SolutionViewer = () => {
   // If no Question Banks at all in user's account
   if (!isLoading && questionBanks.length === 0) {
     return (
-      <div className="min-h-screen bg-slate-950 pb-24 text-slate-100">
+      <div className="min-h-screen bg-[var(--background)] pb-24 text-[var(--text-primary)]">
         <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 text-center">
-          <div className="mx-auto max-w-md rounded-3xl border border-dashed border-slate-800 bg-slate-900/40 p-12">
-            <BookOpen className="mx-auto h-12 w-12 text-slate-600 mb-4" />
-            <h3 className="text-lg font-bold text-slate-200">No Question Banks Available</h3>
-            <p className="mt-2 text-xs text-slate-400">
-              Upload a question bank PDF in the Question Banks section to extract questions and generate answers.
-            </p>
-            <button
-              onClick={() => setActiveTab('question_banks')}
-              className="mt-6 inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-semibold text-white shadow-lg shadow-indigo-500/25 hover:bg-indigo-500"
-            >
-              <FileText className="h-4 w-4" />
-              <span>Go to Question Banks</span>
-            </button>
-          </div>
+          <EmptyState
+            icon={BookOpen}
+            title="No Question Banks Available"
+            description="Upload an examination paper in the Question Banks section to extract questions and synthesize grounded solutions."
+            actionText="Go to Question Banks"
+            onAction={() => setActiveTab('question_banks')}
+          />
         </div>
       </div>
     );
@@ -106,58 +98,58 @@ export const SolutionViewer = () => {
   const isShared = currentAnswerSet?.visibility === 'community';
 
   return (
-    <div className="min-h-screen bg-slate-950 pb-24 text-slate-100">
+    <div className="min-h-screen bg-[var(--background)] pb-24 text-[var(--text-primary)]">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
         
         {/* Feedback Alert Banners */}
         {error && (
-          <div className="mb-6 flex items-center justify-between rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-xs text-rose-300 backdrop-blur-md">
+          <div className="mb-6 flex items-center justify-between rounded-[8px] border border-[rgba(239,68,68,0.25)] bg-[rgba(239,68,68,0.08)] p-3.5 text-xs text-[var(--error)]">
             <div className="flex items-center gap-2.5">
-              <AlertCircle className="h-5 w-5 text-rose-400 shrink-0" />
+              <AlertCircle className="h-4 w-4 shrink-0" />
               <span>{error}</span>
             </div>
-            <button onClick={clearFeedback} className="text-xs text-rose-400 hover:underline">Dismiss</button>
+            <button onClick={clearFeedback} className="text-xs hover:underline font-mono">Dismiss</button>
           </div>
         )}
 
         {successMessage && (
-          <div className="mb-6 flex items-center justify-between rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-xs text-emerald-300 backdrop-blur-md">
+          <div className="mb-6 flex items-center justify-between rounded-[8px] border border-[rgba(34,197,94,0.25)] bg-[rgba(34,197,94,0.08)] p-3.5 text-xs text-[var(--success)]">
             <div className="flex items-center gap-2.5">
-              <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0" />
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
               <span>{successMessage}</span>
             </div>
-            <button onClick={clearFeedback} className="text-xs text-emerald-400 hover:underline">Dismiss</button>
+            <button onClick={clearFeedback} className="text-xs hover:underline font-mono">Dismiss</button>
           </div>
         )}
 
         {/* ── Top Bar: Navigation, Question Bank Switcher & Actions ── */}
-        <div className="flex flex-col gap-6 pb-8 border-b border-slate-800">
+        <div className="flex flex-col gap-6 pb-6 border-b border-[var(--border)]">
           
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
             <div>
-              <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-emerald-400">
-                <FileCheck2 className="h-4 w-4" />
-                Solved Question Banks & Solutions
-              </div>
-              <h1 className="mt-1 text-2xl font-bold tracking-tight text-white sm:text-3xl">
+              <span className="font-mono text-[11px] uppercase tracking-widest text-[var(--text-muted)] flex items-center gap-1.5 mb-1">
+                <FileCheck2 className="h-3.5 w-3.5 stroke-[1.5]" />
+                Solution Manuscript Reader
+              </span>
+              <h1 className="font-display text-2xl sm:text-3xl font-normal text-[var(--text-primary)] tracking-tight">
                 {currentQuestionBank ? currentQuestionBank.name : 'Select a Question Bank'}
               </h1>
               {currentQuestionBank && (
-                <p className="mt-1 text-sm text-slate-400">
-                  Subject: <span className="font-semibold text-slate-200">{currentQuestionBank.subject}</span> • RAG Verified Answers
+                <p className="mt-1 text-xs sm:text-sm text-[var(--text-secondary)]">
+                  Subject: <span className="font-semibold text-[var(--text-primary)]">{currentQuestionBank.subject}</span> · Grounded in linked study notes
                 </p>
               )}
             </div>
 
-            {/* Question Bank Selection Controls */}
+            {/* Selection & Actions */}
             <div className="flex flex-wrap items-center gap-3">
               {questionBanks.length > 0 && (
                 <div className="flex items-center gap-2">
-                  <span className="text-xs text-slate-400 font-medium hidden sm:inline">Select Bank:</span>
+                  <span className="font-mono text-[11px] text-[var(--text-muted)] uppercase hidden sm:inline">Bank:</span>
                   <select
                     value={currentQuestionBank?.id || ''}
                     onChange={(e) => selectQuestionBank(Number(e.target.value))}
-                    className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-2.5 text-xs font-semibold text-slate-200 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500 shadow-sm"
+                    className="rounded-[8px] border border-[var(--border)] bg-[var(--surface-well)] px-3 py-1.5 text-xs font-medium text-[var(--text-primary)] focus:border-[var(--primary)] focus:outline-none"
                   >
                     {questionBanks.map((qb) => (
                       <option key={qb.id} value={qb.id}>
@@ -171,9 +163,9 @@ export const SolutionViewer = () => {
               {currentQuestionBank && (
                 <button
                   onClick={() => setActiveTab('review')}
-                  className="flex items-center gap-1.5 rounded-xl border border-slate-800 bg-slate-900 px-3.5 py-2.5 text-xs font-semibold text-slate-300 hover:border-slate-700 hover:text-white transition-colors"
+                  className="inline-flex items-center gap-1.5 rounded-[8px] border border-[var(--border)] bg-[var(--surface-well)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--text-muted)] transition-colors"
                 >
-                  <Layers className="h-3.5 w-3.5 text-indigo-400" />
+                  <Layers className="h-3.5 w-3.5 stroke-[1.5]" />
                   <span>Review Questions</span>
                 </button>
               )}
@@ -183,25 +175,21 @@ export const SolutionViewer = () => {
           {/* Quick Bank Tabs Strip (if user has multiple question banks) */}
           {questionBanks.length > 1 && (
             <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-              <span className="text-xs text-slate-500 font-medium mr-1 whitespace-nowrap">Question Banks:</span>
+              <span className="font-mono text-[11px] text-[var(--text-muted)] uppercase mr-1 whitespace-nowrap">Archives:</span>
               {questionBanks.map((qb) => {
                 const isSelected = currentQuestionBank?.id === qb.id;
                 return (
                   <button
                     key={qb.id}
                     onClick={() => selectQuestionBank(qb.id)}
-                    className={`flex items-center gap-2 rounded-xl px-3.5 py-1.5 text-xs font-semibold whitespace-nowrap transition-all ${
+                    className={`flex items-center gap-2 rounded-[6px] px-3 py-1 font-mono text-xs transition-all ${
                       isSelected
-                        ? 'bg-gradient-to-r from-indigo-600 to-indigo-500 text-white shadow-md shadow-indigo-500/20'
-                        : 'border border-slate-800/80 bg-slate-900/60 text-slate-400 hover:border-slate-700 hover:text-slate-200'
+                        ? 'bg-[var(--sidebar-active-bg)] text-[var(--primary)] font-semibold border border-[rgba(20,184,166,0.3)]'
+                        : 'border border-[var(--border)] bg-[var(--surface-well)] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
                     }`}
                   >
                     <span>{qb.name}</span>
-                    <span className={`rounded-full px-1.5 py-0.2 text-[10px] font-bold ${
-                      isSelected ? 'bg-white/20 text-white' : 'bg-slate-800 text-slate-400'
-                    }`}>
-                      {qb.subject}
-                    </span>
+                    <span className="text-[10px] opacity-75">[{qb.subject}]</span>
                   </button>
                 );
               })}
@@ -211,7 +199,7 @@ export const SolutionViewer = () => {
           {/* Action Buttons Row */}
           {currentQuestionBank && (
             <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-              <div className="flex flex-wrap items-center gap-3">
+              <div className="flex flex-wrap items-center gap-2.5">
                 {currentAnswerSet && answers.length > 0 && (
                   <>
                     {/* Download PDF Button */}
@@ -222,23 +210,23 @@ export const SolutionViewer = () => {
                           `AcademicStack_${(currentQuestionBank?.subject || 'Subject').replace(/\s+/g, '_')}_${(currentQuestionBank?.name || 'QB').replace(/\s+/g, '_')}_Solved.pdf`
                         )
                       }
-                      className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-4 py-2.5 text-xs font-bold text-white shadow-lg shadow-emerald-500/20 hover:from-emerald-500 hover:to-teal-500 transition-all hover:scale-[1.02]"
+                      className="inline-flex items-center gap-2 rounded-[8px] bg-[var(--community)] px-3.5 py-1.5 text-xs font-semibold text-[var(--community-foreground)] hover:opacity-90 transition-all shadow-sm"
                     >
-                      <Download className="h-4 w-4" />
+                      <Download className="h-3.5 w-3.5 stroke-[2]" />
                       <span>Download Solved PDF</span>
                     </button>
 
                     {/* Share to Community */}
                     <button
                       onClick={() => toggleAnswerSetShare(currentAnswerSet.id)}
-                      className={`flex items-center gap-2 rounded-xl border px-3.5 py-2.5 text-xs font-semibold transition-all ${
+                      className={`inline-flex items-center gap-2 rounded-[8px] border px-3 py-1.5 text-xs font-medium transition-all ${
                         isShared
-                          ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20'
-                          : 'border-slate-700 bg-slate-800 text-slate-300 hover:bg-slate-700 hover:text-white'
+                          ? 'border-[rgba(200,168,32,0.3)] bg-[rgba(200,168,32,0.1)] text-[var(--community)]'
+                          : 'border-[var(--border)] bg-[var(--surface-well)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                       }`}
                     >
-                      <Share2 className="h-4 w-4" />
-                      <span>{isShared ? 'Shared in Community' : 'Share with Community'}</span>
+                      <Share2 className="h-3.5 w-3.5 stroke-[1.5]" />
+                      <span>{isShared ? 'Shared with The Commons' : 'Share with The Commons'}</span>
                     </button>
                   </>
                 )}
@@ -253,10 +241,10 @@ export const SolutionViewer = () => {
                   }
                 }}
                 disabled={isGeneratingAnswers}
-                className="flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-semibold text-white shadow-lg shadow-indigo-500/25 hover:bg-indigo-500 transition-all disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-[8px] border border-[rgba(245,158,11,0.3)] bg-[rgba(245,158,11,0.08)] px-3.5 py-1.5 font-mono text-xs font-medium text-[var(--ai)] hover:bg-[rgba(245,158,11,0.15)] transition-all disabled:opacity-40"
               >
-                <RefreshCw className={`h-4 w-4 ${isGeneratingAnswers ? 'animate-spin' : ''}`} />
-                <span>{isGeneratingAnswers ? 'Generating Answers...' : answers.length > 0 ? 'Regenerate Answers' : 'Generate Answers with AI'}</span>
+                <Workflow className={`h-3.5 w-3.5 stroke-[1.5] ${isGeneratingAnswers ? 'animate-spin' : ''}`} />
+                <span>{isGeneratingAnswers ? 'Synthesizing Answers...' : answers.length > 0 ? 'Regenerate Answers' : 'Generate Solutions (AI)'}</span>
               </button>
             </div>
           )}
@@ -264,68 +252,66 @@ export const SolutionViewer = () => {
 
         {/* ── Stats Strip ── */}
         {currentQuestionBank && answers.length > 0 && (
-          <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 backdrop-blur-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium uppercase tracking-wider text-slate-400">Solved Questions</span>
-                <FileCheck2 className="h-4 w-4 text-emerald-400" />
-              </div>
-              <p className="mt-2 text-3xl font-bold text-white">
-                {completedCount} <span className="text-lg font-normal text-slate-500">/ {answers.length}</span>
+          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div className="rounded-[10px] border border-[var(--border)] bg-[var(--surface-well)] p-4">
+              <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--text-muted)]">Completed Answers</span>
+              <p className="mt-1 font-mono text-2xl font-semibold text-[var(--text-primary)]">
+                {completedCount} <span className="text-sm font-normal text-[var(--text-muted)]">/ {answers.length}</span>
               </p>
+              <p className="mt-0.5 text-[11px] text-[var(--text-muted)]">Total questions solved</p>
             </div>
 
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 backdrop-blur-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium uppercase tracking-wider text-slate-400">Total Solved Marks</span>
-                <Award className="h-4 w-4 text-indigo-400" />
-              </div>
-              <p className="mt-2 text-3xl font-bold text-indigo-300">{totalMarksSolved} Marks</p>
+            <div className="rounded-[10px] border border-[var(--border)] bg-[var(--surface-well)] p-4">
+              <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--text-muted)]">Solved Points</span>
+              <p className="mt-1 font-mono text-2xl font-semibold text-[var(--primary)]">{totalMarksSolved} Marks</p>
+              <p className="mt-0.5 text-[11px] text-[var(--text-muted)]">Calculated question marks</p>
             </div>
 
-            <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 backdrop-blur-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium uppercase tracking-wider text-slate-400">AI Quality Check</span>
-                <Sparkles className="h-4 w-4 text-cyan-400" />
-              </div>
-              <p className="mt-2 text-sm font-semibold text-slate-200">AI Reviewer Active</p>
-              <p className="mt-0.5 text-xs text-slate-400">Grounded in: {currentQuestionBank.resource_ids || 'All Indexed Resources'}</p>
+            <div className="rounded-[10px] border border-[var(--border)] bg-[var(--surface-well)] p-4">
+              <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--text-muted)]">Grounded Pipeline</span>
+              <p className="mt-1 font-mono text-xs font-semibold text-[var(--text-primary)] flex items-center gap-1.5">
+                <span className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--success)]" />
+                <span>Vector RAG Grounded</span>
+              </p>
+              <p className="mt-0.5 font-mono text-[10px] text-[var(--text-muted)] truncate">
+                Linked: {currentQuestionBank.resource_ids || 'All Indexed Notes'}
+              </p>
             </div>
           </div>
         )}
 
         {/* ── Search Bar ── */}
         {answers.length > 0 && (
-          <div className="mt-8 flex items-center justify-between rounded-2xl border border-slate-800 bg-slate-900/40 p-3">
+          <div className="mt-6 flex items-center justify-between rounded-[10px] border border-[var(--border)] bg-[var(--surface-well)] p-3">
             <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-muted)]" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search solutions and key concepts..."
-                className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2 pl-10 pr-4 text-xs text-slate-200 placeholder-slate-500 focus:border-indigo-500 focus:outline-none"
+                placeholder="Search solutions by concept, keyword, or equation..."
+                className="w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] py-1.5 pl-9 pr-3 text-xs text-[var(--text-primary)] placeholder-[var(--text-disabled)] focus:border-[var(--primary)] focus:outline-none"
               />
             </div>
-            <span className="text-xs text-slate-400 hidden sm:inline mr-2">
+            <span className="font-mono text-[11px] text-[var(--text-muted)] hidden sm:inline mr-2">
               Showing {filteredAnswers.length} of {answers.length} Solutions
             </span>
           </div>
         )}
 
-        {/* ── Solutions List / Empty State ── */}
+        {/* ── Solutions List ── */}
         <div className="mt-6 space-y-6">
           {isLoading ? (
-            <div className="py-20 text-center text-slate-400">
-              <RefreshCw className="mx-auto h-8 w-8 animate-spin text-indigo-500 mb-2" />
-              <p className="text-xs">Loading answers for {currentQuestionBank?.name}...</p>
+            <div className="py-20 text-center text-[var(--text-muted)]">
+              <RefreshCw className="mx-auto h-6 w-6 animate-spin text-[var(--primary)] mb-2 stroke-[1.5]" />
+              <p className="font-mono text-xs">Loading solutions for {currentQuestionBank?.name}...</p>
             </div>
           ) : isGeneratingAnswers ? (
-            <div className="py-24 text-center rounded-3xl border border-dashed border-indigo-500/30 bg-indigo-500/5">
-              <RefreshCw className="mx-auto h-10 w-10 animate-spin text-indigo-400 mb-3" />
-              <h3 className="text-lg font-bold text-white">Generating & Reviewing Answers with OpenAI...</h3>
-              <p className="mt-1 text-xs text-slate-400 max-w-md mx-auto">
-                Retrieving vector contexts from Qdrant, drafting syllabus-calibrated answers, and passing through Senior AI Academic Review.
+            <div className="py-24 text-center rounded-[12px] border border-dashed border-[rgba(245,158,11,0.3)] bg-[rgba(245,158,11,0.04)]">
+              <RefreshCw className="mx-auto h-8 w-8 animate-spin text-[var(--ai)] mb-3 stroke-[1.5]" />
+              <h3 className="font-display text-lg font-normal text-[var(--text-primary)]">Synthesizing Examination Solutions...</h3>
+              <p className="mt-1 text-xs text-[var(--text-muted)] max-w-md mx-auto">
+                Retrieving vector contexts from Qdrant, drafting syllabus-calibrated answers, and passing through Academic Review.
               </p>
             </div>
           ) : filteredAnswers.length > 0 ? (
@@ -333,26 +319,18 @@ export const SolutionViewer = () => {
               <AnswerCard key={answer.id} answer={answer} index={index} />
             ))
           ) : (
-            <div className="py-20 text-center rounded-3xl border border-dashed border-slate-800 bg-slate-900/40">
-              <BookOpen className="mx-auto h-12 w-12 text-slate-600" />
-              <h3 className="mt-4 text-base font-semibold text-slate-300">
-                {currentQuestionBank
-                  ? `No Answers Generated for "${currentQuestionBank.name}" Yet`
-                  : 'No Answers Generated Yet'}
-              </h3>
-              <p className="mt-1 text-xs text-slate-500 max-w-md mx-auto">
-                Click "Generate Answers with AI" to generate syllabus-grounded, citation-backed answers using your linked study materials.
-              </p>
-              {currentQuestionBank && (
-                <button
-                  onClick={() => generateAnswers(currentQuestionBank.id)}
-                  className="mt-5 inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-semibold text-white shadow-lg shadow-indigo-500/25 hover:bg-indigo-500"
-                >
-                  <Sparkles className="h-4 w-4" />
-                  <span>Generate Answers with AI</span>
-                </button>
-              )}
-            </div>
+            <EmptyState
+              icon={BookOpen}
+              title={
+                currentQuestionBank
+                  ? `No Solutions Generated for "${currentQuestionBank.name}" Yet`
+                  : 'No Answers Generated Yet'
+              }
+              description="Click 'Generate Solutions' to synthesize complete, step-by-step examination solutions strictly grounded in your indexed study notes."
+              actionText="Generate Solutions (AI)"
+              actionVariant="amber"
+              onAction={() => currentQuestionBank && generateAnswers(currentQuestionBank.id)}
+            />
           )}
         </div>
 
@@ -365,7 +343,7 @@ export const SolutionViewer = () => {
             confirmText="Yes, Regenerate Answers"
             cancelText="Cancel"
             confirmVariant="warning"
-            iconType="sparkles"
+            iconType="ai"
             onConfirm={() => {
               setIsRegenerateConfirmOpen(false);
               generateAnswers(currentQuestionBank.id);
@@ -378,7 +356,7 @@ export const SolutionViewer = () => {
         <AiProgressModal
           isOpen={isGeneratingAnswers}
           type="generation"
-          title="Generating Exam Solutions with AI"
+          title="Synthesizing Solution Manuscript"
           subtitle={`Solving questions with Qdrant vector retrieval, multi-provider drafting, and Academic Review.`}
         />
       </div>

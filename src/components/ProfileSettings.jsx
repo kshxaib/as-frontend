@@ -2,24 +2,23 @@ import React, { useState } from 'react';
 import {
   User,
   KeyRound,
-  ShieldCheck,
   CheckCircle2,
   AlertCircle,
   Eye,
   EyeOff,
   Trash2,
-  Sparkles,
-  Lock,
-  Calendar,
   ExternalLink,
-  Zap,
-  Cpu,
-  Flame,
-  Layers,
   Loader2,
+  Lock,
+  Cpu,
+  Workflow,
+  Server,
+  Layers,
+  Sparkles,
 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import { ConfirmationModal } from './ConfirmationModal';
+import { StatusBadge } from './ui/StatusBadge';
 
 export const ProfileSettings = () => {
   const {
@@ -70,17 +69,17 @@ export const ProfileSettings = () => {
 
   if (!isAuthenticated || !user) {
     return (
-      <div className="mx-auto max-w-4xl px-4 py-20 text-center text-slate-400">
-        <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-3xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400">
-          <User className="h-8 w-8" />
+      <div className="mx-auto max-w-2xl px-4 py-20 text-center text-[var(--text-muted)]">
+        <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-[12px] border border-[var(--border)] bg-[var(--surface-well)] text-[var(--primary)]">
+          <User className="h-6 w-6 stroke-[1.5]" />
         </div>
-        <h2 className="text-xl font-bold text-white">Sign In to Manage Your Profile</h2>
-        <p className="mt-1 text-xs text-slate-400 max-w-md mx-auto">
-          Create an account or login to configure your API keys and unlock high-speed RAG and Question Bank tools.
+        <h2 className="font-display text-xl font-normal text-[var(--text-primary)]">Sign In to Access Profile</h2>
+        <p className="mt-1 text-xs text-[var(--text-muted)]">
+          Sign in to manage your account and API credentials.
         </p>
         <button
           onClick={() => openAuthModal('login')}
-          className="mt-6 inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-6 py-3 text-xs font-semibold text-white shadow-lg shadow-indigo-500/25 hover:bg-indigo-500 transition-all"
+          className="mt-5 inline-flex items-center gap-2 rounded-[8px] bg-[var(--primary)] px-5 py-2 text-xs font-semibold text-[var(--primary-foreground)] hover:opacity-90 transition-all shadow-sm"
         >
           Sign In / Register
         </button>
@@ -101,23 +100,23 @@ export const ProfileSettings = () => {
     const clean = key.trim();
     if (provider === 'gemini') {
       if (clean.startsWith('gsk_') || clean.startsWith('nvapi-') || clean.startsWith('sk-or-') || clean.length < 25) {
-        return "Invalid Google Gemini API key. Gemini keys usually start with 'AIzaSy' or 'AQ.' and must be at least 25 characters.";
+        return "Invalid Gemini key format. Keys start with 'AIzaSy' or 'AQ.' (min 25 chars).";
       }
     } else if (provider === 'groq') {
       if (!clean.startsWith('gsk_') || clean.length < 20) {
-        return "Invalid Groq API key format. Keys must start with 'gsk_' and be at least 20 characters long.";
+        return "Invalid Groq key format. Keys start with 'gsk_'.";
       }
     } else if (provider === 'openrouter') {
       if (!clean.startsWith('sk-or-') || clean.length < 20) {
-        return "Invalid OpenRouter API key format. Keys must start with 'sk-or-' and be at least 20 characters long.";
+        return "Invalid OpenRouter key format. Keys start with 'sk-or-'.";
       }
     } else if (provider === 'nvidia') {
       if (!clean.startsWith('nvapi-') || clean.length < 20) {
-        return "Invalid NVIDIA NIM API key format. Keys must start with 'nvapi-' and be at least 20 characters long.";
+        return "Invalid NVIDIA key format. Keys start with 'nvapi-'.";
       }
     } else if (provider === 'openai') {
       if (!clean.startsWith('sk-') || clean.startsWith('sk-or-') || clean.length < 20) {
-        return "Invalid OpenAI API key format. Keys must start with 'sk-' and be at least 20 characters long.";
+        return "Invalid OpenAI key format. Keys start with 'sk-'.";
       }
     }
     return null;
@@ -127,7 +126,6 @@ export const ProfileSettings = () => {
     const val = keysInput[provider]?.trim();
     if (!val) return;
 
-    // Instant format validation
     const formatErr = validateKeyFormat(provider, val);
     if (formatErr) {
       setValidationError(formatErr);
@@ -150,8 +148,8 @@ export const ProfileSettings = () => {
 
     if (res?.success) {
       setKeysInput((prev) => ({ ...prev, [provider]: '' }));
-      setSuccessMsg(`${providerName} API key saved successfully!`);
-      setTimeout(() => setSuccessMsg(null), 4000);
+      setSuccessMsg(`${providerName} key saved successfully.`);
+      setTimeout(() => setSuccessMsg(null), 3000);
     }
   };
 
@@ -174,314 +172,263 @@ export const ProfileSettings = () => {
     setActionLoading((prev) => ({ ...prev, [provider]: false }));
 
     if (res?.success) {
-      setSuccessMsg(`${providerName} API key removed.`);
-      setTimeout(() => setSuccessMsg(null), 4000);
+      setSuccessMsg(`${providerName} key removed.`);
+      setTimeout(() => setSuccessMsg(null), 3000);
     }
   };
 
-  const providers = [
+  const primaryProviders = [
     {
       id: 'gemini',
       name: 'Google Gemini',
-      tag: 'Required (100% Free)',
-      tagColor: 'text-amber-300 bg-amber-500/10 border-amber-500/20',
-      description: 'Used for Free Vector Embeddings (gemini-embedding-001) and RAG fallback generation (1,500 RPD).',
-      placeholder: 'AIzaSy...',
+      tag: 'Embeddings & RAG',
+      placeholder: 'AQ.... or AIzaSy...',
       hasKey: user.has_gemini_key,
-      getKeyUrl: 'https://aistudio.google.com/app/api-keys?project=gen-lang-client-0528736665',
-      icon: Sparkles,
-      iconColor: 'text-amber-400 bg-amber-500/10 border-amber-500/20',
+      getKeyUrl: 'https://aistudio.google.com/app/api-keys',
+      icon: Server,
     },
     {
       id: 'groq',
       name: 'Groq Cloud',
-      tag: 'Required (100% Free)',
-      tagColor: 'text-emerald-300 bg-emerald-500/10 border-emerald-500/20',
-      description: 'Ultra-fast RAG Generation (Llama 3.3 70B, 300+ tokens/sec, 1,000 RPD).',
+      tag: 'Fast Inference',
       placeholder: 'gsk_...',
       hasKey: user.has_groq_key,
       getKeyUrl: 'https://console.groq.com/keys',
-      icon: Zap,
-      iconColor: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/20',
+      icon: Cpu,
     },
     {
       id: 'openrouter',
       name: 'OpenRouter',
-      tag: 'Required (100% Free)',
-      tagColor: 'text-cyan-300 bg-cyan-500/10 border-cyan-500/20',
-      description: 'High-Volume Question Extraction & AI Reviewer with free AI models.',
+      tag: 'Extraction',
       placeholder: 'sk-or-v1-...',
       hasKey: user.has_openrouter_key,
       getKeyUrl: 'https://openrouter.ai/workspaces/default/keys',
-      icon: Cpu,
-      iconColor: 'text-cyan-400 bg-cyan-500/10 border-cyan-500/20',
+      icon: Workflow,
     },
     {
       id: 'nvidia',
       name: 'NVIDIA NIM',
-      tag: 'Required (100% Free)',
-      tagColor: 'text-lime-300 bg-lime-500/10 border-lime-500/20',
-      description: 'Heavy Academic Reviewer & High-Grade RAG Verification (10,000 RPD free).',
+      tag: 'AI Reviewer',
       placeholder: 'nvapi-...',
       hasKey: user.has_nvidia_key,
       getKeyUrl: 'https://build.nvidia.com/',
-      icon: Flame,
-      iconColor: 'text-lime-400 bg-lime-500/10 border-lime-500/20',
-    },
-    {
-      id: 'openai',
-      name: 'OpenAI API',
-      tag: 'Optional (Emergency Backup)',
-      tagColor: 'text-slate-400 bg-slate-800 border-slate-700',
-      description: 'Optional safety net (gpt-4o-mini). Used only if all 4 free providers above are exhausted.',
-      placeholder: 'sk-proj-...',
-      hasKey: user.has_openai_key,
-      getKeyUrl: 'https://platform.openai.com/api-keys',
       icon: Layers,
-      iconColor: 'text-indigo-400 bg-indigo-500/10 border-indigo-500/20',
     },
   ];
 
-  return (
-    <div className="min-h-screen bg-slate-950 pb-24 text-slate-100">
-      <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6 lg:px-8">
-        
-        {/* Header */}
-        <div className="border-b border-slate-800 pb-6">
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-indigo-400">
-            <User className="h-4 w-4" />
-            Account & API Configuration
+  const backupProviders = [
+    {
+      id: 'openai',
+      name: 'OpenAI API',
+      tag: 'Optional Backup',
+      placeholder: 'sk-proj-...',
+      hasKey: user.has_openai_key,
+      getKeyUrl: 'https://platform.openai.com/api-keys',
+      icon: KeyRound,
+    },
+  ];
+
+  const configuredCount = [user.has_gemini_key, user.has_groq_key, user.has_openrouter_key, user.has_nvidia_key].filter(Boolean).length;
+
+  const renderProviderRow = (p) => {
+    const Icon = p.icon;
+    const isConfigured = p.hasKey;
+    const inputVal = keysInput[p.id];
+    const isShowing = showKey[p.id];
+    const isProcessing = actionLoading[p.id];
+
+    return (
+      <div
+        key={p.id}
+        className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-[var(--surface-muted)]/40 transition-colors"
+      >
+        {/* Left: Provider Info */}
+        <div className="w-full sm:w-48 shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-7 w-7 items-center justify-center rounded-[6px] border border-[var(--border-subtle)] bg-[var(--surface-well)] text-[var(--text-secondary)] shrink-0">
+              <Icon className="h-3.5 w-3.5 stroke-[1.5]" />
+            </div>
+            <div>
+              <span className="font-medium text-xs text-[var(--text-primary)] block leading-tight">
+                {p.name}
+              </span>
+              <span className="font-mono text-[10px] text-[var(--text-muted)]">
+                {p.tag}
+              </span>
+            </div>
           </div>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-white sm:text-3xl">
-            User Profile & Multi-Provider Keys
-          </h1>
-          <p className="mt-1 text-sm text-slate-400">
-            Configure your individual AI API keys with automatic failover. Modify each provider separately.
-          </p>
+          <div className="mt-1 pl-9">
+            <a
+              href={p.getKeyUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-1 font-mono text-[10px] text-[var(--primary)] hover:underline"
+            >
+              <span>Get Free Key</span>
+              <ExternalLink className="h-2.5 w-2.5 stroke-[1.5]" />
+            </a>
+          </div>
+        </div>
+
+        {/* Center: Input Box */}
+        <div className="relative flex-1">
+          <input
+            type={isShowing ? 'text' : 'password'}
+            value={inputVal}
+            onChange={(e) => handleInputChange(p.id, e.target.value)}
+            placeholder={isConfigured ? '••••••••••••••••••••••••••••••••' : p.placeholder}
+            disabled={isProcessing}
+            className="w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface-well)] py-1.5 pl-3 pr-8 font-mono text-xs text-[var(--text-primary)] placeholder-[var(--text-disabled)] focus:border-[var(--primary)] focus:outline-none disabled:opacity-50"
+          />
+          <button
+            type="button"
+            onClick={() => toggleShowKey(p.id)}
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--text-muted)] hover:text-[var(--text-primary)] text-xs"
+          >
+            {isShowing ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
+          </button>
+        </div>
+
+        {/* Right: Actions */}
+        <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+          {isConfigured ? (
+            <>
+              <StatusBadge variant="success">Active</StatusBadge>
+              {inputVal.trim() && (
+                <button
+                  type="button"
+                  onClick={() => handleSaveSingleKey(p.id, p.name)}
+                  disabled={isProcessing}
+                  className="inline-flex items-center gap-1 rounded-[6px] bg-[var(--primary)] px-2.5 py-1 font-mono text-xs font-semibold text-[var(--primary-foreground)] hover:opacity-90 transition-all disabled:opacity-50"
+                >
+                  {isProcessing && <Loader2 className="h-3 w-3 animate-spin" />}
+                  <span>Update</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setDeleteKeyCandidate({ provider: p.id, providerName: p.name })}
+                disabled={isProcessing}
+                className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-well)] p-1 text-[var(--text-muted)] hover:bg-[rgba(239,68,68,0.1)] hover:text-[var(--error)] hover:border-[rgba(239,68,68,0.3)] transition-all disabled:opacity-50"
+                title={`Remove ${p.name} key`}
+              >
+                {isProcessing ? <Loader2 className="h-3.5 w-3.5 animate-spin text-[var(--error)]" /> : <Trash2 className="h-3.5 w-3.5 stroke-[1.5]" />}
+              </button>
+            </>
+          ) : (
+            <button
+              type="button"
+              onClick={() => handleSaveSingleKey(p.id, p.name)}
+              disabled={isProcessing || !inputVal.trim()}
+              className="inline-flex items-center gap-1 rounded-[6px] bg-[var(--primary)] px-3 py-1 font-mono text-xs font-semibold text-[var(--primary-foreground)] hover:opacity-90 transition-all disabled:opacity-40"
+            >
+              {isProcessing && <Loader2 className="h-3 w-3 animate-spin" />}
+              <span>Save</span>
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="min-h-screen bg-[var(--background)] pb-28 text-[var(--text-primary)]">
+      <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6">
+        
+        {/* User Masthead */}
+        <div className="flex items-center justify-between pb-6 border-b border-[var(--border)]">
+          <div className="flex items-center gap-3.5">
+            <div className="flex h-11 w-11 items-center justify-center rounded-[10px] border border-[var(--border)] bg-[var(--surface-well)] text-sm font-bold text-[var(--primary)] uppercase font-mono">
+              {user.name?.[0] || 'U'}
+            </div>
+            <div>
+              <h1 className="font-display text-lg font-normal text-[var(--text-primary)] leading-tight">
+                {user.name}
+              </h1>
+              <p className="font-mono text-xs text-[var(--text-muted)] mt-0.5">
+                @{user.username} 
+              </p>
+            </div>
+          </div>
+
+          <StatusBadge variant={configuredCount === 4 ? 'success' : 'amber'}>
+            {configuredCount}/4 Keys Ready
+          </StatusBadge>
         </div>
 
         {/* Feedback Banners */}
         {validationError && (
-          <div className="mt-6 flex items-center justify-between rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-xs text-amber-300 animate-in fade-in">
-            <div className="flex items-center gap-2.5">
-              <AlertCircle className="h-5 w-5 text-amber-400 shrink-0" />
-              <span className="font-medium">{validationError}</span>
+          <div className="mt-4 flex items-center justify-between rounded-[8px] border border-[rgba(245,158,11,0.25)] bg-[rgba(245,158,11,0.08)] p-3 text-xs text-[var(--warning)] animate-in fade-in">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              <span>{validationError}</span>
             </div>
-            <button onClick={() => setValidationError(null)} className="text-amber-400 hover:underline font-semibold">Dismiss</button>
+            <button onClick={() => setValidationError(null)} className="font-mono text-[11px] hover:underline">Dismiss</button>
           </div>
         )}
 
         {error && (
-          <div className="mt-6 flex items-center justify-between rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-xs text-rose-300 animate-in fade-in">
-            <div className="flex items-center gap-2.5">
-              <AlertCircle className="h-5 w-5 text-rose-400 shrink-0" />
+          <div className="mt-4 flex items-center justify-between rounded-[8px] border border-[rgba(239,68,68,0.25)] bg-[rgba(239,68,68,0.08)] p-3 text-xs text-[var(--error)] animate-in fade-in">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-4 w-4 shrink-0" />
               <span>{error}</span>
             </div>
-            <button onClick={clearError} className="text-rose-400 hover:underline font-semibold">Dismiss</button>
+            <button onClick={clearError} className="font-mono text-[11px] hover:underline">Dismiss</button>
           </div>
         )}
 
         {successMsg && (
-          <div className="mt-6 flex items-center justify-between rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-xs text-emerald-300 animate-in fade-in">
-            <div className="flex items-center gap-2.5">
-              <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0" />
-              <span className="font-medium">{successMsg}</span>
+          <div className="mt-4 flex items-center justify-between rounded-[8px] border border-[rgba(34,197,94,0.25)] bg-[rgba(34,197,94,0.08)] p-3 text-xs text-[var(--success)] animate-in fade-in">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
+              <span>{successMsg}</span>
             </div>
-            <button onClick={() => setSuccessMsg(null)} className="text-emerald-400 hover:underline font-semibold">Dismiss</button>
+            <button onClick={() => setSuccessMsg(null)} className="font-mono text-[11px] hover:underline">Dismiss</button>
           </div>
         )}
 
-        <div className="mt-8 space-y-8">
-          {/* User Info Card */}
-          <div className="rounded-3xl border border-slate-800 bg-slate-900/60 p-6 backdrop-blur-sm">
-            <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-4">
-              Profile Details
-            </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-                <span className="text-[11px] text-slate-500 uppercase font-medium">Full Name</span>
-                <p className="mt-1 text-base font-bold text-white">{user.name}</p>
-              </div>
-              <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-                <span className="text-[11px] text-slate-500 uppercase font-medium">Username</span>
-                <p className="mt-1 text-base font-bold text-indigo-300">@{user.username}</p>
-              </div>
-              <div className="rounded-2xl border border-slate-800 bg-slate-950/60 p-4">
-                <span className="text-[11px] text-slate-500 uppercase font-medium">Member Since</span>
-                <p className="mt-1 text-base font-bold text-slate-300">
-                  {user.created_at ? new Date(user.created_at).toLocaleDateString() : 'Active Member'}
-                </p>
-              </div>
+        {/* ── Section 1: Required Free Tier Providers ── */}
+        <div className="mt-8">
+          <div className="flex items-center justify-between mb-3 px-1">
+            <div>
+              <h2 className="font-mono text-xs uppercase tracking-wider text-[var(--text-primary)] font-semibold">
+                Required AI Providers (100% Free)
+              </h2>
+              <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
+                Powers automated failover for embeddings, question extraction, and answer synthesis.
+              </p>
             </div>
           </div>
 
-          {/* API Keys Management Section */}
-          <div className="space-y-6">
-            <div>
-              <h2 className="text-lg font-bold text-white flex items-center gap-2">
-                <KeyRound className="h-5 w-5 text-indigo-400" />
-                AI Provider API Keys
-              </h2>
-              <p className="text-xs text-slate-400 mt-1">
-                Keys are stored securely with AES-GCM encryption. Add, update, or remove any key individually.
-              </p>
-            </div>
+          <div className="divide-y divide-[var(--border-subtle)] rounded-[12px] border border-[var(--border)] bg-[var(--surface)] shadow-xs">
+            {primaryProviders.map(renderProviderRow)}
+          </div>
+        </div>
 
-            {/* Required Keys Progress Status Banner */}
-            {(() => {
-              const requiredCount = [user.has_gemini_key, user.has_groq_key, user.has_openrouter_key, user.has_nvidia_key].filter(Boolean).length;
-              const isFullyConfigured = requiredCount === 4;
-              return (
-                <div className={`flex items-center justify-between rounded-2xl p-4 border ${
-                  isFullyConfigured
-                    ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-300'
-                    : 'bg-amber-500/10 border-amber-500/20 text-amber-300'
-                }`}>
-                  <div className="flex items-center gap-2.5">
-                    {isFullyConfigured ? (
-                      <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0" />
-                    ) : (
-                      <AlertCircle className="h-5 w-5 text-amber-400 shrink-0" />
-                    )}
-                    <div>
-                      <span className="font-bold text-xs">
-                        {isFullyConfigured
-                          ? 'All 4 Required AI Keys Active — Full AI Pipeline Unlocked!'
-                          : `Setup Incomplete (${requiredCount}/4 Required Keys Configured)`}
-                      </span>
-                      <p className="text-[11px] text-slate-400 mt-0.5">
-                        {isFullyConfigured
-                          ? 'Multi-provider failover is active. You can now extract questions, index notes, and generate answers.'
-                          : 'Please add all 4 free provider keys below (Gemini, Groq, OpenRouter, and NVIDIA NIM) to unlock AI pipeline features.'}
-                      </p>
-                    </div>
-                  </div>
-                  <span className="font-mono text-xs font-bold px-2.5 py-1 rounded-xl bg-slate-950/60 border border-slate-800 shrink-0 ml-3">
-                    {requiredCount}/4
-                  </span>
-                </div>
-              );
-            })()}
+        {/* Section Divider */}
+        <div className="editorial-rule my-8" />
 
-            {/* Provider Cards List */}
-            <div className="space-y-4">
-              {providers.map((p) => {
-                const Icon = p.icon;
-                const isConfigured = p.hasKey;
-                const inputVal = keysInput[p.id];
-                const isShowing = showKey[p.id];
-                const isProcessing = actionLoading[p.id];
+        {/* ── Section 2: Optional Backup Provider ── */}
+        <div>
+          <div className="mb-3 px-1">
+            <h2 className="font-mono text-xs uppercase tracking-wider text-[var(--text-secondary)] font-semibold">
+              Emergency Backup (Optional)
+            </h2>
+            <p className="text-[11px] text-[var(--text-muted)] mt-0.5">
+              Used only if free provider quotas are temporarily exhausted.
+            </p>
+          </div>
 
-                return (
-                  <div
-                    key={p.id}
-                    className="rounded-3xl border border-slate-800 bg-slate-900/60 p-5 sm:p-6 backdrop-blur-sm hover:border-slate-700/80 transition-all"
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-800/80 pb-4">
-                      <div className="flex items-start gap-3.5">
-                        <div className={`p-2.5 rounded-2xl border ${p.iconColor} shrink-0`}>
-                          <Icon className="h-5 w-5" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <h3 className="text-sm font-bold text-white">{p.name}</h3>
-                            <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold border ${p.tagColor}`}>
-                              {p.tag}
-                            </span>
-                          </div>
-                          <p className="text-xs text-slate-400 mt-1 max-w-xl">
-                            {p.description}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Direct Get Key Link */}
-                      <a
-                        href={p.getKeyUrl}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1 self-start sm:self-center text-xs font-semibold text-indigo-400 hover:text-indigo-300 hover:underline shrink-0"
-                      >
-                        <span>Get Free Key</span>
-                        <ExternalLink className="h-3.5 w-3.5" />
-                      </a>
-                    </div>
-
-                    {/* Key Input / Status Row */}
-                    <div className="mt-4 flex flex-col sm:flex-row sm:items-center gap-3">
-                      <div className="relative flex-1">
-                        <KeyRound className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
-                        <input
-                          type={isShowing ? 'text' : 'password'}
-                          value={inputVal}
-                          onChange={(e) => handleInputChange(p.id, e.target.value)}
-                          placeholder={isConfigured ? '••••••••••••••••••••••••••••••••' : p.placeholder}
-                          disabled={isProcessing}
-                          className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2 pl-10 pr-16 text-xs font-mono text-slate-200 placeholder-slate-600 focus:border-indigo-500 focus:outline-none disabled:opacity-50"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => toggleShowKey(p.id)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 text-xs"
-                        >
-                          {isShowing ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </button>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        {isConfigured ? (
-                          <div className="flex items-center gap-2">
-                            <span className="inline-flex items-center gap-1.5 rounded-xl bg-emerald-500/10 border border-emerald-500/20 px-3 py-2 text-xs font-semibold text-emerald-400">
-                              <CheckCircle2 className="h-3.5 w-3.5" />
-                              <span>Active</span>
-                            </span>
-                            <button
-                              type="button"
-                              onClick={() => setDeleteKeyCandidate({ provider: p.id, providerName: p.name })}
-                              disabled={isProcessing}
-                              className="rounded-xl border border-slate-800 bg-slate-950 p-2 text-slate-400 hover:bg-rose-500/10 hover:text-rose-400 hover:border-rose-500/20 transition-all disabled:opacity-50"
-                              title={`Remove ${p.name} key`}
-                            >
-                              {isProcessing ? <Loader2 className="h-4 w-4 animate-spin text-rose-400" /> : <Trash2 className="h-4 w-4" />}
-                            </button>
-                          </div>
-                        ) : (
-                          <button
-                            type="button"
-                            onClick={() => handleSaveSingleKey(p.id, p.name)}
-                            disabled={isProcessing || !inputVal.trim()}
-                            className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-semibold text-white shadow-md hover:bg-indigo-500 transition-all disabled:opacity-40"
-                          >
-                            {isProcessing && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                            <span>Save Key</span>
-                          </button>
-                        )}
-
-                        {isConfigured && inputVal.trim() && (
-                          <button
-                            type="button"
-                            onClick={() => handleSaveSingleKey(p.id, p.name)}
-                            disabled={isProcessing}
-                            className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white shadow-md hover:bg-indigo-500 transition-all disabled:opacity-50"
-                          >
-                            {isProcessing && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                            <span>Update</span>
-                          </button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+          <div className="divide-y divide-[var(--border-subtle)] rounded-[12px] border border-[var(--border)] bg-[var(--surface)] shadow-xs">
+            {backupProviders.map(renderProviderRow)}
           </div>
         </div>
 
         {/* Delete API Key Confirmation Modal */}
         <ConfirmationModal
           isOpen={!!deleteKeyCandidate}
-          title={`Remove ${deleteKeyCandidate?.providerName} API Key?`}
-          message={`Are you sure you want to remove your stored ${deleteKeyCandidate?.providerName} API key? Tasks relying on this provider will fall back to other configured keys.`}
+          title={`Remove ${deleteKeyCandidate?.providerName} Key?`}
+          message={`Are you sure you want to remove your stored ${deleteKeyCandidate?.providerName} API key?`}
           confirmText="Yes, Remove Key"
           cancelText="Cancel"
           confirmVariant="danger"

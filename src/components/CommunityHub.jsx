@@ -4,15 +4,15 @@ import {
   BookOpen,
   FileCheck2,
   Download,
-  ExternalLink,
   Search,
   RefreshCw,
-  Award,
-  Layers,
   User,
   Calendar,
+  Layers,
 } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
+import { StatusBadge } from './ui/StatusBadge';
+import { EmptyState } from './ui/EmptyState';
 
 export const CommunityHub = () => {
   const {
@@ -57,69 +57,70 @@ export const CommunityHub = () => {
   );
 
   return (
-    <div className="min-h-screen bg-slate-950 pb-24 text-slate-100">
+    <div className="min-h-screen bg-[var(--background)] pb-24 text-[var(--text-primary)]">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        
         {/* Header */}
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between border-b border-slate-800 pb-8">
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between pb-6 border-b border-[var(--border)]">
           <div>
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-emerald-400">
-              <Globe className="h-4 w-4" />
-              Community Knowledge Hub
-            </div>
-            <h1 className="mt-1 text-2xl font-bold tracking-tight text-white sm:text-3xl">
-              Shared Academic Knowledge & Solved Papers
+            <span className="font-mono text-[11px] uppercase tracking-widest text-[var(--community)] flex items-center gap-1.5 mb-1">
+              <Globe className="h-3.5 w-3.5 stroke-[1.5]" />
+              The Commons
+            </span>
+            <h1 className="font-display text-2xl sm:text-3xl font-normal text-[var(--text-primary)] tracking-tight">
+              Shared Academic Archive & Solved Papers
             </h1>
-            <p className="mt-1 text-sm text-slate-400">
-              Open to all students. Browse and download textbooks, verified notes, and AI-reviewed solved question banks.
+            <p className="mt-1 text-xs sm:text-sm text-[var(--text-secondary)]">
+              Open to all students. Browse and download textbooks, verified syllabus notes, and solved question banks.
             </p>
           </div>
 
           <button
             onClick={fetchCommunityData}
-            className="inline-flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-900 px-4 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-800 transition-colors"
+            className="inline-flex items-center gap-1.5 rounded-[8px] border border-[var(--border)] bg-[var(--surface-well)] px-3 py-1.5 font-mono text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
           >
-            <RefreshCw className={`h-3.5 w-3.5 ${isLoadingCommunity ? 'animate-spin' : ''}`} />
-            Refresh Hub
+            <RefreshCw className={`h-3 w-3 stroke-[1.5] ${isLoadingCommunity ? 'animate-spin' : ''}`} />
+            <span>Refresh Archive</span>
           </button>
         </div>
 
         {/* SubTab Switcher & Filter Bar */}
-        <div className="mt-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div className="flex rounded-2xl border border-slate-800 bg-slate-900/80 p-1">
+        <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+          <div className="flex rounded-[8px] border border-[var(--border)] bg-[var(--surface-well)] p-1">
             <button
               onClick={() => setActiveSubTab('resources')}
-              className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition-all ${
+              className={`flex items-center gap-2 rounded-[6px] px-3.5 py-1.5 font-mono text-xs transition-all ${
                 activeSubTab === 'resources'
-                  ? 'bg-indigo-600 text-white shadow-md'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-[var(--surface)] text-[var(--text-primary)] font-semibold border border-[var(--border)] shadow-xs'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
               }`}
             >
-              <BookOpen className="h-4 w-4" />
-              <span>Public Notes & Textbooks ({communityResources.length})</span>
+              <BookOpen className="h-3.5 w-3.5 stroke-[1.5]" />
+              <span>Public Notes ({communityResources.length})</span>
             </button>
             <button
               onClick={() => setActiveSubTab('solved_sets')}
-              className={`flex items-center gap-2 rounded-xl px-4 py-2 text-xs font-semibold transition-all ${
+              className={`flex items-center gap-2 rounded-[6px] px-3.5 py-1.5 font-mono text-xs transition-all ${
                 activeSubTab === 'solved_sets'
-                  ? 'bg-emerald-600 text-white shadow-md'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-[var(--surface)] text-[var(--community)] font-semibold border border-[var(--border)] shadow-xs'
+                  : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
               }`}
             >
-              <FileCheck2 className="h-4 w-4" />
+              <FileCheck2 className="h-3.5 w-3.5 stroke-[1.5]" />
               <span>Solved Question Banks ({communityAnswerSets.length})</span>
             </button>
           </div>
 
           {/* Search & Subject */}
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             <div className="relative flex-1 sm:w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-500" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-muted)]" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search community items..."
-                className="w-full rounded-xl border border-slate-800 bg-slate-900/80 py-2 pl-9 pr-3 text-xs text-slate-200 focus:border-indigo-500 focus:outline-none"
+                placeholder="Search archive..."
+                className="w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface-well)] py-1.5 pl-9 pr-3 text-xs text-[var(--text-primary)] placeholder-[var(--text-disabled)] focus:border-[var(--primary)] focus:outline-none"
               />
             </div>
 
@@ -127,7 +128,7 @@ export const CommunityHub = () => {
               <select
                 value={selectedSubject}
                 onChange={(e) => setSelectedSubject(e.target.value)}
-                className="rounded-xl border border-slate-800 bg-slate-900/80 px-3 py-2 text-xs text-slate-300 focus:border-indigo-500 focus:outline-none"
+                className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-well)] px-2.5 py-1 text-xs text-[var(--text-primary)] focus:border-[var(--primary)] focus:outline-none"
               >
                 <option value="ALL">All Subjects</option>
                 {allSubjects.map((s) => (
@@ -139,59 +140,59 @@ export const CommunityHub = () => {
         </div>
 
         {/* Content Section */}
-        <div className="mt-8">
+        <div className="mt-6">
           {isLoadingCommunity ? (
-            <div className="py-20 text-center text-slate-400">
-              <RefreshCw className="mx-auto h-8 w-8 animate-spin text-indigo-500 mb-2" />
-              <p className="text-xs">Fetching shared community content...</p>
+            <div className="py-24 text-center text-[var(--text-muted)]">
+              <RefreshCw className="mx-auto h-6 w-6 animate-spin text-[var(--primary)] mb-2 stroke-[1.5]" />
+              <p className="font-mono text-xs">Querying The Commons archive...</p>
             </div>
           ) : activeSubTab === 'resources' ? (
             /* Resources Grid */
             filteredResources.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredResources.map((res) => (
                   <div
                     key={res.id}
-                    className="flex flex-col justify-between rounded-3xl border border-slate-800 bg-slate-900/60 p-6 backdrop-blur-sm hover:border-slate-700 transition-all"
+                    className="flex flex-col justify-between rounded-[12px] border border-[var(--border)] bg-[var(--surface)] p-5 hover:border-[var(--border-strong)] transition-all"
                   >
                     <div>
-                      <div className="flex items-center justify-between">
-                        <span className="rounded-full bg-indigo-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-indigo-300 border border-indigo-500/20">
+                      <div className="flex items-center justify-between gap-2 mb-3">
+                        <span className="font-mono text-[11px] font-medium text-[var(--text-muted)] bg-[var(--surface-well)] px-2 py-0.5 rounded-[4px] border border-[var(--border-subtle)] truncate">
                           {res.subject}
                         </span>
-                        <span className="text-[11px] text-slate-500 flex items-center gap-1">
+                        <span className="font-mono text-[11px] text-[var(--text-muted)] flex items-center gap-1">
                           <User className="h-3 w-3" />
-                          {res.uploader_name}
+                          {res.uploader_name || 'Academic'}
                         </span>
                       </div>
 
-                      <h3 className="mt-3 text-lg font-bold text-white tracking-tight line-clamp-1">
+                      <h3 className="font-display text-base font-normal text-[var(--text-primary)] line-clamp-1">
                         {res.name}
                       </h3>
 
                       {res.chapters && (
-                        <p className="mt-1 text-xs text-indigo-300">
+                        <p className="mt-1 font-mono text-[11px] text-[var(--text-secondary)]">
                           Chapters: {res.chapters}
                         </p>
                       )}
 
                       {res.description && (
-                        <p className="mt-2 text-xs text-slate-400 line-clamp-2 leading-relaxed">
+                        <p className="mt-2 text-xs text-[var(--text-muted)] line-clamp-2 leading-relaxed">
                           {res.description}
                         </p>
                       )}
                     </div>
 
-                    <div className="mt-6 flex items-center justify-between border-t border-slate-800/80 pt-4">
-                      <span className="text-[11px] text-slate-500">
+                    <div className="mt-5 flex items-center justify-between border-t border-[var(--border-subtle)] pt-3">
+                      <span className="font-mono text-[10px] text-[var(--text-muted)]">
                         {new Date(res.created_at).toLocaleDateString()}
                       </span>
 
                       <button
                         onClick={() => downloadResourceFile(res.id, `${res.name.replace(/\s+/g, '_')}.pdf`)}
-                        className="inline-flex items-center gap-1.5 rounded-xl bg-indigo-600/90 px-3.5 py-2 text-xs font-semibold text-white hover:bg-indigo-500 transition-all shadow-md"
+                        className="inline-flex items-center gap-1.5 rounded-[6px] border border-[rgba(200,168,32,0.3)] bg-[rgba(200,168,32,0.08)] px-2.5 py-1 font-mono text-[11px] font-medium text-[var(--community)] hover:bg-[rgba(200,168,32,0.15)] transition-all"
                       >
-                        <Download className="h-3.5 w-3.5" />
+                        <Download className="h-3 w-3 stroke-[1.5]" />
                         <span>Download PDF</span>
                       </button>
                     </div>
@@ -199,56 +200,54 @@ export const CommunityHub = () => {
                 ))}
               </div>
             ) : (
-              <div className="py-20 text-center rounded-3xl border border-dashed border-slate-800 bg-slate-900/30">
-                <BookOpen className="mx-auto h-12 w-12 text-slate-600" />
-                <h3 className="mt-4 text-base font-semibold text-slate-300">No Community Resources Yet</h3>
-                <p className="mt-1 text-xs text-slate-500">
-                  Be the first to share your notes with the student community from the Study Resources tab!
-                </p>
-              </div>
+              <EmptyState
+                icon={BookOpen}
+                title="No Public Notes in The Commons Yet"
+                description="Share study resources from your digital library to publish them here for the community."
+              />
             )
           ) : (
             /* Solved Question Banks Grid */
             filteredAnswerSets.length > 0 ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {filteredAnswerSets.map((set) => (
                   <div
                     key={set.id}
-                    className="flex flex-col justify-between rounded-3xl border border-slate-800 bg-slate-900/60 p-6 backdrop-blur-sm hover:border-slate-700 transition-all"
+                    className="flex flex-col justify-between rounded-[12px] border border-[var(--border)] bg-[var(--surface)] p-5 hover:border-[var(--border-strong)] transition-all"
                   >
                     <div>
-                      <div className="flex items-center justify-between">
-                        <span className="rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-emerald-400 border border-emerald-500/20">
+                      <div className="flex items-center justify-between gap-2 mb-3">
+                        <span className="font-mono text-[11px] font-medium text-[var(--community)] bg-[rgba(200,168,32,0.1)] px-2 py-0.5 rounded-[4px] border border-[rgba(200,168,32,0.2)] truncate">
                           {set.subject}
                         </span>
-                        <span className="text-[11px] text-slate-500 flex items-center gap-1">
+                        <span className="font-mono text-[11px] text-[var(--text-muted)] flex items-center gap-1">
                           <User className="h-3 w-3" />
-                          {set.author_name}
+                          {set.author_name || 'Scholar'}
                         </span>
                       </div>
 
-                      <h3 className="mt-3 text-lg font-bold text-white tracking-tight line-clamp-1">
+                      <h3 className="font-display text-base font-normal text-[var(--text-primary)] line-clamp-1">
                         {set.question_bank_name}
                       </h3>
 
-                      <div className="mt-4 flex items-center gap-3">
-                        <div className="rounded-xl bg-slate-950/60 border border-slate-800 p-2.5 flex-1 text-center">
-                          <span className="text-[10px] text-slate-500 uppercase block">Solved Questions</span>
-                          <span className="text-sm font-bold text-white">
-                            {set.completed_questions} / {set.total_questions}
+                      <div className="mt-3 grid grid-cols-2 gap-2">
+                        <div className="rounded-[6px] bg-[var(--surface-well)] border border-[var(--border-subtle)] p-2 text-center">
+                          <span className="font-mono text-[9px] text-[var(--text-muted)] uppercase block">Solved</span>
+                          <span className="font-mono text-xs font-semibold text-[var(--text-primary)]">
+                            {set.completed_questions} / {set.total_questions} Qs
                           </span>
                         </div>
-                        <div className="rounded-xl bg-slate-950/60 border border-slate-800 p-2.5 flex-1 text-center">
-                          <span className="text-[10px] text-slate-500 uppercase block">Status</span>
-                          <span className="text-xs font-semibold text-emerald-400 uppercase">
-                            AI Verified
+                        <div className="rounded-[6px] bg-[var(--surface-well)] border border-[var(--border-subtle)] p-2 text-center">
+                          <span className="font-mono text-[9px] text-[var(--text-muted)] uppercase block">Review</span>
+                          <span className="font-mono text-xs font-medium text-[var(--success)]">
+                            RAG Grounded
                           </span>
                         </div>
                       </div>
                     </div>
 
-                    <div className="mt-6 flex items-center justify-between border-t border-slate-800/80 pt-4">
-                      <span className="text-[11px] text-slate-500">
+                    <div className="mt-5 flex items-center justify-between border-t border-[var(--border-subtle)] pt-3">
+                      <span className="font-mono text-[10px] text-[var(--text-muted)]">
                         {new Date(set.created_at).toLocaleDateString()}
                       </span>
 
@@ -259,23 +258,21 @@ export const CommunityHub = () => {
                             `AcademicStack_${(set.subject || 'Subject').replace(/\s+/g, '_')}_${(set.question_bank_name || 'Solved_QB').replace(/\s+/g, '_')}.pdf`
                           )
                         }
-                        className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-3.5 py-2 text-xs font-semibold text-white shadow-lg shadow-emerald-500/20 hover:from-emerald-500 hover:to-teal-500 transition-all"
+                        className="inline-flex items-center gap-1.5 rounded-[6px] bg-[var(--community)] px-3 py-1 font-mono text-[11px] font-semibold text-[var(--community-foreground)] hover:opacity-90 transition-all shadow-xs"
                       >
-                        <Download className="h-3.5 w-3.5" />
-                        <span>Download Solved PDF</span>
+                        <Download className="h-3 w-3 stroke-[2]" />
+                        <span>Download PDF</span>
                       </button>
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="py-20 text-center rounded-3xl border border-dashed border-slate-800 bg-slate-900/30">
-                <FileCheck2 className="mx-auto h-12 w-12 text-slate-600" />
-                <h3 className="mt-4 text-base font-semibold text-slate-300">No Solved Papers Shared Yet</h3>
-                <p className="mt-1 text-xs text-slate-500">
-                  Generate solutions for your question bank and click "Share with Community" to publish here.
-                </p>
-              </div>
+              <EmptyState
+                icon={FileCheck2}
+                title="No Solved Question Banks Shared Yet"
+                description="Generate solutions for your question bank and click 'Share with The Commons' to contribute."
+              />
             )
           )}
         </div>

@@ -1,71 +1,204 @@
 @import "tailwindcss";
 @import "katex/dist/katex.min.css";
 
-/* ── Custom Animations ─────────────────────────────────────────────────────── */
+/* ── Typography Imports ─────────────────────────────────────────────────────── */
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Geist:wght@100..900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 
-@keyframes fade-in {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
+/* ── Theme Definitions (§3 & §4 of DESIGN_TOKENS.md) ───────────────────────── */
+
+:root,
+:root.dark,
+[data-theme="dark"] {
+  /* Midnight Library (Dark Theme — Primary) */
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-sans: 'Geist', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+
+  --background: #0c1015;
+  --foreground: #e8ecf0;
+
+  --surface: #141a22;
+  --surface-elevated: #1a2230;
+  --surface-muted: #111722;
+  --surface-well: #0e131a;
+
+  --text-primary: #e8ecf0;
+  --text-secondary: #bcc4cd;
+  --text-muted: #667180;
+  --text-disabled: #374151;
+
+  --border: #1f2937;
+  --border-subtle: #161e28;
+  --border-strong: #374151;
+
+  --primary: #14b8a6;          /* Scholar Teal */
+  --primary-hover: #2dd4bf;
+  --primary-active: #0d9488;
+  --primary-foreground: #042f2e;
+
+  --secondary: #1a2230;
+  --secondary-hover: #1f2937;
+  --secondary-foreground: #bcc4cd;
+
+  --ai: #f59e0b;                 /* Manuscript Amber */
+  --ai-hover: #fbbf24;
+  --ai-foreground: #451a03;
+
+  --community: #c8a820;          /* Laurel Gold */
+  --community-hover: #dbc230;
+  --community-foreground: #4a3a0b;
+
+  --success: #22c55e;
+  --success-hover: #16a34a;
+  --success-foreground: #052e16;
+
+  --warning: #e0a92b;
+  --warning-hover: #c9922a;
+  --warning-foreground: #451a03;
+
+  --error: #f87171;
+  --error-hover: #ef4444;
+  --error-foreground: #450a0a;
+
+  --info: #2dd4bf;
+  --info-hover: #14b8a6;
+  --info-foreground: #042f2e;
+
+  --focus-ring: rgba(20, 184, 166, 0.50);
+  --overlay: rgba(7, 12, 18, 0.80);
+
+  --sidebar-background: #0e131a;
+  --sidebar-border: #161e28;
+  --sidebar-text: #667180;
+  --sidebar-text-active: #14b8a6;
+  --sidebar-active-bg: rgba(20, 184, 166, 0.10);
+  --sidebar-hover-bg: rgba(20, 184, 166, 0.05);
+
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.12);
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.20), 0 1px 2px -1px rgba(0, 0, 0, 0.12);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.25), 0 2px 4px -2px rgba(0, 0, 0, 0.15);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.35), 0 4px 6px -4px rgba(0, 0, 0, 0.20);
 }
 
-@keyframes fade-in-down {
-  from { opacity: 0; transform: translateY(-12px); }
-  to   { opacity: 1; transform: translateY(0); }
+:root.light,
+[data-theme="light"] {
+  /* Reading Room (Light Theme) */
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-sans: 'Geist', system-ui, -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+
+  --background: #f8f9fa;
+  --foreground: #111827;
+
+  --surface: #ffffff;
+  --surface-elevated: #ffffff;
+  --surface-muted: #f0f2f4;
+  --surface-well: #e8ecf0;
+
+  --text-primary: #111827;
+  --text-secondary: #374151;
+  --text-muted: #4e5a69;
+  --text-disabled: #8e9aaa;
+
+  --border: #dce1e7;
+  --border-subtle: #e8ecf0;
+  --border-strong: #bcc4cd;
+
+  --primary: #0f766e;          /* Scholar Teal */
+  --primary-hover: #0d9488;
+  --primary-active: #0f766e;
+  --primary-foreground: #ffffff;
+
+  --secondary: #f0f2f4;
+  --secondary-hover: #dce1e7;
+  --secondary-foreground: #374151;
+
+  --ai: #d97706;                 /* Manuscript Amber */
+  --ai-hover: #b45309;
+  --ai-foreground: #ffffff;
+
+  --community: #a88a16;          /* Laurel Gold */
+  --community-hover: #86690f;
+  --community-foreground: #ffffff;
+
+  --success: #16a34a;
+  --success-hover: #15803d;
+  --success-foreground: #ffffff;
+
+  --warning: #c9922a;
+  --warning-hover: #a8721d;
+  --warning-foreground: #ffffff;
+
+  --error: #dc2626;
+  --error-hover: #b91c1c;
+  --error-foreground: #ffffff;
+
+  --info: #0d9488;
+  --info-hover: #0f766e;
+  --info-foreground: #ffffff;
+
+  --focus-ring: rgba(14, 116, 144, 0.45);
+  --overlay: rgba(17, 24, 39, 0.55);
+
+  --sidebar-background: #f0f2f4;
+  --sidebar-border: #dce1e7;
+  --sidebar-text: #4e5a69;
+  --sidebar-text-active: #0f766e;
+  --sidebar-active-bg: rgba(14, 116, 144, 0.08);
+  --sidebar-hover-bg: rgba(14, 116, 144, 0.05);
+
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.08), 0 1px 2px -1px rgba(0, 0, 0, 0.04);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.10), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.12), 0 4px 6px -4px rgba(0, 0, 0, 0.08);
 }
 
-@keyframes pulse-slow {
-  0%, 100% { opacity: 0.15; transform: scale(1); }
-  50%       { opacity: 0.25; transform: scale(1.05); }
+/* ── Base Setup ─────────────────────────────────────────────────────────────── */
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--background);
+  color: var(--text-primary);
+  min-height: 100vh;
+  margin: 0;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-@keyframes float {
-  0%, 100% { transform: translateY(0px); }
-  50%       { transform: translateY(-8px); }
+/* ── Typography Utility Classes ─────────────────────────────────────────────── */
+
+.font-display {
+  font-family: var(--font-display);
 }
 
-@keyframes shimmer {
-  0%   { background-position: -200% center; }
-  100% { background-position:  200% center; }
+.font-sans {
+  font-family: var(--font-sans);
 }
 
-/* ── Utility Classes ───────────────────────────────────────────────────────── */
-
-.animate-fade-in {
-  animation: fade-in 0.4s ease-out both;
+.font-mono {
+  font-family: var(--font-mono);
 }
 
-.animate-fade-in-down {
-  animation: fade-in-down 0.5s ease-out both;
+/* ── Editorial Line Divider ─────────────────────────────────────────────────── */
+.editorial-rule {
+  height: 1px;
+  background-color: var(--border-subtle);
+  width: 100%;
 }
 
-.animate-pulse-slow {
-  animation: pulse-slow 6s ease-in-out infinite;
-}
-
-.animate-float {
-  animation: float 4s ease-in-out infinite;
-}
-
-.animation-delay-2000 {
-  animation-delay: 2s;
-}
-
-.animation-delay-4000 {
-  animation-delay: 4s;
+.editorial-rule-strong {
+  height: 1px;
+  background-color: var(--border);
+  width: 100%;
 }
 
 /* ── Scrollbar Hide ────────────────────────────────────────────────────────── */
 .scrollbar-none::-webkit-scrollbar { display: none; }
 .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
 
-/* ── Glass Glow ────────────────────────────────────────────────────────────── */
-.glow-indigo {
-  box-shadow: 0 0 30px rgba(99, 102, 241, 0.25);
-}
-
 /* ── KaTeX & Math Styling ──────────────────────────────────────────────────── */
 
-/* Ensure KaTeX MathML is visually hidden so characters aren't duplicated */
 .katex-mathml {
   position: absolute !important;
   clip: rect(1px, 1px, 1px, 1px) !important;
@@ -84,12 +217,11 @@
 .katex-display {
   margin: 1rem 0 !important;
   padding: 0.75rem 1.25rem !important;
-  background-color: rgba(15, 23, 42, 0.75) !important;
-  border: 1px solid rgba(99, 102, 241, 0.25) !important;
-  border-radius: 0.75rem !important;
+  background-color: var(--surface-well) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 8px !important;
   overflow-x: auto !important;
   overflow-y: hidden !important;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.25) !important;
 }
 
 .katex-display > .katex {
@@ -99,12 +231,12 @@
 
 .katex {
   font-size: 1.05em !important;
-  color: #c7d2fe !important; /* soft indigo */
+  color: var(--primary) !important;
 }
 
-/* ── Markdown Answer Body Styling ─────────────────────────────────────────── */
+/* ── Solution Manuscript Markdown Body Styling ─────────────────────────────── */
 .markdown-answer-body {
-  color: #cbd5e1;
+  color: var(--text-primary);
   line-height: 1.65;
   font-size: 0.9375rem;
 }
@@ -113,19 +245,21 @@
 .markdown-answer-body h2,
 .markdown-answer-body h3,
 .markdown-answer-body h4 {
-  color: #f8fafc;
-  font-weight: 700;
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  font-weight: 600;
   margin-top: 1.25rem;
   margin-bottom: 0.5rem;
   letter-spacing: -0.01em;
 }
 
-.markdown-answer-body h1 { font-size: 1.25rem; }
-.markdown-answer-body h2 { font-size: 1.15rem; }
-.markdown-answer-body h3 { font-size: 1.05rem; }
+.markdown-answer-body h1 { font-size: 1.2rem; }
+.markdown-answer-body h2 { font-size: 1.1rem; }
+.markdown-answer-body h3 { font-size: 1rem; }
 
 .markdown-answer-body p {
   margin-bottom: 0.875rem;
+  color: var(--text-secondary);
 }
 
 .markdown-answer-body ul,
@@ -133,6 +267,7 @@
   margin-top: 0.35rem;
   margin-bottom: 0.875rem;
   padding-left: 1.25rem;
+  color: var(--text-secondary);
 }
 
 .markdown-answer-body li {
@@ -140,14 +275,48 @@
 }
 
 .markdown-answer-body strong {
-  color: #a5b4fc;
+  color: var(--text-primary);
   font-weight: 600;
 }
 
 .markdown-answer-body blockquote {
-  border-left: 3px solid #6366f1;
+  border-left: 2px solid var(--primary);
   padding-left: 0.875rem;
   margin: 1rem 0;
-  color: #94a3b8;
+  color: var(--text-muted);
   font-style: italic;
+}
+
+.markdown-answer-body code:not(.katex *) {
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  background-color: var(--surface-well);
+  border: 1px solid var(--border);
+  padding: 0.15em 0.4em;
+  border-radius: 4px;
+  color: var(--primary);
+}
+
+.markdown-answer-body table {
+  width: 100%;
+  margin: 1rem 0;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.markdown-answer-body th,
+.markdown-answer-body td {
+  border: 1px solid var(--border);
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+}
+
+.markdown-answer-body th {
+  background-color: var(--surface-well);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.markdown-answer-body tr:nth-child(even) {
+  background-color: var(--surface-muted);
 }

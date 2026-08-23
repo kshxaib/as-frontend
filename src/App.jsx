@@ -11,18 +11,21 @@ import { AuthModal } from './components/AuthModal';
 import { ApiKeyRequiredModal } from './components/ApiKeyRequiredModal';
 import { useQuestionBankStore } from './store/useQuestionBankStore';
 import { useAuthStore } from './store/useAuthStore';
+import { useThemeStore } from './store/useThemeStore';
 
 function App() {
   const { activeTab, setActiveTab } = useQuestionBankStore();
   const { initAuth, isAuthenticated } = useAuthStore();
+  const { initTheme } = useThemeStore();
   const [justLoggedOut, setJustLoggedOut] = useState(false);
 
   // Track previous auth state to detect logout transitions
   const [prevAuth, setPrevAuth] = useState(isAuthenticated);
 
   useEffect(() => {
+    initTheme();
     initAuth();
-  }, [initAuth]);
+  }, [initTheme, initAuth]);
 
   // Detect logout → show logged-out message
   useEffect(() => {
@@ -42,26 +45,23 @@ function App() {
   const showApp = isAuthenticated || isCommunityTab;
 
   return (
-    <div className="min-h-screen bg-slate-950 font-sans antialiased text-slate-100 selection:bg-indigo-500 selection:text-white">
+    <div className="min-h-screen bg-[var(--background)] text-[var(--text-primary)] font-sans antialiased selection:bg-[var(--primary)] selection:text-[var(--primary-foreground)]">
 
-      {/* Navbar always rendered — it adapts based on auth state */}
+      {/* Navbar always rendered */}
       <Navbar />
 
-      {/* Main content area with smooth transitions */}
+      {/* Main content area */}
       <main>
         {/* ── LANDING PAGE ── (unauthenticated, non-community tab) */}
         {!showApp && (
-          <div
-            key="landing"
-            className="animate-fade-in"
-          >
+          <div key="landing">
             <LandingPage justLoggedOut={justLoggedOut} />
           </div>
         )}
 
         {/* ── AUTHENTICATED APP + COMMUNITY (public) ── */}
         {showApp && (
-          <div key="app" className="animate-fade-in">
+          <div key="app">
             {/* Community tab — accessible without auth */}
             {activeTab === 'community' && <CommunityHub />}
 
@@ -76,8 +76,7 @@ function App() {
               </>
             )}
 
-            {/* If on a protected tab but not authenticated → this shouldn't happen
-                since showApp only allows community for guests, but as a safety net: */}
+            {/* Safety fallback for guests */}
             {!isAuthenticated && activeTab !== 'community' && (
               <LandingPage justLoggedOut={justLoggedOut} />
             )}

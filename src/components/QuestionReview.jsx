@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
   FileText,
-  Sparkles,
   Plus,
   ArrowRight,
   RefreshCw,
@@ -11,12 +10,15 @@ import {
   AlertCircle,
   BarChart3,
   Layers,
+  Workflow,
 } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
 import { QuestionCard } from './QuestionCard';
 import { AddQuestionModal } from './AddQuestionModal';
 import { ConfirmationModal } from './ConfirmationModal';
 import { AiProgressModal } from './AiProgressModal';
+import { StatusBadge } from './ui/StatusBadge';
+import { EmptyState } from './ui/EmptyState';
 
 export const QuestionReview = () => {
   const {
@@ -72,56 +74,57 @@ export const QuestionReview = () => {
   });
 
   return (
-    <div className="min-h-screen bg-slate-950 pb-24 text-slate-100">
+    <div className="min-h-screen bg-[var(--background)] pb-32 text-[var(--text-primary)]">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+        
         {/* Feedback Alert Banners */}
         {error && (
-          <div className="mb-6 flex items-center justify-between rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-sm text-rose-300 backdrop-blur-md">
-            <div className="flex items-center gap-3">
-              <AlertCircle className="h-5 w-5 text-rose-400 shrink-0" />
+          <div className="mb-6 flex items-center justify-between rounded-[8px] border border-[rgba(239,68,68,0.25)] bg-[rgba(239,68,68,0.08)] p-3.5 text-xs text-[var(--error)]">
+            <div className="flex items-center gap-2.5">
+              <AlertCircle className="h-4 w-4 shrink-0" />
               <span>{error}</span>
             </div>
-            <button onClick={clearFeedback} className="text-xs text-rose-400 hover:underline">
+            <button onClick={clearFeedback} className="text-xs hover:underline font-mono">
               Dismiss
             </button>
           </div>
         )}
 
         {successMessage && (
-          <div className="mb-6 flex items-center justify-between rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-300 backdrop-blur-md">
-            <div className="flex items-center gap-3">
-              <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0" />
+          <div className="mb-6 flex items-center justify-between rounded-[8px] border border-[rgba(34,197,94,0.25)] bg-[rgba(34,197,94,0.08)] p-3.5 text-xs text-[var(--success)]">
+            <div className="flex items-center gap-2.5">
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
               <span>{successMessage}</span>
             </div>
-            <button onClick={clearFeedback} className="text-xs text-emerald-400 hover:underline">
+            <button onClick={clearFeedback} className="text-xs hover:underline font-mono">
               Dismiss
             </button>
           </div>
         )}
 
-        {/* Top Control Bar: Question Bank Selection & Actions */}
-        <div className="flex flex-col gap-6 md:flex-row md:items-center md:justify-between pb-8 border-b border-slate-800">
+        {/* Top Control Bar */}
+        <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between pb-6 border-b border-[var(--border)]">
           <div>
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-indigo-400">
-              <Layers className="h-4 w-4" />
-              Question Review & Verification
-            </div>
-            <h1 className="mt-1 text-2xl font-bold tracking-tight text-white sm:text-3xl">
-              Question Review & Marks Tuning
+            <span className="font-mono text-[11px] uppercase tracking-widest text-[var(--text-muted)] flex items-center gap-1.5 mb-1">
+              <Layers className="h-3.5 w-3.5 stroke-[1.5]" />
+              Editorial Review
+            </span>
+            <h1 className="font-display text-2xl sm:text-3xl font-normal text-[var(--text-primary)] tracking-tight">
+              Question Verification & Marks Allocation
             </h1>
-            <p className="mt-1 text-sm text-slate-400">
-              Review extracted questions, adjust marks, and approve before triggering AI answer generation.
+            <p className="mt-1 text-xs sm:text-sm text-[var(--text-secondary)]">
+              Audit parsed questions, customize point weights, and review before generating grounded solution manuscripts.
             </p>
           </div>
 
-          {/* Question Bank Switcher */}
+          {/* Controls: Switcher & Actions */}
           <div className="flex flex-wrap items-center gap-3">
             {questionBanks.length > 0 && (
               <div className="relative">
                 <select
                   value={currentQuestionBank?.id || ''}
                   onChange={(e) => selectQuestionBank(Number(e.target.value))}
-                  className="rounded-xl border border-slate-800 bg-slate-900 px-4 py-2.5 text-xs font-semibold text-slate-200 focus:border-indigo-500 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                  className="rounded-[8px] border border-[var(--border)] bg-[var(--surface-well)] px-3 py-2 text-xs font-medium text-[var(--text-primary)] focus:border-[var(--primary)] focus:outline-none"
                 >
                   {questionBanks.map((qb) => (
                     <option key={qb.id} value={qb.id}>
@@ -132,7 +135,6 @@ export const QuestionReview = () => {
               </div>
             )}
 
-            {/* AI Extract / Re-extract Button */}
             {currentQuestionBank && (
               <button
                 onClick={() => {
@@ -143,146 +145,120 @@ export const QuestionReview = () => {
                   }
                 }}
                 disabled={!!extractingQBs[currentQuestionBank.id]}
-                className="flex items-center gap-2 rounded-xl bg-slate-800 px-4 py-2.5 text-xs font-semibold text-slate-200 border border-slate-700 hover:bg-slate-700 hover:text-white transition-all disabled:opacity-50"
+                className="inline-flex items-center gap-1.5 rounded-[8px] border border-[rgba(245,158,11,0.3)] bg-[rgba(245,158,11,0.08)] px-3.5 py-2 font-mono text-[11px] font-medium text-[var(--ai)] hover:bg-[rgba(245,158,11,0.15)] transition-all disabled:opacity-40"
               >
-                <Sparkles className={`h-4 w-4 text-indigo-400 ${extractingQBs[currentQuestionBank.id] ? 'animate-spin' : ''}`} />
-                {extractingQBs[currentQuestionBank.id]
-                  ? 'Extracting with AI...'
-                  : currentQuestionBank.status === 'extracted'
-                  ? 'Re-extract Questions'
-                  : 'Extract Questions (AI)'}
+                <Workflow className={`h-3.5 w-3.5 stroke-[1.5] ${extractingQBs[currentQuestionBank.id] ? 'animate-spin' : ''}`} />
+                <span>
+                  {extractingQBs[currentQuestionBank.id]
+                    ? 'Extracting...'
+                    : currentQuestionBank.status === 'extracted'
+                    ? 'Re-extract Questions'
+                    : 'Extract with AI'}
+                </span>
               </button>
             )}
 
-            {/* Add Manual Question Button */}
             {currentQuestionBank && (
               <button
                 onClick={() => setIsAddModalOpen(true)}
-                className="flex items-center gap-2 rounded-xl bg-indigo-600 px-4 py-2.5 text-xs font-semibold text-white shadow-lg shadow-indigo-500/25 hover:bg-indigo-500 transition-all"
+                className="inline-flex items-center gap-1.5 rounded-[8px] bg-[var(--primary)] px-3.5 py-2 text-xs font-semibold text-[var(--primary-foreground)] hover:opacity-90 transition-all shadow-sm"
               >
-                <Plus className="h-4 w-4" />
-                Add Question
+                <Plus className="h-3.5 w-3.5 stroke-[2]" />
+                <span>Add Question</span>
               </button>
             )}
           </div>
         </div>
 
-        {/* Current Question Bank Details & Stats Dashboard */}
+        {/* Current Question Bank Details & Stats */}
         {currentQuestionBank ? (
-          <div className="mt-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {/* Total Questions Stat */}
-            <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-5 backdrop-blur-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium uppercase tracking-wider text-slate-400">Total Questions</span>
-                <div className="rounded-lg bg-indigo-500/10 p-2 text-indigo-400">
-                  <FileText className="h-4 w-4" />
-                </div>
-              </div>
-              <p className="mt-2 text-3xl font-bold tracking-tight text-white">{totalQuestions}</p>
-              <p className="mt-1 text-xs text-slate-400">Questions in this bank</p>
+          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="rounded-[10px] border border-[var(--border)] bg-[var(--surface-well)] p-4">
+              <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--text-muted)]">Total Questions</span>
+              <p className="mt-1 font-mono text-2xl font-semibold text-[var(--text-primary)]">{totalQuestions}</p>
+              <p className="mt-0.5 text-[11px] text-[var(--text-muted)]">Verified question entries</p>
             </div>
 
-            {/* Total Marks Stat */}
-            <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-5 backdrop-blur-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium uppercase tracking-wider text-slate-400">Total Marks</span>
-                <div className="rounded-lg bg-emerald-500/10 p-2 text-emerald-400">
-                  <BarChart3 className="h-4 w-4" />
-                </div>
-              </div>
-              <p className="mt-2 text-3xl font-bold tracking-tight text-emerald-400">{totalMarks}</p>
-              <p className="mt-1 text-xs text-slate-400">Sum of all question weights</p>
+            <div className="rounded-[10px] border border-[var(--border)] bg-[var(--surface-well)] p-4">
+              <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--text-muted)]">Total Marks</span>
+              <p className="mt-1 font-mono text-2xl font-semibold text-[var(--primary)]">{totalMarks} Marks</p>
+              <p className="mt-0.5 text-[11px] text-[var(--text-muted)]">Sum of examination weights</p>
             </div>
 
-            {/* Marks Breakdown Stat */}
-            <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-5 backdrop-blur-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium uppercase tracking-wider text-slate-400">Marks Source</span>
-                <div className="rounded-lg bg-amber-500/10 p-2 text-amber-400">
-                  <Sparkles className="h-4 w-4" />
-                </div>
-              </div>
-              <div className="mt-3 flex items-center gap-2 text-xs font-medium">
-                <span className="rounded bg-emerald-500/10 px-1.5 py-0.5 text-emerald-400 border border-emerald-500/20" title="Explicit from paper">
+            <div className="rounded-[10px] border border-[var(--border)] bg-[var(--surface-well)] p-4">
+              <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--text-muted)]">Marks Provenance</span>
+              <div className="mt-2 flex items-center gap-1.5 font-mono text-[10px]">
+                <span className="bg-[rgba(34,197,94,0.1)] text-[var(--success)] px-1.5 py-0.5 rounded border border-[rgba(34,197,94,0.2)]">
                   {explicitCount} Explicit
                 </span>
-                <span className="rounded bg-amber-500/10 px-1.5 py-0.5 text-amber-400 border border-amber-500/20" title="Estimated by AI">
+                <span className="bg-[rgba(245,158,11,0.1)] text-[var(--ai)] px-1.5 py-0.5 rounded border border-[rgba(245,158,11,0.2)]">
                   {aiEstimatedCount} AI
                 </span>
-                <span className="rounded bg-indigo-500/10 px-1.5 py-0.5 text-indigo-400 border border-indigo-500/20" title="Modified by user">
-                  {userModifiedCount} Modified
-                </span>
+                {userModifiedCount > 0 && (
+                  <span className="bg-[var(--surface)] text-[var(--text-muted)] px-1.5 py-0.5 rounded border border-[var(--border)]">
+                    {userModifiedCount} Modified
+                  </span>
+                )}
               </div>
-              <p className="mt-2 text-xs text-slate-400">Verification distribution</p>
+              <p className="mt-1 text-[11px] text-[var(--text-muted)]">Mark allocation sources</p>
             </div>
 
-            {/* Status & Linked Resources */}
-            <div className="rounded-2xl border border-slate-800/80 bg-slate-900/60 p-5 backdrop-blur-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-medium uppercase tracking-wider text-slate-400">Linked Resources</span>
-                <span className="rounded-full bg-indigo-500/20 px-2 py-0.5 text-[10px] font-bold text-indigo-300 uppercase">
-                  {currentQuestionBank.status}
-                </span>
-              </div>
-              <p className="mt-2 text-sm font-semibold text-slate-200">
-                Subject: {currentQuestionBank.subject}
+            <div className="rounded-[10px] border border-[var(--border)] bg-[var(--surface-well)] p-4">
+              <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--text-muted)]">Subject Archive</span>
+              <p className="mt-1 font-display text-sm font-medium text-[var(--text-primary)] truncate">
+                {currentQuestionBank.subject}
               </p>
-              <p className="mt-1 text-xs text-slate-400">
-                Resource IDs: {currentQuestionBank.resource_ids || 'None linked'}
+              <p className="mt-0.5 font-mono text-[10px] text-[var(--text-muted)] truncate">
+                Linked IDs: {currentQuestionBank.resource_ids || 'All Notes'}
               </p>
             </div>
           </div>
         ) : (
-          <div className="mt-12 text-center py-16 rounded-2xl border border-dashed border-slate-800 bg-slate-900/30">
-            <FileText className="mx-auto h-12 w-12 text-slate-600" />
-            <h3 className="mt-4 text-base font-semibold text-slate-300">No Question Bank Selected</h3>
-            <p className="mt-1 text-xs text-slate-500">
-              Upload a question bank PDF or select one to begin reviewing questions.
-            </p>
-          </div>
+          <EmptyState
+            icon={Layers}
+            title="No Question Bank Selected"
+            description="Select or upload a question bank to review and audit question structures."
+          />
         )}
 
         {/* Filter and Search Bar */}
         {currentQuestionBank && questions.length > 0 && (
-          <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between rounded-xl border border-slate-800 bg-slate-900/40 p-3">
-            {/* Search */}
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-[10px] border border-[var(--border)] bg-[var(--surface-well)] p-3">
             <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-muted)]" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search questions by keyword..."
-                className="w-full rounded-lg border border-slate-800 bg-slate-950 py-2 pl-10 pr-4 text-xs text-slate-200 placeholder-slate-500 focus:border-indigo-500 focus:outline-none"
+                placeholder="Filter questions by keyword..."
+                className="w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] py-1.5 pl-9 pr-3 text-xs text-[var(--text-primary)] placeholder-[var(--text-disabled)] focus:border-[var(--primary)] focus:outline-none"
               />
             </div>
 
-            {/* Filter Pills */}
             <div className="flex flex-wrap items-center gap-2">
-              <span className="flex items-center gap-1 text-xs text-slate-400 mr-1">
-                <SlidersHorizontal className="h-3.5 w-3.5" />
-                Filter Marks:
+              <span className="font-mono text-[11px] text-[var(--text-muted)] mr-1 uppercase">
+                Filter:
               </span>
               {['ALL', 2, 5, 10].map((filter) => (
                 <button
                   key={filter}
                   onClick={() => setSelectedMarkFilter(filter)}
-                  className={`rounded-lg px-2.5 py-1 text-xs font-semibold transition-all ${
+                  className={`rounded-[4px] px-2 py-0.5 font-mono text-[11px] font-medium transition-all ${
                     selectedMarkFilter === filter
-                      ? 'bg-indigo-600 text-white'
-                      : 'bg-slate-800 text-slate-400 hover:bg-slate-700 hover:text-slate-200'
+                      ? 'bg-[var(--primary)] text-[var(--primary-foreground)] font-semibold shadow-xs'
+                      : 'border border-[var(--border)] bg-[var(--surface)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
                   }`}
                 >
                   {filter === 'ALL' ? 'All' : `${filter}M`}
                 </button>
               ))}
 
-              <div className="h-4 w-px bg-slate-800 mx-1" />
+              <div className="h-4 w-px bg-[var(--border)] mx-1" />
 
               <select
                 value={selectedSourceFilter}
                 onChange={(e) => setSelectedSourceFilter(e.target.value)}
-                className="rounded-lg border border-slate-800 bg-slate-950 px-2.5 py-1 text-xs text-slate-300 focus:border-indigo-500 focus:outline-none"
+                className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 font-mono text-xs text-[var(--text-primary)] focus:border-[var(--primary)] focus:outline-none"
               >
                 <option value="ALL">All Sources</option>
                 <option value="explicit">Explicit</option>
@@ -297,22 +273,24 @@ export const QuestionReview = () => {
         {currentQuestionBank && (
           <div className="mt-6 space-y-4">
             {isLoading ? (
-              <div className="py-16 text-center text-slate-400">
-                <RefreshCw className="mx-auto h-8 w-8 animate-spin text-indigo-500 mb-2" />
-                <p className="text-xs">Loading question bank data...</p>
+              <div className="py-20 text-center text-[var(--text-muted)]">
+                <RefreshCw className="mx-auto h-6 w-6 animate-spin text-[var(--primary)] mb-2 stroke-[1.5]" />
+                <p className="font-mono text-xs">Loading manuscript items...</p>
               </div>
             ) : filteredQuestions.length > 0 ? (
               filteredQuestions.map((question, index) => (
                 <QuestionCard key={question.id} question={question} index={index} />
               ))
             ) : (
-              <div className="py-16 text-center rounded-2xl border border-slate-800/80 bg-slate-900/40">
-                <p className="text-sm font-semibold text-slate-300">
-                  {questions.length === 0
-                    ? 'No questions extracted yet. Click "Extract Questions (AI)" or add questions manually.'
-                    : 'No questions match your current search / filter.'}
-                </p>
-              </div>
+              <EmptyState
+                icon={FileText}
+                title="No Questions Match Filter"
+                description={
+                  questions.length === 0
+                    ? 'No questions extracted yet. Click "Extract with AI" or add questions manually.'
+                    : 'Try clearing your search query or adjusting marks filter.'
+                }
+              />
             )}
           </div>
         )}
@@ -320,16 +298,16 @@ export const QuestionReview = () => {
 
       {/* Sticky Bottom Action Bar */}
       {currentQuestionBank && questions.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-slate-800 bg-slate-950/90 backdrop-blur-md p-4">
+        <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-md p-3.5">
           <div className="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center gap-4">
-              <div className="flex h-3 w-3 rounded-full bg-emerald-400 animate-ping" />
+            <div className="flex items-center gap-3">
+              <span className="inline-block h-2 w-2 rounded-full bg-[var(--success)]" />
               <div>
-                <p className="text-xs font-semibold text-slate-200">
-                  {totalQuestions} Questions Approved ({totalMarks} Total Marks)
+                <p className="font-mono text-xs font-semibold text-[var(--text-primary)]">
+                  {totalQuestions} Questions Approved · {totalMarks} Total Marks
                 </p>
-                <p className="text-[11px] text-slate-400">
-                  Ready for AI Answer Generation using linked study resources
+                <p className="text-[11px] text-[var(--text-muted)]">
+                  Ready to synthesize grounded exam answers from linked notes
                 </p>
               </div>
             </div>
@@ -337,11 +315,11 @@ export const QuestionReview = () => {
             <button
               onClick={() => setIsGenerateConfirmOpen(true)}
               disabled={isGeneratingAnswers}
-              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 px-6 py-3 text-xs font-bold text-slate-950 shadow-lg shadow-emerald-500/20 hover:from-emerald-400 hover:to-teal-400 transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+              className="inline-flex items-center gap-2 rounded-[8px] bg-[var(--primary)] px-5 py-2 text-xs font-semibold text-[var(--primary-foreground)] hover:opacity-90 transition-all disabled:opacity-50 shadow-sm"
             >
-              <Sparkles className={`h-4 w-4 ${isGeneratingAnswers ? 'animate-spin' : ''}`} />
-              <span>{isGeneratingAnswers ? 'Generating Answers...' : 'Approve & Generate Answers'}</span>
-              <ArrowRight className="h-4 w-4" />
+              <Workflow className={`h-4 w-4 stroke-[1.5] ${isGeneratingAnswers ? 'animate-spin' : ''}`} />
+              <span>{isGeneratingAnswers ? 'Generating Answers...' : 'Generate Solution Manuscript'}</span>
+              <ArrowRight className="h-3.5 w-3.5 stroke-[2]" />
             </button>
           </div>
         </div>
@@ -352,7 +330,7 @@ export const QuestionReview = () => {
         <ConfirmationModal
           isOpen={isReExtractConfirmOpen}
           title="Re-extract Question Bank?"
-          message={`Existing extracted questions for "${currentQuestionBank.name}" will be replaced with fresh AI extraction. Any custom edits will be lost.`}
+          message={`Existing extracted questions for "${currentQuestionBank.name}" will be replaced with fresh AI extraction. Any custom question modifications will be lost.`}
           confirmText="Yes, Re-extract Questions"
           cancelText="Cancel"
           confirmVariant="warning"
@@ -369,12 +347,12 @@ export const QuestionReview = () => {
       {currentQuestionBank && (
         <ConfirmationModal
           isOpen={isGenerateConfirmOpen}
-          title="Generate AI Solutions & Academic Review?"
+          title="Generate Solution Manuscript?"
           message={`AcademicStack will retrieve grounded notes from Qdrant, draft complete examination answers for all ${totalQuestions} questions (${totalMarks} marks total), and run an Academic AI Review pass with LaTeX math verification.`}
           confirmText="Start Solution Generation"
           cancelText="Cancel"
-          confirmVariant="emerald"
-          iconType="sparkles"
+          confirmVariant="primary"
+          iconType="ai"
           onConfirm={() => {
             setIsGenerateConfirmOpen(false);
             generateAnswers(currentQuestionBank.id);
@@ -394,8 +372,8 @@ export const QuestionReview = () => {
       <AiProgressModal
         isOpen={isGeneratingAnswers}
         type="generation"
-        title="Generating Exam Solutions with AI"
-        subtitle={`Solving all ${totalQuestions} questions with Qdrant vector retrieval, multi-provider drafting, and Academic Review.`}
+        title="Generating Solution Manuscript"
+        subtitle={`Synthesizing solutions for ${totalQuestions} questions with vector retrieval, multi-provider drafting, and Academic Review pass.`}
       />
 
       {/* Add Question Modal */}

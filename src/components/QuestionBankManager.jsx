@@ -2,21 +2,24 @@ import React, { useEffect, useState } from 'react';
 import {
   FileText,
   Plus,
-  Sparkles,
-  Layers,
   ArrowRight,
-  ExternalLink,
   Download,
   RefreshCw,
   Search,
   CheckCircle2,
   AlertCircle,
-  HelpCircle,
+  Workflow,
+  Link,
+  Layers,
+  X,
+  Loader2,
 } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { ConfirmationModal } from './ConfirmationModal';
 import { AiProgressModal } from './AiProgressModal';
+import { StatusBadge } from './ui/StatusBadge';
+import { EmptyState } from './ui/EmptyState';
 
 export const QuestionBankManager = () => {
   const {
@@ -92,41 +95,42 @@ export const QuestionBankManager = () => {
   );
 
   return (
-    <div className="min-h-screen bg-slate-950 pb-24 text-slate-100">
+    <div className="min-h-screen bg-[var(--background)] pb-24 text-[var(--text-primary)]">
       <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        {/* Alerts */}
+        
+        {/* Feedback Banners */}
         {error && (
-          <div className="mb-6 flex items-center justify-between rounded-xl border border-rose-500/30 bg-rose-500/10 p-4 text-xs text-rose-300">
+          <div className="mb-6 flex items-center justify-between rounded-[8px] border border-[rgba(239,68,68,0.25)] bg-[rgba(239,68,68,0.08)] p-3.5 text-xs text-[var(--error)]">
             <div className="flex items-center gap-2.5">
-              <AlertCircle className="h-5 w-5 text-rose-400 shrink-0" />
+              <AlertCircle className="h-4 w-4 shrink-0" />
               <span>{error}</span>
             </div>
-            <button onClick={clearFeedback} className="text-xs text-rose-400 hover:underline">Dismiss</button>
+            <button onClick={clearFeedback} className="text-xs hover:underline font-mono">Dismiss</button>
           </div>
         )}
 
         {successMessage && (
-          <div className="mb-6 flex items-center justify-between rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-xs text-emerald-300">
+          <div className="mb-6 flex items-center justify-between rounded-[8px] border border-[rgba(34,197,94,0.25)] bg-[rgba(34,197,94,0.08)] p-3.5 text-xs text-[var(--success)]">
             <div className="flex items-center gap-2.5">
-              <CheckCircle2 className="h-5 w-5 text-emerald-400 shrink-0" />
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
               <span>{successMessage}</span>
             </div>
-            <button onClick={clearFeedback} className="text-xs text-emerald-400 hover:underline">Dismiss</button>
+            <button onClick={clearFeedback} className="text-xs hover:underline font-mono">Dismiss</button>
           </div>
         )}
 
-        {/* Top Header */}
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between border-b border-slate-800 pb-8">
+        {/* Top Masthead */}
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between pb-6 border-b border-[var(--border)]">
           <div>
-            <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-indigo-400">
-              <Layers className="h-4 w-4" />
-              Exam Paper Management
-            </div>
-            <h1 className="mt-1 text-2xl font-bold tracking-tight text-white sm:text-3xl">
-              Question Banks & AI Extraction
+            <span className="font-mono text-[11px] uppercase tracking-widest text-[var(--text-muted)] flex items-center gap-1.5 mb-1">
+              <Layers className="h-3.5 w-3.5 stroke-[1.5]" />
+              Examination Archive
+            </span>
+            <h1 className="font-display text-2xl sm:text-3xl font-normal text-[var(--text-primary)] tracking-tight">
+              Question Banks & Exam Ingestion
             </h1>
-            <p className="mt-1 text-sm text-slate-400">
-              Upload university previous year question papers. Link them to indexed study materials and extract questions.
+            <p className="mt-1 text-xs sm:text-sm text-[var(--text-secondary)]">
+              Ingest semester question papers, link relevant study notes, and extract questions with explicit mark allocations.
             </p>
           </div>
 
@@ -139,118 +143,128 @@ export const QuestionBankManager = () => {
                   setIsUploadModalOpen(true);
                 }
               }}
-              className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-500 px-5 py-2.5 text-xs font-semibold text-white shadow-lg shadow-indigo-500/25 hover:from-indigo-500 hover:to-indigo-400 transition-all"
+              className="inline-flex items-center gap-2 rounded-[8px] bg-[var(--primary)] px-4 py-2 text-xs font-semibold text-[var(--primary-foreground)] hover:opacity-90 transition-all shadow-sm"
             >
-              <Plus className="h-4 w-4" />
-              <span>Upload Question Bank PDF</span>
+              <Plus className="h-3.5 w-3.5 stroke-[2]" />
+              <span>Upload Question Paper</span>
             </button>
           </div>
         </div>
 
         {/* Search */}
-        <div className="mt-8 max-w-md">
+        <div className="mt-6 max-w-md">
           <div className="relative">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-500" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-muted)]" />
             <input
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search question banks..."
-              className="w-full rounded-xl border border-slate-800 bg-slate-900/60 py-2.5 pl-10 pr-4 text-xs text-slate-200 placeholder-slate-500 focus:border-indigo-500 focus:outline-none"
+              placeholder="Search question banks by title or subject..."
+              className="w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface-well)] py-1.5 pl-9 pr-3 text-xs text-[var(--text-primary)] placeholder-[var(--text-disabled)] focus:border-[var(--primary)] focus:outline-none"
             />
           </div>
         </div>
 
         {/* Question Banks List */}
-        <div className="mt-8">
+        <div className="mt-6">
           {isLoading ? (
-            <div className="py-20 text-center text-slate-400">
-              <RefreshCw className="mx-auto h-8 w-8 animate-spin text-indigo-500 mb-2" />
-              <p className="text-xs">Loading question banks...</p>
+            <div className="py-24 text-center text-[var(--text-muted)]">
+              <RefreshCw className="mx-auto h-6 w-6 animate-spin text-[var(--primary)] mb-2 stroke-[1.5]" />
+              <p className="font-mono text-xs">Retrieving examination archives...</p>
             </div>
           ) : filteredBanks.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredBanks.map((qb) => (
-                <div
-                  key={qb.id}
-                  className="flex flex-col justify-between rounded-3xl border border-slate-800 bg-slate-900/60 p-6 backdrop-blur-sm hover:border-slate-700 transition-all"
-                >
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <span className="rounded-full bg-indigo-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-indigo-300 border border-indigo-500/20">
-                        {qb.subject}
-                      </span>
-                      <span className="rounded-full bg-slate-800 px-2 py-0.5 text-[10px] font-medium text-slate-400 uppercase">
-                        {qb.status}
-                      </span>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {filteredBanks.map((qb) => {
+                const isExtracting = !!extractingQBs[qb.id];
+                return (
+                  <div
+                    key={qb.id}
+                    className="flex flex-col justify-between rounded-[12px] border border-[var(--border)] bg-[var(--surface)] p-5 hover:border-[var(--border-strong)] transition-all"
+                  >
+                    <div>
+                      {/* Subject & Status */}
+                      <div className="flex items-center justify-between gap-2 mb-3">
+                        <span className="font-mono text-[11px] font-medium text-[var(--text-muted)] bg-[var(--surface-well)] px-2 py-0.5 rounded-[4px] border border-[var(--border-subtle)] truncate">
+                          {qb.subject}
+                        </span>
+                        {qb.status === 'extracted' ? (
+                          <StatusBadge variant="success">Extracted</StatusBadge>
+                        ) : isExtracting ? (
+                          <StatusBadge variant="amber" pulse>Extracting...</StatusBadge>
+                        ) : (
+                          <StatusBadge variant="neutral">Pending</StatusBadge>
+                        )}
+                      </div>
+
+                      <h3 className="font-display text-base font-normal text-[var(--text-primary)] line-clamp-1">
+                        {qb.name}
+                      </h3>
+
+                      {/* Linked Resources Strip */}
+                      <div className="mt-3 rounded-[6px] bg-[var(--surface-well)] border border-[var(--border-subtle)] p-2.5 text-xs text-[var(--text-muted)]">
+                        <div className="flex items-center gap-1.5 mb-1 font-mono text-[11px]">
+                          <Link className="h-3 w-3 stroke-[1.5] text-[var(--community)]" />
+                          <span className="font-medium text-[var(--text-secondary)]">Linked Notes:</span>
+                        </div>
+                        {qb.resource_ids ? (
+                          <p className="font-mono text-[10px] text-[var(--community)] truncate">
+                            Resource IDs: [{qb.resource_ids}]
+                          </p>
+                        ) : (
+                          <p className="text-[11px] text-[var(--text-disabled)] italic">
+                            All indexed study materials
+                          </p>
+                        )}
+                      </div>
                     </div>
 
-                    <h3 className="mt-3 text-lg font-bold text-white tracking-tight line-clamp-1">
-                      {qb.name}
-                    </h3>
+                    {/* Action Bar */}
+                    <div className="mt-5 flex items-center justify-between border-t border-[var(--border-subtle)] pt-3">
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => {
+                            if (qb.status === 'extracted') {
+                              setReExtractCandidate(qb);
+                            } else {
+                              extractQuestions(qb.id);
+                            }
+                          }}
+                          disabled={isExtracting || isUploadingQuestionBank}
+                          className="inline-flex items-center gap-1.5 rounded-[6px] border border-[rgba(245,158,11,0.3)] bg-[rgba(245,158,11,0.08)] px-2.5 py-1 font-mono text-[11px] font-medium text-[var(--ai)] hover:bg-[rgba(245,158,11,0.15)] transition-all disabled:opacity-40"
+                        >
+                          <Workflow className={`h-3 w-3 stroke-[1.5] ${isExtracting ? 'animate-spin' : ''}`} />
+                          <span>{isExtracting ? 'Extracting...' : qb.status === 'extracted' ? 'Re-extract' : 'AI Extract'}</span>
+                        </button>
 
-                    <div className="mt-4 rounded-2xl bg-slate-950/60 border border-slate-800/80 p-3 text-xs text-slate-400">
-                      <span className="font-medium text-slate-300">Linked Resources: </span>
-                      {qb.resource_ids ? (
-                        <span className="text-indigo-300 font-mono">IDs [{qb.resource_ids}]</span>
-                      ) : (
-                        <span className="text-slate-500">None linked (All Resources)</span>
-                      )}
+                        <button
+                          onClick={() => downloadQuestionBankFile(qb.id, `${qb.name.replace(/\s+/g, '_')}.pdf`)}
+                          title="Download Original Exam PDF"
+                          className="rounded-[6px] p-1 text-[var(--text-muted)] hover:bg-[var(--surface-well)] hover:text-[var(--text-primary)] transition-colors"
+                        >
+                          <Download className="h-3.5 w-3.5 stroke-[1.5]" />
+                        </button>
+                      </div>
+
+                      <button
+                        onClick={() => handleReviewBank(qb.id)}
+                        className="inline-flex items-center gap-1 font-mono text-[11px] font-medium text-[var(--primary)] hover:underline transition-colors"
+                      >
+                        <span>Review & Solve</span>
+                        <ArrowRight className="h-3 w-3 stroke-[2]" />
+                      </button>
                     </div>
                   </div>
-
-                    <div className="mt-6 flex items-center justify-between border-t border-slate-800/80 pt-4">
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => {
-                          if (qb.status === 'extracted') {
-                            setReExtractCandidate(qb);
-                          } else {
-                            extractQuestions(qb.id);
-                          }
-                        }}
-                        disabled={!!extractingQBs[qb.id] || isUploadingQuestionBank}
-                        className="inline-flex items-center gap-1.5 rounded-xl bg-slate-800 px-3 py-1.5 text-xs font-semibold text-slate-200 border border-slate-700 hover:bg-slate-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <Sparkles className={`h-3.5 w-3.5 text-indigo-400 ${extractingQBs[qb.id] ? 'animate-spin' : ''}`} />
-                        <span>{extractingQBs[qb.id] ? 'Extracting...' : qb.status === 'extracted' ? 'Re-extract' : 'AI Extract'}</span>
-                      </button>
-
-                      <button
-                        onClick={() => downloadQuestionBankFile(qb.id, `${qb.name.replace(/\s+/g, '_')}.pdf`)}
-                        title="Download Original Exam Paper PDF"
-                        className="rounded-lg p-1.5 text-slate-400 hover:bg-slate-800 hover:text-white transition-colors"
-                      >
-                        <Download className="h-4 w-4" />
-                      </button>
-                    </div>
-
-                    <button
-                      onClick={() => handleReviewBank(qb.id)}
-                      className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-400 hover:text-indigo-300 transition-colors"
-                    >
-                      <span>Review & Solve</span>
-                      <ArrowRight className="h-3.5 w-3.5" />
-                    </button>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           ) : (
-            <div className="py-20 text-center rounded-3xl border border-dashed border-slate-800 bg-slate-900/30">
-              <FileText className="mx-auto h-12 w-12 text-slate-600" />
-              <h3 className="mt-4 text-base font-semibold text-slate-300">No Question Banks Found</h3>
-              <p className="mt-1 text-xs text-slate-500 max-w-sm mx-auto">
-                Upload your semester question paper or assignment PDF to extract structured questions with AI.
-              </p>
-              <button
-                onClick={() => setIsUploadModalOpen(true)}
-                className="mt-5 inline-flex items-center gap-2 rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-semibold text-white shadow-lg shadow-indigo-500/25 hover:bg-indigo-500"
-              >
-                <Plus className="h-4 w-4" />
-                Upload First Paper
-              </button>
-            </div>
+            <EmptyState
+              icon={Layers}
+              title="No Question Banks Found"
+              description="Upload university previous year examination papers or semester tests to extract questions and allocate marks with AI."
+              actionText="Upload First Question Paper"
+              onAction={() => setIsUploadModalOpen(true)}
+            />
           )}
         </div>
 
@@ -258,7 +272,7 @@ export const QuestionBankManager = () => {
         <ConfirmationModal
           isOpen={!!reExtractCandidate}
           title="Re-extract Question Bank?"
-          message={`Existing extracted questions for "${reExtractCandidate?.name}" will be replaced with fresh AI extraction. Any custom modifications will be reset.`}
+          message={`Existing extracted questions for "${reExtractCandidate?.name}" will be replaced with fresh AI extraction. Any custom question modifications will be reset.`}
           confirmText="Yes, Re-extract Questions"
           cancelText="Cancel"
           confirmVariant="warning"
@@ -282,88 +296,118 @@ export const QuestionBankManager = () => {
 
         {/* Upload Modal */}
         {isUploadModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/80 p-4 backdrop-blur-md">
-            <div className="w-full max-w-lg rounded-3xl border border-slate-800 bg-slate-900 p-6 sm:p-8 shadow-2xl">
-              <h3 className="text-xl font-bold text-white tracking-tight">Upload Question Bank PDF</h3>
-              <p className="mt-1 text-xs text-slate-400">Select which study resources this question bank should draw knowledge from.</p>
+          <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[var(--overlay)] p-4 pt-16 sm:pt-24 backdrop-blur-sm animate-in fade-in duration-150">
+            <div className="relative w-full max-w-lg rounded-[20px] border border-[var(--border)] bg-[var(--surface-elevated)] p-6 sm:p-7 shadow-[var(--shadow-lg)]">
+              
+              <button
+                onClick={() => setIsUploadModalOpen(false)}
+                className="absolute right-4 top-4 rounded-[8px] p-2 text-[var(--text-muted)] hover:bg-[var(--surface-well)] hover:text-[var(--text-primary)] transition-colors"
+              >
+                <X className="h-4 w-4 stroke-[1.5]" />
+              </button>
 
-              <form onSubmit={handleUploadSubmit} className="mt-6 space-y-4">
+              <div className="flex items-start gap-3.5 mb-5">
+                <div className="flex h-10 w-10 items-center justify-center rounded-[10px] border border-[var(--border)] bg-[var(--surface-well)] text-[var(--primary)] shrink-0">
+                  <FileText className="h-5 w-5 stroke-[1.5]" />
+                </div>
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">Paper Title *</label>
+                  <h3 className="font-display text-lg font-normal text-[var(--text-primary)] tracking-tight">
+                    Upload Question Bank PDF
+                  </h3>
+                  <p className="mt-0.5 text-xs text-[var(--text-muted)]">
+                    Link specific study resources to ground the examination answer generation pipeline.
+                  </p>
+                </div>
+              </div>
+
+              <form onSubmit={handleUploadSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+                    Paper Title *
+                  </label>
                   <input
                     type="text"
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
                     placeholder="e.g. End Semester Exam 2025"
-                    className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2 px-3 text-xs text-slate-200 focus:border-indigo-500 focus:outline-none"
+                    className="w-full rounded-[8px] border border-[var(--border)] bg-[var(--surface-well)] py-2 px-3 text-xs text-[var(--text-primary)] placeholder-[var(--text-disabled)] focus:border-[var(--primary)] focus:outline-none"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">Subject *</label>
+                  <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+                    Subject *
+                  </label>
                   <input
                     type="text"
                     required
                     value={subject}
                     onChange={(e) => setSubject(e.target.value)}
                     placeholder="e.g. Database Management Systems"
-                    className="w-full rounded-xl border border-slate-800 bg-slate-950 py-2 px-3 text-xs text-slate-200 focus:border-indigo-500 focus:outline-none"
+                    className="w-full rounded-[8px] border border-[var(--border)] bg-[var(--surface-well)] py-2 px-3 text-xs text-[var(--text-primary)] placeholder-[var(--text-disabled)] focus:border-[var(--primary)] focus:outline-none"
                   />
                 </div>
 
                 {/* Resource Linking Checkboxes */}
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1.5">
+                  <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5">
                     Link Study Resources (for strict RAG grounding)
                   </label>
-                  <div className="max-h-36 overflow-y-auto space-y-2 rounded-xl border border-slate-800 bg-slate-950 p-3">
+                  <div className="max-h-36 overflow-y-auto space-y-2 rounded-[8px] border border-[var(--border)] bg-[var(--surface-well)] p-3">
                     {resources.length > 0 ? (
                       resources.map((r) => (
-                        <label key={r.id} className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+                        <label key={r.id} className="flex items-center gap-2 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer">
                           <input
                             type="checkbox"
                             checked={selectedResourceIds.includes(r.id)}
                             onChange={() => handleToggleResourceId(r.id)}
-                            className="rounded border-slate-700 bg-slate-900 text-indigo-600 focus:ring-0"
+                            className="rounded border-[var(--border)] bg-[var(--surface)] text-[var(--primary)] focus:ring-0"
                           />
                           <span className="truncate">{r.name} ({r.subject})</span>
                           {r.status === 'indexed' && (
-                            <span className="text-[10px] text-emerald-400 bg-emerald-500/10 px-1 rounded">indexed</span>
+                            <span className="font-mono text-[9px] text-[var(--success)] bg-[rgba(34,197,94,0.1)] px-1 rounded border border-[rgba(34,197,94,0.2)]">
+                              indexed
+                            </span>
                           )}
                         </label>
                       ))
                     ) : (
-                      <p className="text-[11px] text-slate-500 italic">No resources available. You can link them later.</p>
+                      <p className="text-[11px] text-[var(--text-disabled)] italic font-mono">
+                        No study materials uploaded yet. All indexed notes will be used by default.
+                      </p>
                     )}
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-slate-300 mb-1">Question Bank PDF *</label>
+                  <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+                    Exam Paper PDF *
+                  </label>
                   <input
                     type="file"
                     required
                     accept="application/pdf"
                     onChange={(e) => setFile(e.target.files?.[0] || null)}
-                    className="w-full text-xs text-slate-400 file:mr-4 file:py-2 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-indigo-400 hover:file:bg-slate-700"
+                    className="w-full text-xs text-[var(--text-muted)] file:mr-4 file:py-1.5 file:px-3 file:rounded-[6px] file:border-0 file:text-xs file:font-semibold file:bg-[var(--surface-well)] file:text-[var(--text-primary)] hover:file:bg-[var(--surface-muted)] cursor-pointer"
                   />
                 </div>
 
-                <div className="mt-6 flex items-center justify-end gap-3">
+                <div className="mt-6 flex items-center justify-end gap-3 pt-3 border-t border-[var(--border-subtle)]">
                   <button
                     type="button"
                     onClick={() => setIsUploadModalOpen(false)}
-                    className="rounded-xl border border-slate-800 px-4 py-2 text-xs font-semibold text-slate-400 hover:bg-slate-800"
+                    className="rounded-[8px] border border-[var(--border)] bg-[var(--surface-well)] px-4 py-2 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)] transition-all"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={isUploadingQuestionBank}
-                    className="rounded-xl bg-indigo-600 px-5 py-2 text-xs font-semibold text-white shadow-lg shadow-indigo-500/25 hover:bg-indigo-500 disabled:opacity-50"
+                    className="inline-flex items-center gap-2 rounded-[8px] bg-[var(--primary)] px-5 py-2 text-xs font-semibold text-[var(--primary-foreground)] hover:opacity-90 transition-all disabled:opacity-50 shadow-sm"
                   >
-                    {isUploadingQuestionBank ? 'Uploading...' : 'Create Question Bank'}
+                    {isUploadingQuestionBank && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                    <span>{isUploadingQuestionBank ? 'Uploading Paper...' : 'Create Question Bank'}</span>
                   </button>
                 </div>
               </form>
