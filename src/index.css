@@ -287,7 +287,42 @@ body {
   font-style: italic;
 }
 
-.markdown-answer-body code:not(.katex *) {
+/* ── Preformatted Code Blocks & ASCII / Unicode Diagrams ────────────────────── */
+.markdown-answer-body pre {
+  background-color: var(--surface-well);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1rem 1.25rem;
+  overflow-x: auto;
+  overflow-y: hidden;
+  margin: 1.25rem 0;
+  font-family: 'JetBrains Mono', 'Courier New', monospace;
+  font-size: 0.8125rem;
+  line-height: 1.35;
+  letter-spacing: 0;
+  white-space: pre;
+  word-spacing: normal;
+  word-break: normal;
+  tab-size: 2;
+}
+
+.markdown-answer-body pre code {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  font-family: inherit !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+  letter-spacing: inherit !important;
+  white-space: pre !important;
+  word-break: normal !important;
+  word-wrap: normal !important;
+  color: var(--primary) !important;
+  display: block;
+}
+
+.markdown-answer-body code:not(pre code):not(.katex *) {
   font-family: var(--font-mono);
   font-size: 0.85em;
   background-color: var(--surface-well);

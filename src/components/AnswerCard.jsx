@@ -12,35 +12,50 @@ import { StatusBadge } from './ui/StatusBadge';
 function formatMarkdownMath(content) {
   if (!content) return '';
 
-  let text = content;
+  // 1. Strip accidental rubric/evaluation leakage
+  let cleaned = content.replace(/(?:^|\n)(?:Mark Allocation|Grading Rubric|Scoring Breakdown|Reviewer Assessment):\s*[\s\S]*?(?=\n\n|\n[A-Z]|$)/gi, '\n');
 
-  // 1. Fix isolated single dollars on their own lines: $\n\n[formula]\n\n$ -> $$\n[formula]\n$$
-  text = text.replace(/(?:^|\n)\s*\$\s*\n+([\s\S]*?)\n+\s*\$\s*(?=\n|$)/g, (match, formula) => {
-    return `\n\n$$\n${formula.trim()}\n$$\n\n`;
+  // 2. Protect code blocks / ASCII diagrams from regex alterations
+  const parts = cleaned.split(/(```[\s\S]*?```)/g);
+
+  const processed = parts.map((part) => {
+    if (part.startsWith('```') && part.endsWith('```')) {
+      // Return code block / diagram 100% unaltered
+      return part;
+    }
+
+    let text = part;
+
+    // Fix isolated single dollars on their own lines: $\n\n[formula]\n\n$ -> $$\n[formula]\n$$
+    text = text.replace(/(?:^|\n)\s*\$\s*\n+([\s\S]*?)\n+\s*\$\s*(?=\n|$)/g, (match, formula) => {
+      return `\n\n$$\n${formula.trim()}\n$$\n\n`;
+    });
+
+    // Convert standard bracketed display math \[ ... \] to $$ ... $$
+    text = text.replace(/\\\[([\s\S]*?)\\\]/g, (match, formula) => `\n\n$$\n${formula.trim()}\n$$\n\n`);
+
+    // Convert \( ... \) to $ ... $ (inline)
+    text = text.replace(/\\\(([\s\S]*?)\\\)/g, (match, formula) => `$${formula.replace(/\s+/g, ' ').trim()}$`);
+
+    // Convert bracketed LaTeX environments like [ \mu... ], [ \begin{cases}... ] to $$ ... $$
+    text = text.replace(/\[\s*(\\mu|\\max|\\min|\\begin\{cases\}|\\neg|\\text|\\sum|\\frac|\\int|\\lim|\\sigma|\\alpha|\\beta|\\gamma|\\delta|\\theta)([\s\S]*?)\]/g, 
+      (match, prefix, rest) => `\n\n$$\n${prefix}${rest.trim()}\n$$\n\n`
+    );
+
+    // Fix any broken inline math split across multiple newlines: $\n A \n$ -> $A$
+    text = text.replace(/\$([^$\n]+)\$/g, (match, inner) => `$${inner.trim()}$`);
+
+    // Clean up excessive consecutive blank lines (limit to max 2 newlines = 1 blank line)
+    text = text.replace(/\n{3,}/g, '\n\n');
+
+    // Ensure clean spacing before subquestions / numbered topics
+    text = text.replace(/([^\n])\n(\d+\.\s+[A-Za-z])/g, '$1\n\n$2');
+    text = text.replace(/([^\n])\n(###?\s+)/g, '$1\n\n$2');
+
+    return text;
   });
 
-  // 2. Convert standard bracketed display math \[ ... \] to $$ ... $$
-  text = text.replace(/\\\[([\s\S]*?)\\\]/g, (match, formula) => `\n\n$$\n${formula.trim()}\n$$\n\n`);
-
-  // 3. Convert \( ... \) to $ ... $ (inline)
-  text = text.replace(/\\\(([\s\S]*?)\\\)/g, (match, formula) => `$${formula.replace(/\s+/g, ' ').trim()}$`);
-
-  // 4. Convert bracketed LaTeX environments like [ \mu... ], [ \begin{cases}... ] to $$ ... $$
-  text = text.replace(/\[\s*(\\mu|\\max|\\min|\\begin\{cases\}|\\neg|\\text|\\sum|\\frac|\\int|\\lim|\\sigma|\\alpha|\\beta|\\gamma|\\delta|\\theta)([\s\S]*?)\]/g, 
-    (match, prefix, rest) => `\n\n$$\n${prefix}${rest.trim()}\n$$\n\n`
-  );
-
-  // 5. Fix any broken inline math split across multiple newlines: $\n A \n$ -> $A$
-  text = text.replace(/\$([^$\n]+)\$/g, (match, inner) => `$${inner.trim()}$`);
-
-  // 6. Clean up excessive consecutive blank lines (limit to max 2 newlines = 1 blank line)
-  text = text.replace(/\n{3,}/g, '\n\n');
-
-  // 7. Ensure clean spacing before subquestions / numbered topics
-  text = text.replace(/([^\n])\n(\d+\.\s+[A-Za-z])/g, '$1\n\n$2');
-  text = text.replace(/([^\n])\n(###?\s+)/g, '$1\n\n$2');
-
-  return text.trim();
+  return processed.join('').trim();
 }
 
 export const AnswerCard = ({ answer, index }) => {
