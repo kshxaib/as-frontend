@@ -223,11 +223,12 @@ export const CommunityHub = () => {
                         <span className="font-mono text-[11px] font-medium text-[var(--community)] bg-[rgba(200,168,32,0.1)] px-2 py-0.5 rounded-[4px] border border-[rgba(200,168,32,0.2)] truncate">
                           {set.subject}
                         </span>
-                        <span className="font-mono text-[11px] text-[var(--text-muted)] flex items-center gap-1">
-                          <User className="h-3 w-3" />
-                          {set.author_name || 'Scholar'}
+                        <span className="font-mono text-[11px] text-[var(--text-primary)] font-medium bg-[rgba(200,168,32,0.08)] border border-[rgba(200,168,32,0.25)] px-2 py-0.5 rounded-[4px] flex items-center gap-1.5 shadow-xs">
+                          <User className="h-3 w-3 text-[var(--community)] stroke-[2]" />
+                          <span>{set.author_name || 'Scholar'}</span>
                         </span>
                       </div>
+
 
                       <h3 className="font-display text-base font-normal text-[var(--text-primary)] line-clamp-1">
                         {set.question_bank_name}
