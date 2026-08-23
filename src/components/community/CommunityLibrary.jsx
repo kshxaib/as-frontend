@@ -165,6 +165,15 @@ export function CommunityLibrary() {
                 {successMessage}
               </p>
             </div>
+            <Button
+              variant="ghost"
+              size="xs"
+              onClick={clearFeedback}
+              aria-label="Dismiss notification"
+              className="text-success hover:bg-success/10 hover:text-success"
+            >
+              Dismiss
+            </Button>
           </motion.div>
         )}
       </AnimatePresence>

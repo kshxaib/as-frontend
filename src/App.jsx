@@ -18,26 +18,32 @@ function App() {
   const setActiveTab = useQuestionBankStore((s) => s.setActiveTab);
   const { initAuth, isAuthenticated } = useAuthStore();
   const [navigationOpen, setNavigationOpen] = useState(false);
-  const [justLoggedOut, setJustLoggedOut] = useState(false);
 
-  // Track previous auth state to detect logout transitions
+  // Track previous auth state to detect logout transitions.
+  // Render-time adjustment is React's sanctioned pattern here
+  // (replaces a setState-in-effect that the hooks rules flag).
   const [prevAuth, setPrevAuth] = useState(isAuthenticated);
+  const [justLoggedOut, setJustLoggedOut] = useState(false);
 
   useEffect(() => {
     initAuth();
   }, [initAuth]);
 
-  // Detect logout → show logged-out message
-  useEffect(() => {
-    if (prevAuth && !isAuthenticated) {
-      setJustLoggedOut(true);
+  if (prevAuth !== isAuthenticated) {
+    setPrevAuth(isAuthenticated);
+    if (!isAuthenticated) {
       // Reset to landing state
       setActiveTab('resources');
-      const timer = setTimeout(() => setJustLoggedOut(false), 5000);
-      return () => clearTimeout(timer);
+      setJustLoggedOut(true);
     }
-    setPrevAuth(isAuthenticated);
-  }, [isAuthenticated, prevAuth, setActiveTab]);
+  }
+
+  // Auto-clear the signed-out notice after 5 seconds
+  useEffect(() => {
+    if (!justLoggedOut) return;
+    const timer = setTimeout(() => setJustLoggedOut(false), 5000);
+    return () => clearTimeout(timer);
+  }, [justLoggedOut]);
 
   return (
     <div className="min-h-screen bg-background font-sans text-foreground antialiased selection:bg-primary/20 selection:text-foreground">

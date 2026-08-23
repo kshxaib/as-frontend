@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import api from '../api/client';
 
-export const useAuthStore = create((set, get) => ({
+export const useAuthStore = create((set) => ({
   user: null,
   token: localStorage.getItem('academicstack_token') || null,
   isAuthenticated: !!localStorage.getItem('academicstack_token'),
@@ -23,7 +23,7 @@ export const useAuthStore = create((set, get) => ({
     try {
       const res = await api.get('/auth/me');
       set({ user: res.data, isAuthenticated: true, isLoading: false });
-    } catch (err) {
+    } catch {
       console.warn('Auth token invalid or expired, clearing session.');
       localStorage.removeItem('academicstack_token');
       set({ user: null, token: null, isAuthenticated: false, isLoading: false });

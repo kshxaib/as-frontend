@@ -344,26 +344,6 @@ export const useQuestionBankStore = create((set, get) => ({
     }
   },
 
-  downloadSolvedPdf: async (answerSetId, customFilename) => {
-    try {
-      const res = await api.get(`/answer-sets/${answerSetId}/pdf`, {
-        responseType: 'blob',
-      });
-      const blob = new Blob([res.data], { type: 'application/pdf' });
-      const blobUrl = window.URL.createObjectURL(blob);
-      const filename = customFilename || `AcademicStack_Solved_QB_${answerSetId}.pdf`;
-      const link = document.createElement('a');
-      link.href = blobUrl;
-      link.setAttribute('download', filename.endsWith('.pdf') ? filename : `${filename}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      setTimeout(() => window.URL.revokeObjectURL(blobUrl), 2000);
-    } catch (err) {
-      set({ error: err.response?.data?.detail || 'Failed to download solved PDF.' });
-    }
-  },
-
   downloadResourceFile: async (resourceId, filename = 'Resource.pdf') => {
     try {
       const res = await api.get(`/resources/${resourceId}/download`, {
@@ -434,7 +414,7 @@ export const useQuestionBankStore = create((set, get) => ({
       link.click();
       link.remove();
       setTimeout(() => window.URL.revokeObjectURL(blobUrl), 2000);
-    } catch (err) {
+    } catch {
       // Fallback: open in new tab
       window.open(url, '_blank');
     }

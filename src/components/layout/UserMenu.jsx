@@ -11,12 +11,21 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import { Button } from "@/components/ui/button"
-import { ConfirmationModal } from "@/components/ConfirmationModal"
 
 /**
  * UserMenu — task 6. Existing actions only: Profile & Keys, Sign out.
- * Logout keeps its original confirmation step (legacy ConfirmationModal).
+ * Logout keeps its original confirmation step, now on the shared
+ * AlertDialog primitive (Phase 11 consolidation).
  */
 export function UserMenu({ showName = true }) {
   const user = useAuthStore((s) => s.user)
@@ -79,20 +88,37 @@ export function UserMenu({ showName = true }) {
         </DropdownMenuContent>
       </DropdownMenu>
 
-      <ConfirmationModal
-        isOpen={confirmOpen}
-        title="Sign Out of AcademicStack?"
-        message="Are you sure you want to log out? Your configured API keys will remain securely encrypted on your account."
-        confirmText="Yes, Sign Out"
-        cancelText="Stay Signed In"
-        confirmVariant="danger"
-        iconType="logout"
-        onConfirm={() => {
-          setConfirmOpen(false)
-          logout()
-        }}
-        onCancel={() => setConfirmOpen(false)}
-      />
+      <AlertDialog open={confirmOpen} onOpenChange={(open) => !open && setConfirmOpen(false)}>
+        <AlertDialogContent>
+          <div className="flex items-start gap-4">
+            <span
+              aria-hidden="true"
+              className="flex size-11 shrink-0 items-center justify-center rounded-lg border border-warning/30 bg-warning/10 text-warning"
+            >
+              <LogOutIcon className="size-5" />
+            </span>
+            <div className="min-w-0">
+              <AlertDialogTitle>Sign Out of AcademicStack?</AlertDialogTitle>
+              <AlertDialogDescription>
+                Are you sure you want to log out? Your configured API keys will remain
+                securely encrypted on your account.
+              </AlertDialogDescription>
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Stay Signed In</AlertDialogCancel>
+            <AlertDialogAction
+              variant="primary"
+              onClick={() => {
+                setConfirmOpen(false)
+                logout()
+              }}
+            >
+              Yes, Sign Out
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </>
   )
 }
