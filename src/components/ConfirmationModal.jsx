@@ -1,13 +1,5 @@
 import React from 'react';
-import {
-  AlertTriangle,
-  FileQuestion,
-  Trash2,
-  LogOut,
-  RefreshCw,
-  X,
-  Loader2,
-} from 'lucide-react';
+import { Loader2, X } from 'lucide-react';
 
 export const ConfirmationModal = ({
   isOpen,
@@ -16,45 +8,12 @@ export const ConfirmationModal = ({
   confirmText = 'Confirm',
   cancelText = 'Cancel',
   confirmVariant = 'primary', // 'primary' | 'danger' | 'warning' | 'emerald'
-  iconType = 'alert', // 'alert' | 'trash' | 'sparkles' | 'logout' | 'refresh'
+  iconType, // kept for API compat, no longer renders an icon
   isLoading = false,
   onConfirm,
   onCancel,
 }) => {
   if (!isOpen) return null;
-
-  const renderIcon = () => {
-    switch (iconType) {
-      case 'trash':
-        return <Trash2 className="h-5 w-5 text-[var(--error)] stroke-[1.5]" />;
-      case 'sparkles':
-      case 'ai':
-        return <FileQuestion className="h-5 w-5 text-[var(--ai)] stroke-[1.5]" />;
-      case 'logout':
-        return <LogOut className="h-5 w-5 text-[var(--warning)] stroke-[1.5]" />;
-      case 'refresh':
-        return <RefreshCw className="h-5 w-5 text-[var(--primary)] stroke-[1.5]" />;
-      case 'alert':
-      default:
-        return <AlertTriangle className="h-5 w-5 text-[var(--warning)] stroke-[1.5]" />;
-    }
-  };
-
-  const getIconBg = () => {
-    switch (iconType) {
-      case 'trash':
-        return 'bg-[rgba(248,113,113,0.1)] border-[rgba(248,113,113,0.25)]';
-      case 'sparkles':
-      case 'ai':
-        return 'bg-[rgba(245,158,11,0.1)] border-[rgba(245,158,11,0.25)]';
-      case 'logout':
-        return 'bg-[rgba(224,169,43,0.1)] border-[rgba(224,169,43,0.25)]';
-      case 'refresh':
-        return 'bg-[rgba(20,184,166,0.1)] border-[rgba(20,184,166,0.25)]';
-      default:
-        return 'bg-[rgba(224,169,43,0.1)] border-[rgba(224,169,43,0.25)]';
-    }
-  };
 
   const getConfirmButtonClasses = () => {
     switch (confirmVariant) {
@@ -72,40 +31,35 @@ export const ConfirmationModal = ({
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[var(--overlay)] p-4 pt-20 sm:pt-28 backdrop-blur-sm animate-in fade-in duration-150">
-      <div className="relative w-full max-w-md rounded-[20px] border border-[var(--border)] bg-[var(--surface-elevated)] p-6 sm:p-7 shadow-[var(--shadow-lg)]">
+      <div className="relative w-full max-w-sm rounded-[16px] border border-[var(--border)] bg-[var(--surface-elevated)] p-6 shadow-[var(--shadow-lg)]">
         
         {/* Close Button */}
         {!isLoading && (
           <button
             onClick={onCancel}
-            className="absolute right-4 top-4 rounded-[8px] p-2 text-[var(--text-muted)] hover:bg-[var(--surface-well)] hover:text-[var(--text-primary)] transition-colors"
+            className="absolute right-3.5 top-3.5 rounded-[6px] p-1.5 text-[var(--text-muted)] hover:bg-[var(--surface-well)] hover:text-[var(--text-primary)] transition-colors"
           >
             <X className="h-4 w-4 stroke-[1.5]" />
           </button>
         )}
 
-        {/* Icon & Title */}
-        <div className="flex items-start gap-4">
-          <div className={`flex h-11 w-11 items-center justify-center rounded-[12px] border ${getIconBg()} shrink-0 mt-0.5`}>
-            {renderIcon()}
-          </div>
-          <div>
-            <h3 className="font-display text-lg font-normal text-[var(--text-primary)] tracking-tight">
-              {title}
-            </h3>
-            <p className="mt-1.5 text-xs text-[var(--text-muted)] leading-relaxed">
-              {message}
-            </p>
-          </div>
+        {/* Title & Message */}
+        <div className="pr-6">
+          <h3 className="font-display text-base font-normal text-[var(--text-primary)] tracking-tight leading-snug">
+            {title}
+          </h3>
+          <p className="mt-2 text-xs text-[var(--text-muted)] leading-relaxed">
+            {message}
+          </p>
         </div>
 
         {/* Action Buttons */}
-        <div className="mt-6 flex items-center justify-end gap-3 pt-4 border-t border-[var(--border-subtle)]">
+        <div className="mt-5 flex items-center justify-end gap-2.5 pt-4 border-t border-[var(--border-subtle)]">
           <button
             type="button"
             onClick={onCancel}
             disabled={isLoading}
-            className="rounded-[8px] border border-[var(--border)] bg-[var(--surface-well)] px-4 py-2 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)] transition-all disabled:opacity-50"
+            className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-well)] px-4 py-1.5 text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)] transition-all disabled:opacity-50"
           >
             {cancelText}
           </button>
@@ -114,7 +68,7 @@ export const ConfirmationModal = ({
             type="button"
             onClick={onConfirm}
             disabled={isLoading}
-            className={`inline-flex items-center gap-2 rounded-[8px] px-5 py-2 text-xs font-semibold transition-all disabled:opacity-50 ${getConfirmButtonClasses()}`}
+            className={`inline-flex items-center gap-1.5 rounded-[6px] px-4 py-1.5 text-xs font-semibold transition-all disabled:opacity-50 ${getConfirmButtonClasses()}`}
           >
             {isLoading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
             <span>{isLoading ? 'Processing...' : confirmText}</span>
