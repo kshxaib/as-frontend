@@ -35,7 +35,6 @@ import { PdfExportActions } from "@/components/pdf-export"
 import { useQuestionBankStore } from "@/store/useQuestionBankStore"
 import { useReducedMotion } from "@/lib/motion"
 import { parseResourceIds } from "@/components/question-banks/question-bank-meta"
-import { AnswerIndex } from "./AnswerIndex"
 import { AnswerManuscript } from "./AnswerManuscript"
 import { GenerationPanel } from "./GenerationPanel"
 import { SolutionsEmptyState } from "./SolutionsEmptyState"
@@ -274,11 +273,11 @@ export function SolutionsWorkspace() {
                 }
               />
               <DropdownMenuContent align="end" sideOffset={6} className="min-w-[16rem]">
-                <DropdownMenuLabel>Question banks</DropdownMenuLabel>
                 <DropdownMenuRadioGroup
                   value={currentQuestionBank ? String(currentQuestionBank.id) : undefined}
                   onValueChange={(value) => selectQuestionBank(Number(value))}
                 >
+                  <DropdownMenuLabel>Question banks</DropdownMenuLabel>
                   {questionBanks.map((qb) => (
                     <DropdownMenuRadioItem key={qb.id} value={String(qb.id)}>
                       <span className="truncate">
@@ -400,7 +399,6 @@ export function SolutionsWorkspace() {
         <GenerationPanel totalQuestions={answers.length || undefined} />
       ) : filteredAnswers.length > 0 ? (
         <div className="flex flex-col gap-4 lg:flex-row lg:gap-6">
-          <AnswerIndex answers={filteredAnswers} />
 
           <motion.ol
             layout={!reduceMotion}

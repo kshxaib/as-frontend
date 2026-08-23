@@ -94,11 +94,11 @@ export function ReviewToolbar({
             }
           />
           <DropdownMenuContent align="end" sideOffset={6}>
-            <DropdownMenuLabel>Filter by marks source</DropdownMenuLabel>
             <DropdownMenuRadioGroup
               value={selectedSourceFilter}
               onValueChange={(value) => onSelectSourceFilter(value)}
             >
+              <DropdownMenuLabel>Filter by marks source</DropdownMenuLabel>
               {SOURCE_FILTER_OPTIONS.map((option) => (
                 <DropdownMenuRadioItem key={option.value} value={option.value}>
                   {option.label}

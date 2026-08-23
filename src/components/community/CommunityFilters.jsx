@@ -116,11 +116,11 @@ export function CommunityFilters({
             <DropdownMenu>
               <FilterTrigger icon={SlidersHorizontalIcon} label={subjectLabel} />
               <DropdownMenuContent align="start" sideOffset={6} className="min-w-[13rem]">
-                <DropdownMenuLabel>Filter by subject</DropdownMenuLabel>
                 <DropdownMenuRadioGroup
                   value={selectedSubject}
                   onValueChange={(value) => onSelectSubject(value)}
                 >
+                  <DropdownMenuLabel>Filter by subject</DropdownMenuLabel>
                   <DropdownMenuRadioItem value="ALL">All Subjects</DropdownMenuRadioItem>
                   {subjects.map((subject) => (
                     <DropdownMenuRadioItem key={subject} value={subject}>

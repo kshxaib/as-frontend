@@ -436,7 +436,7 @@ export function QuestionReviewWorkspace() {
       {currentQuestionBank && hasQuestions && (
         <div
           data-slot="review-action-bar"
-          className="fixed inset-x-0 bottom-0 z-30 border-t border-border bg-background/90 backdrop-blur-md"
+          className="fixed bottom-0 right-0 left-0 z-30 border-t border-border bg-background/90 backdrop-blur-md md:left-[72px] lg:left-[264px]"
           style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
         >
           <div className="mx-auto flex max-w-[1280px] flex-wrap items-center justify-between gap-x-6 gap-y-2 px-4 py-3 sm:px-6 lg:px-8">

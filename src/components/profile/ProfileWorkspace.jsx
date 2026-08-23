@@ -189,12 +189,9 @@ export function ProfileWorkspace() {
           <UserIcon aria-hidden="true" className="size-3.5" />
           Control Room · Account &amp; AI Provider Configuration
         </p>
-        <div className="mt-2 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <h1 className="font-serif text-title-xl text-foreground">{user.name}</h1>
-          <span className="font-mono text-meta uppercase tracking-wider text-muted-foreground">
-            @{user.username}
-          </span>
-        </div>
+        <h1 className="mt-2 font-serif text-title-xl text-foreground">
+          Profile &amp; Keys
+        </h1>
         <p className="mt-2 max-w-2xl text-body-base leading-relaxed text-muted-foreground">
           Configure your individual AI API keys with automatic failover. Modify each
           provider separately.

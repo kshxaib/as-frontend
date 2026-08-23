@@ -8,6 +8,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuGroup,
   DropdownMenuLabel,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
@@ -62,14 +63,16 @@ export function UserMenu({ showName = true }) {
           }
         />
         <DropdownMenuContent align="end" sideOffset={8}>
-          <DropdownMenuLabel className="normal-case tracking-normal">
-            <span className="block truncate font-sans text-body-sm font-semibold text-foreground">
-              {user?.name ?? "Signed in"}
-            </span>
-            <span className="block truncate font-mono text-meta">
-              @{user?.username ?? "user"}
-            </span>
-          </DropdownMenuLabel>
+          <DropdownMenuGroup>
+            <DropdownMenuLabel className="normal-case tracking-normal">
+              <span className="block truncate font-sans text-body-sm font-semibold text-foreground">
+                {user?.name ?? "Signed in"}
+              </span>
+              <span className="block truncate font-mono text-meta">
+                @{user?.username ?? "user"}
+              </span>
+            </DropdownMenuLabel>
+          </DropdownMenuGroup>
           <DropdownMenuSeparator />
           <DropdownMenuItem onSelect={() => setActiveTab("profile")}>
             <KeyRoundIcon aria-hidden="true" />
