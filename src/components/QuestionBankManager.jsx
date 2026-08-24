@@ -13,6 +13,8 @@ import {
   Layers,
   X,
   Loader2,
+  ChevronDown,
+  BookOpen,
 } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
 import { useAuthStore } from '../store/useAuthStore';
@@ -45,6 +47,7 @@ export const QuestionBankManager = () => {
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [reExtractCandidate, setReExtractCandidate] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [resourceDropdownOpen, setResourceDropdownOpen] = useState(false);
 
   // Form state
   const [name, setName] = useState('');
@@ -345,35 +348,123 @@ export const QuestionBankManager = () => {
                   />
                 </div>
 
-                {/* Resource Linking Checkboxes */}
-                <div>
+                {/* Resource Linking Dropdown */}
+                <div className="relative">
                   <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5">
-                    Link Study Resources (for strict RAG grounding)
+                    <BookOpen className="inline h-3 w-3 mr-1 -mt-0.5" />
+                    Link Study Resources
+                    <span className="ml-1 text-[var(--text-disabled)] font-normal">(optional · RAG grounding)</span>
                   </label>
-                  <div className="max-h-36 overflow-y-auto space-y-2 rounded-[8px] border border-[var(--border)] bg-[var(--surface-well)] p-3">
-                    {resources.length > 0 ? (
-                      resources.map((r) => (
-                        <label key={r.id} className="flex items-center gap-2 text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={selectedResourceIds.includes(r.id)}
-                            onChange={() => handleToggleResourceId(r.id)}
-                            className="rounded border-[var(--border)] bg-[var(--surface)] text-[var(--primary)] focus:ring-0"
-                          />
-                          <span className="truncate">{r.name} ({r.subject})</span>
-                          {r.status === 'indexed' && (
-                            <span className="font-mono text-[9px] text-[var(--success)] bg-[rgba(34,197,94,0.1)] px-1 rounded border border-[rgba(34,197,94,0.2)]">
-                              indexed
-                            </span>
-                          )}
-                        </label>
-                      ))
-                    ) : (
-                      <p className="text-[11px] text-[var(--text-disabled)] italic font-mono">
-                        No study materials uploaded yet. All indexed notes will be used by default.
-                      </p>
-                    )}
-                  </div>
+
+                  {/* Trigger */}
+                  <button
+                    type="button"
+                    onClick={() => setResourceDropdownOpen((o) => !o)}
+                    className="w-full flex items-center justify-between rounded-[8px] border border-[var(--border)] bg-[var(--surface-well)] px-3 py-2 text-xs text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--text-primary)] transition-all focus:outline-none focus:border-[var(--primary)]"
+                  >
+                    <span className="flex items-center gap-2">
+                      {selectedResourceIds.length === 0 ? (
+                        <span className="text-[var(--text-disabled)] italic">Select resources to link...</span>
+                      ) : (
+                        <span className="font-medium text-[var(--text-primary)]">
+                          {selectedResourceIds.length} resource{selectedResourceIds.length !== 1 ? 's' : ''} linked
+                        </span>
+                      )}
+                    </span>
+                    <ChevronDown
+                      className={`h-3.5 w-3.5 text-[var(--text-muted)] transition-transform duration-200 ${resourceDropdownOpen ? 'rotate-180' : ''}`}
+                    />
+                  </button>
+
+                  {/* Selected chips */}
+                  {selectedResourceIds.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {selectedResourceIds.map((id) => {
+                        const r = resources.find((x) => x.id === id);
+                        if (!r) return null;
+                        return (
+                          <span
+                            key={id}
+                            className="inline-flex items-center gap-1 rounded-full bg-[var(--primary-muted,rgba(99,102,241,0.12))] border border-[var(--primary-border,rgba(99,102,241,0.25))] px-2 py-0.5 text-[10px] font-medium text-[var(--primary)] max-w-[180px]"
+                          >
+                            <span className="truncate">{r.name}</span>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleResourceId(id)}
+                              className="shrink-0 hover:opacity-70 transition-opacity"
+                            >
+                              <X className="h-2.5 w-2.5" />
+                            </button>
+                          </span>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Dropdown panel */}
+                  {resourceDropdownOpen && (
+                    <div className="absolute z-50 mt-1 w-full rounded-[10px] border border-[var(--border)] bg-[var(--surface)] shadow-xl overflow-hidden">
+                      {resources.length === 0 ? (
+                        <p className="px-3 py-3 text-[11px] text-[var(--text-disabled)] italic">
+                          No study resources uploaded yet.
+                        </p>
+                      ) : (
+                        <ul className="max-h-44 overflow-y-auto divide-y divide-[var(--border-subtle)]">
+                          {resources.map((r) => {
+                            const selected = selectedResourceIds.includes(r.id);
+                            const isIndexed = r.status === 'indexed';
+                            return (
+                              <li
+                                key={r.id}
+                                onClick={() => isIndexed && handleToggleResourceId(r.id)}
+                                className={`flex items-center gap-2.5 px-3 py-2.5 text-xs transition-colors ${
+                                  !isIndexed
+                                    ? 'opacity-40 cursor-not-allowed'
+                                    : selected
+                                    ? 'bg-[var(--primary-muted,rgba(99,102,241,0.1))] text-[var(--text-primary)] cursor-pointer'
+                                    : 'hover:bg-[var(--surface-hover,var(--surface-well))] text-[var(--text-secondary)] cursor-pointer hover:text-[var(--text-primary)]'
+                                }`}
+                              >
+                                {/* Custom checkbox */}
+                                <span
+                                  className={`shrink-0 h-4 w-4 rounded border flex items-center justify-center transition-all ${
+                                    selected
+                                      ? 'bg-[var(--primary)] border-[var(--primary)]'
+                                      : 'border-[var(--border)] bg-[var(--surface-well)]'
+                                  }`}
+                                >
+                                  {selected && (
+                                    <svg className="h-2.5 w-2.5 text-white" fill="none" viewBox="0 0 12 12">
+                                      <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
+                                  )}
+                                </span>
+
+                                <span className="flex-1 min-w-0">
+                                  <span className="block truncate font-medium">{r.name}</span>
+                                  <span className="block truncate text-[10px] text-[var(--text-muted)]">{r.subject}</span>
+                                </span>
+
+                                <span className={`shrink-0 text-[9px] font-mono px-1.5 py-0.5 rounded border ${
+                                  isIndexed
+                                    ? 'text-[var(--success)] bg-[rgba(34,197,94,0.08)] border-[rgba(34,197,94,0.2)]'
+                                    : 'text-[var(--text-disabled)] bg-[var(--surface-well)] border-[var(--border-subtle)]'
+                                }`}>
+                                  {r.status}
+                                </span>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      )}
+
+                      {resources.some((r) => r.status !== 'indexed') && (
+                        <p className="px-3 py-2 text-[10px] text-[var(--text-disabled)] border-t border-[var(--border-subtle)] bg-[var(--surface-well)]">
+                          Only indexed resources can be linked.
+                        </p>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div>
