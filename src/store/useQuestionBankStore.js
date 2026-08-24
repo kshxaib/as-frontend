@@ -139,13 +139,21 @@ export const useQuestionBankStore = create((set, get) => ({
       }));
     } catch (err) {
       const msg = getErrorMessage(err, 'Indexing failed. Check your Gemini API key in Profile.');
+      // Provider quota / rate-limit failures -> dedicated modal, not a raw banner
+      const isQuotaError =
+        err?.response?.status === 429 ||
+        /resource_exhausted|exceeded your current quota|rate limit/i.test(msg);
       set((state) => ({
         resources: state.resources.map((r) =>
           r.id === resourceId ? { ...r, status: 'indexing_failed' } : r
         ),
         isIndexingResource: { ...state.isIndexingResource, [resourceId]: false },
-        error: msg,
       }));
+      if (isQuotaError) {
+        get().showErrorModal(msg);
+      } else {
+        set({ error: msg });
+      }
     }
   },
 
