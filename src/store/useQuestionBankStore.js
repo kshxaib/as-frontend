@@ -1,6 +1,7 @@
 import { create } from 'zustand';
-import api from '../api/client';
+import api, { getErrorMessage } from '../api/client';
 import { useAuthStore } from './useAuthStore';
+
 
 export const useQuestionBankStore = create((set, get) => ({
   activeTab: 'resources', // 'resources' | 'question_banks' | 'review' | 'solutions' | 'community' | 'profile'
@@ -127,7 +128,7 @@ export const useQuestionBankStore = create((set, get) => ({
         successMessage: `Resource indexed! ${res.data.chunks_indexed || 0} searchable vectors embedded into Qdrant.`,
       }));
     } catch (err) {
-      const msg = err.response?.data?.detail || 'Indexing failed. Check your Gemini API key in Profile.';
+      const msg = getErrorMessage(err, 'Indexing failed. Check your Gemini API key in Profile.');
       set((state) => ({
         resources: state.resources.map((r) =>
           r.id === resourceId ? { ...r, status: 'indexing_failed' } : r
@@ -146,7 +147,7 @@ export const useQuestionBankStore = create((set, get) => ({
         successMessage: 'Resource deleted successfully.',
       }));
     } catch (err) {
-      set({ error: err.response?.data?.detail || 'Failed to delete resource.' });
+      set({ error: getErrorMessage(err, 'Failed to delete resource.') });
     }
   },
 
@@ -166,7 +167,7 @@ export const useQuestionBankStore = create((set, get) => ({
       }
     } catch (err) {
       set({
-        error: err.response?.data?.detail || 'Failed to load question banks',
+        error: getErrorMessage(err, 'Failed to load question banks'),
         isLoading: false,
       });
     }
@@ -186,7 +187,7 @@ export const useQuestionBankStore = create((set, get) => ({
       }));
       return { success: true, questionBank: res.data };
     } catch (err) {
-      const msg = err.response?.data?.detail || 'Failed to upload question bank';
+      const msg = getErrorMessage(err, 'Failed to upload question bank');
       set({ error: msg, isUploadingQuestionBank: false });
       return { success: false, error: msg };
     }
@@ -218,7 +219,7 @@ export const useQuestionBankStore = create((set, get) => ({
       });
     } catch (err) {
       set({
-        error: err.response?.data?.detail || 'Failed to load question bank details',
+        error: getErrorMessage(err, 'Failed to load question bank details'),
         isLoading: false,
       });
     }
@@ -240,7 +241,7 @@ export const useQuestionBankStore = create((set, get) => ({
         successMessage: `Successfully extracted ${res.data.questions_extracted || 0} questions!`,
       }));
     } catch (err) {
-      const msg = err.response?.data?.detail || 'Extraction failed. Check your OpenRouter/Groq/Gemini keys in Profile.';
+      const msg = getErrorMessage(err, 'Extraction failed. Check your OpenRouter/Groq/Gemini keys in Profile.');
       set((state) => ({
         error: msg,
         extractingQBs: { ...state.extractingQBs, [id]: false },
@@ -257,7 +258,7 @@ export const useQuestionBankStore = create((set, get) => ({
         ),
       }));
     } catch (err) {
-      set({ error: err.response?.data?.detail || 'Failed to update question' });
+      set({ error: getErrorMessage(err, 'Failed to update question') });
     }
   },
 
@@ -271,7 +272,7 @@ export const useQuestionBankStore = create((set, get) => ({
         successMessage: `Question ${formattedQNum} added successfully to the examination paper!`,
       }));
     } catch (err) {
-      set({ error: err.response?.data?.detail || 'Failed to add question' });
+      set({ error: getErrorMessage(err, 'Failed to add question') });
     }
   },
 
@@ -284,7 +285,7 @@ export const useQuestionBankStore = create((set, get) => ({
         successMessage: 'Question removed from question bank.',
       }));
     } catch (err) {
-      set({ error: err.response?.data?.detail || 'Failed to delete question' });
+      set({ error: getErrorMessage(err, 'Failed to delete question') });
     }
   },
 
@@ -310,7 +311,7 @@ export const useQuestionBankStore = create((set, get) => ({
         successMessage: `Successfully generated ${res.data.completed_questions} answers with AI Review & citations!`,
       });
     } catch (err) {
-      const msg = err.response?.data?.detail || 'Answer generation failed. Check your Groq/Gemini/OpenRouter keys in Profile.';
+      const msg = getErrorMessage(err, 'Answer generation failed. Check your Groq/Gemini/OpenRouter keys in Profile.');
       set({
         error: msg,
         isGeneratingAnswers: false,
@@ -348,7 +349,7 @@ export const useQuestionBankStore = create((set, get) => ({
     } catch (err) {
       set((state) => ({
         isRetryingAnswer: { ...state.isRetryingAnswer, [answerId]: false },
-        error: err.response?.data?.detail || 'Failed to retry answer',
+        error: getErrorMessage(err, 'Failed to retry answer'),
       }));
     }
   },
@@ -369,7 +370,7 @@ export const useQuestionBankStore = create((set, get) => ({
       link.remove();
       setTimeout(() => window.URL.revokeObjectURL(blobUrl), 2000);
     } catch (err) {
-      set({ error: err.response?.data?.detail || 'Failed to download solved PDF.' });
+      set({ error: getErrorMessage(err, 'Failed to download solved PDF.') });
     }
   },
 
@@ -388,7 +389,7 @@ export const useQuestionBankStore = create((set, get) => ({
       link.remove();
       setTimeout(() => window.URL.revokeObjectURL(blobUrl), 2000);
     } catch (err) {
-      set({ error: err.response?.data?.detail || 'Failed to download study resource.' });
+      set({ error: getErrorMessage(err, 'Failed to download study resource.') });
     }
   },
 
@@ -407,7 +408,7 @@ export const useQuestionBankStore = create((set, get) => ({
       link.remove();
       setTimeout(() => window.URL.revokeObjectURL(blobUrl), 2000);
     } catch (err) {
-      set({ error: err.response?.data?.detail || 'Failed to download question bank paper.' });
+      set({ error: getErrorMessage(err, 'Failed to download question bank paper.') });
     }
   },
 
@@ -466,7 +467,7 @@ export const useQuestionBankStore = create((set, get) => ({
       });
     } catch (err) {
       set({
-        error: err.response?.data?.detail || 'Failed to load community hub data',
+        error: getErrorMessage(err, 'Failed to load community hub data'),
         isLoadingCommunity: false,
       });
     }
@@ -487,7 +488,7 @@ export const useQuestionBankStore = create((set, get) => ({
       }));
       get().fetchCommunityFeed();
     } catch (err) {
-      set({ error: err.response?.data?.detail || 'Failed to toggle resource sharing.' });
+      set({ error: getErrorMessage(err, 'Failed to toggle resource sharing.') });
     }
   },
 
@@ -505,7 +506,7 @@ export const useQuestionBankStore = create((set, get) => ({
       }));
       get().fetchCommunityFeed();
     } catch (err) {
-      set({ error: err.response?.data?.detail || 'Failed to toggle answer set sharing.' });
+      set({ error: getErrorMessage(err, 'Failed to toggle answer set sharing.') });
     }
   },
 
@@ -532,7 +533,7 @@ export const useQuestionBankStore = create((set, get) => ({
       });
     } catch (err) {
       set({
-        error: err.response?.data?.detail || 'Failed to load solved answers.',
+        error: getErrorMessage(err, 'Failed to load solved answers.'),
         isLoadingCommunityViewer: false,
         communityViewerOpen: false,
       });

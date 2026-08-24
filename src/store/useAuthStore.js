@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import api from '../api/client';
+import api, { getErrorMessage } from '../api/client';
 
 export const useAuthStore = create((set, get) => ({
   user: null,
@@ -47,7 +47,7 @@ export const useAuthStore = create((set, get) => ({
       });
       return { success: true };
     } catch (err) {
-      const msg = err.response?.data?.detail || 'Registration failed. Please try again.';
+      const msg = getErrorMessage(err, 'Registration failed. Please try again.');
       set({ error: msg, isLoading: false });
       return { success: false, error: msg };
     }
@@ -70,11 +70,12 @@ export const useAuthStore = create((set, get) => ({
       });
       return { success: true };
     } catch (err) {
-      const msg = err.response?.data?.detail || 'Invalid username or password.';
+      const msg = getErrorMessage(err, 'Invalid username or password.');
       set({ error: msg, isLoading: false });
       return { success: false, error: msg };
     }
   },
+
 
   // Logout
   logout: () => {
@@ -95,7 +96,7 @@ export const useAuthStore = create((set, get) => ({
       set({ user: res.data, isLoading: false });
       return { success: true };
     } catch (err) {
-      const msg = err.response?.data?.detail || 'Failed to update Gemini key.';
+      const msg = getErrorMessage(err, 'Failed to update Gemini key.');
       set({ error: msg, isLoading: false });
       return { success: false, error: msg };
     }
@@ -109,7 +110,7 @@ export const useAuthStore = create((set, get) => ({
       set({ user: res.data, isLoading: false });
       return { success: true };
     } catch (err) {
-      const msg = err.response?.data?.detail || 'Failed to remove Gemini key.';
+      const msg = getErrorMessage(err, 'Failed to remove Gemini key.');
       set({ error: msg, isLoading: false });
       return { success: false, error: msg };
     }
@@ -123,7 +124,7 @@ export const useAuthStore = create((set, get) => ({
       set({ user: res.data, isLoading: false });
       return { success: true };
     } catch (err) {
-      const msg = err.response?.data?.detail || 'Failed to update Groq key.';
+      const msg = getErrorMessage(err, 'Failed to update Groq key.');
       set({ error: msg, isLoading: false });
       return { success: false, error: msg };
     }
@@ -137,7 +138,7 @@ export const useAuthStore = create((set, get) => ({
       set({ user: res.data, isLoading: false });
       return { success: true };
     } catch (err) {
-      const msg = err.response?.data?.detail || 'Failed to remove Groq key.';
+      const msg = getErrorMessage(err, 'Failed to remove Groq key.');
       set({ error: msg, isLoading: false });
       return { success: false, error: msg };
     }
@@ -151,7 +152,7 @@ export const useAuthStore = create((set, get) => ({
       set({ user: res.data, isLoading: false });
       return { success: true };
     } catch (err) {
-      const msg = err.response?.data?.detail || 'Failed to update OpenRouter key.';
+      const msg = getErrorMessage(err, 'Failed to update OpenRouter key.');
       set({ error: msg, isLoading: false });
       return { success: false, error: msg };
     }
@@ -165,7 +166,7 @@ export const useAuthStore = create((set, get) => ({
       set({ user: res.data, isLoading: false });
       return { success: true };
     } catch (err) {
-      const msg = err.response?.data?.detail || 'Failed to remove OpenRouter key.';
+      const msg = getErrorMessage(err, 'Failed to remove OpenRouter key.');
       set({ error: msg, isLoading: false });
       return { success: false, error: msg };
     }
@@ -179,7 +180,7 @@ export const useAuthStore = create((set, get) => ({
       set({ user: res.data, isLoading: false });
       return { success: true };
     } catch (err) {
-      const msg = err.response?.data?.detail || 'Failed to update NVIDIA NIM key.';
+      const msg = getErrorMessage(err, 'Failed to update NVIDIA NIM key.');
       set({ error: msg, isLoading: false });
       return { success: false, error: msg };
     }
@@ -193,7 +194,7 @@ export const useAuthStore = create((set, get) => ({
       set({ user: res.data, isLoading: false });
       return { success: true };
     } catch (err) {
-      const msg = err.response?.data?.detail || 'Failed to remove NVIDIA NIM key.';
+      const msg = getErrorMessage(err, 'Failed to remove NVIDIA NIM key.');
       set({ error: msg, isLoading: false });
       return { success: false, error: msg };
     }
@@ -207,7 +208,7 @@ export const useAuthStore = create((set, get) => ({
       set({ user: res.data, isLoading: false });
       return { success: true };
     } catch (err) {
-      const msg = err.response?.data?.detail || 'Failed to update OpenAI key.';
+      const msg = getErrorMessage(err, 'Failed to update OpenAI key.');
       set({ error: msg, isLoading: false });
       return { success: false, error: msg };
     }
@@ -221,11 +222,12 @@ export const useAuthStore = create((set, get) => ({
       set({ user: res.data, isLoading: false });
       return { success: true };
     } catch (err) {
-      const msg = err.response?.data?.detail || 'Failed to remove OpenAI key.';
+      const msg = getErrorMessage(err, 'Failed to remove OpenAI key.');
       set({ error: msg, isLoading: false });
       return { success: false, error: msg };
     }
   },
+
 
   // Clear error
   clearError: () => set({ error: null }),
