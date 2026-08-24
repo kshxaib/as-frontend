@@ -16,7 +16,11 @@ export const useQuestionBankStore = create((set, get) => ({
   // Global Feedback
   error: null,
   successMessage: null,
-  clearFeedback: () => set({ error: null, successMessage: null }),
+  isErrorModalOpen: false,
+  // Functions for modal handling
+  showErrorModal: (msg) => set({ error: msg, isErrorModalOpen: true, isUploadingResource: false }),
+  closeErrorModal: () => set({ isErrorModalOpen: false, error: null }),
+  clearFeedback: () => set({ error: null, successMessage: null, isErrorModalOpen: false }),
 
   // Resources State (Phase 2 & 3)
   resources: [],
@@ -99,8 +103,14 @@ export const useQuestionBankStore = create((set, get) => ({
       }));
       return { success: true, resource: res.data };
     } catch (err) {
-      const msg = err.response?.data?.detail || 'Failed to upload study resource';
-      set({ error: msg, isUploadingResource: false });
+      // Determine user-friendly error message
+      let msg = err.response?.data?.detail || 'Failed to upload study resource';
+      // If the backend indicates a size limit issue, show a custom message
+      if (msg && msg.toLowerCase().includes('file size exceeds')) {
+        msg = 'PDF size is larger than 10 MB. Please compress it before uploading.';
+      }
+      // Use custom modal for error display (call via get() since this is inside the store)
+      get().showErrorModal(msg);
       return { success: false, error: msg };
     }
   },
@@ -547,4 +557,4 @@ export const useQuestionBankStore = create((set, get) => ({
       communityViewerAnswers: [],
     });
   },
-}));
+}));

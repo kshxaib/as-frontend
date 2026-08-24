@@ -9,6 +9,7 @@ import { CommunityHub } from './components/CommunityHub';
 import { ProfileSettings } from './components/ProfileSettings';
 import { AuthModal } from './components/AuthModal';
 import { ApiKeyRequiredModal } from './components/ApiKeyRequiredModal';
+import { ErrorModal } from './components/ErrorModal';
 import { useQuestionBankStore } from './store/useQuestionBankStore';
 import { useAuthStore } from './store/useAuthStore';
 import { useThemeStore } from './store/useThemeStore';
@@ -87,6 +88,7 @@ function App() {
       {/* Global Modals — always mounted */}
       <AuthModal />
       <ApiKeyRequiredModal />
+      <ErrorModal />
     </div>
   );
 }
