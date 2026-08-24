@@ -30,8 +30,9 @@ export const ConfirmationModal = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[var(--overlay)] p-4 pt-20 sm:pt-28 backdrop-blur-sm animate-in fade-in duration-150">
-      <div className="relative w-full max-w-sm rounded-[16px] border border-[var(--border)] bg-[var(--surface-elevated)] p-6 shadow-[var(--shadow-lg)]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[var(--overlay)] p-4 backdrop-blur-sm animate-in fade-in duration-150">
+      <div className="relative w-full max-w-sm rounded-[16px] border border-[var(--border)] bg-[var(--surface-elevated)] p-6 shadow-[var(--shadow-lg)] my-auto">
+
         
         {/* Close Button */}
         {!isLoading && (

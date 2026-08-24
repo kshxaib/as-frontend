@@ -264,14 +264,17 @@ export const useQuestionBankStore = create((set, get) => ({
   addQuestion: async (questionBankId, payload) => {
     try {
       const res = await api.post(`/question-banks/${questionBankId}/questions`, payload);
+      const qNum = res.data.question_number;
+      const formattedQNum = qNum ? `Q${String(qNum).padStart(2, '0')}` : 'Question';
       set((state) => ({
         questions: [...state.questions, res.data],
-        successMessage: 'Question added successfully!',
+        successMessage: `Question ${formattedQNum} added successfully to the examination paper!`,
       }));
     } catch (err) {
       set({ error: err.response?.data?.detail || 'Failed to add question' });
     }
   },
+
 
   deleteQuestion: async (questionId) => {
     try {

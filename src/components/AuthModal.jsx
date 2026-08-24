@@ -36,8 +36,8 @@ export const AuthModal = () => {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto bg-[var(--overlay)] p-4 pt-16 sm:pt-24 backdrop-blur-sm animate-in fade-in duration-150">
-      <div className="relative w-full max-w-md rounded-[20px] border border-[var(--border)] bg-[var(--surface-elevated)] p-6 sm:p-7 shadow-[var(--shadow-lg)]">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[var(--overlay)] p-4 backdrop-blur-sm animate-in fade-in duration-150">
+      <div className="relative w-full max-w-md rounded-[20px] border border-[var(--border)] bg-[var(--surface-elevated)] p-6 sm:p-7 shadow-[var(--shadow-lg)] my-auto">
         
         {/* Close Button */}
         <button
@@ -48,10 +48,7 @@ export const AuthModal = () => {
         </button>
 
         {/* Brand & Title */}
-        <div className="text-center">
-          <div className="inline-flex h-11 w-11 items-center justify-center rounded-[12px] border border-[var(--border)] bg-[var(--surface-well)] text-[var(--primary)] mb-3">
-            {authModalMode === 'login' ? <LogIn className="h-5 w-5 stroke-[1.5]" /> : <UserPlus className="h-5 w-5 stroke-[1.5]" />}
-          </div>
+        <div className="text-center pt-1">
           <h3 className="font-display text-xl font-normal tracking-tight text-[var(--text-primary)]">
             {authModalMode === 'login' ? 'AcademicStack Access' : 'Create Scholar Account'}
           </h3>
@@ -61,6 +58,7 @@ export const AuthModal = () => {
               : 'Register to manage study materials and generate grounded solutions.'}
           </p>
         </div>
+
 
         {/* Mode Switcher */}
         <div className="mt-5 flex rounded-[8px] border border-[var(--border)] bg-[var(--surface-well)] p-1">

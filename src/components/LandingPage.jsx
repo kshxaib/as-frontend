@@ -47,11 +47,11 @@ export const LandingPage = ({ justLoggedOut }) => {
     },
     {
       step: '04',
-      title: 'Grounded Solution Synthesis',
-      subtitle: 'Answer Manuscript',
-      description: 'Multi-provider failover routing synthesizes complete, step-by-step examination solutions strictly grounded in your indexed notes with LaTeX math equations.',
+      title: 'Multi-Agent Solution Synthesis',
+      subtitle: 'Autonomous RAG Pipeline',
+      description: 'Autonomous multi-agent orchestration (Retrieval Agent, Synthesis Agent, LaTeX Reviewer) generates step-by-step examination solutions strictly grounded in your indexed notes with mathematical rigor.',
       icon: Cpu,
-      tag: 'RAG Synthesis',
+      tag: 'Multi-Agent RAG',
     },
     {
       step: '05',
@@ -83,9 +83,11 @@ export const LandingPage = ({ justLoggedOut }) => {
           </div>
         )}
 
-        <div className="inline-flex items-center gap-2 rounded-[4px] border border-[var(--border)] bg-[var(--surface-well)] px-3 py-1 font-mono text-[11px] uppercase tracking-widest text-[var(--text-muted)] mb-8">
-          <span>AcademicStack v2 · Editorial Research Workspace</span>
+        <div className="inline-flex items-center gap-2 rounded-[6px] border border-[var(--border)] bg-[var(--surface-well)] px-3.5 py-1 font-mono text-[11px] uppercase tracking-wider text-[var(--text-muted)] mb-8 shadow-xs">
+          <Cpu className="h-3 w-3 text-[var(--primary)]" />
+          <span>Multi-Agent Research & Exam Workspace</span>
         </div>
+
 
         <h1 className="font-display text-4xl sm:text-5xl lg:text-6xl font-normal tracking-tight text-[var(--text-primary)] leading-[1.12]">
           From Study Material to <br className="hidden sm:inline" />
@@ -93,8 +95,9 @@ export const LandingPage = ({ justLoggedOut }) => {
         </h1>
 
         <p className="mt-6 mx-auto max-w-2xl text-sm sm:text-base text-[var(--text-secondary)] leading-relaxed font-normal">
-          An academic workspace for syllabus-grounded exam preparation. Index your lecture notes, extract past papers with structured mark allocation, and synthesize citation-verified examination answers.
+          An academic workspace for syllabus-grounded exam preparation powered by <span className="text-[var(--text-primary)] font-semibold border-b border-[var(--primary)]/60 pb-0.5">autonomous multi-agent orchestration</span>. Index your lecture notes, extract past papers with structured mark allocation, and synthesize citation-verified examination answers with <span className="text-[var(--text-primary)] font-semibold border-b border-[var(--primary)]/60 pb-0.5">0% downtime</span> across multi-provider AI failover.
         </p>
+
 
         {/* Primary Action Row */}
         <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
@@ -121,21 +124,9 @@ export const LandingPage = ({ justLoggedOut }) => {
             <span>Browse The Commons</span>
           </button>
         </div>
-
-        {/* Quiet Provenance Footnote */}
-        <div className="mt-12 flex flex-wrap items-center justify-center gap-6 text-[11px] font-mono text-[var(--text-muted)] border-t border-[var(--border-subtle)] pt-6">
-          <span className="flex items-center gap-1.5">
-            <ShieldCheck className="h-3 w-3 text-[var(--primary)]" />
-            <span>Client API Keys Encrypted</span>
-          </span>
-          <span className="text-[var(--border-strong)]">·</span>
-          <span>Cosine Vector Search (Qdrant)</span>
-          <span className="text-[var(--border-strong)]">·</span>
-          <span>Multi-Provider AI Failover</span>
-          <span className="text-[var(--border-strong)]">·</span>
-          <span>ReportLab Typeset PDF Export</span>
-        </div>
       </section>
+
+
 
       <div className="editorial-rule max-w-5xl mx-auto" />
 
