@@ -273,11 +273,20 @@ export const ProfileSettings = () => {
         {/* Center: Input Box */}
         <div className="relative flex-1">
           <input
+            id={`api_key_${p.id}`}
+            name={`api_key_${p.id}`}
             type={isShowing ? 'text' : 'password'}
             value={inputVal}
             onChange={(e) => handleInputChange(p.id, e.target.value)}
             placeholder={isConfigured ? '••••••••••••••••••••••••••••••••' : p.placeholder}
             disabled={isProcessing}
+            autoComplete="new-password"
+            autoCorrect="off"
+            autoCapitalize="off"
+            spellCheck={false}
+            data-form-type="other"
+            data-lpignore="true"
+            data-1p-ignore="true"
             className="w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface-well)] py-1.5 pl-3 pr-8 font-mono text-xs text-[var(--text-primary)] placeholder-[var(--text-disabled)] focus:border-[var(--primary)] focus:outline-none disabled:opacity-50"
           />
           <button
