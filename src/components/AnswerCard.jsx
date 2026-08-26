@@ -15,6 +15,15 @@ function formatMarkdownMath(content) {
   // 1. Strip accidental rubric/evaluation leakage
   let cleaned = content.replace(/(?:^|\n)(?:Mark Allocation|Grading Rubric|Scoring Breakdown|Reviewer Assessment):\s*[\s\S]*?(?=\n\n|\n[A-Z]|$)/gi, '\n');
 
+  // 1b. Strip a trailing self-referential meta paragraph that describes the answer
+  //     itself (e.g. "This answer is concise, uses plain English, and follows the
+  //     2-mark requirement..."). Only the FINAL paragraph is considered so long
+  //     answers are never truncated. Backup so already-saved answers are cleaned.
+  cleaned = cleaned.replace(
+    /\n\s*\n\s*(?:This answer|This response|This solution|This explanation|The above answer|The answer above|The response above)\b(?:(?!\n\s*\n)[\s\S])*?(?:concise|plain English|simple English|bullet|mark requirement|marks requirement|jargon|explains? them simply|explains? it simply|brief introduction|as requested|as required|proportional to the marks?|easy to (?:understand|memori[sz]e))(?:(?!\n\s*\n)[\s\S])*\s*$/i,
+    ''
+  );
+
   // 2. Protect code blocks / ASCII diagrams from regex alterations
   const parts = cleaned.split(/(```[\s\S]*?```)/g);
 
@@ -58,8 +67,11 @@ function formatMarkdownMath(content) {
   return processed.join('').trim();
 }
 
-export const AnswerCard = ({ answer, index, readOnly = false }) => {
-  const { retryAnswer } = useQuestionBankStore();
+export const AnswerCard = React.memo(function AnswerCard({ answer, index, readOnly = false }) {
+  // Subscribe only to the retryAnswer action (a stable reference) so this card
+  // does NOT re-render when unrelated store slices change (success banner,
+  // other answers' retry flags, or the currentAnswerSet swap for other cards).
+  const retryAnswer = useQuestionBankStore((s) => s.retryAnswer);
   const [isRetrying, setIsRetrying] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isRetryConfirmOpen, setIsRetryConfirmOpen] = useState(false);
@@ -215,4 +227,4 @@ export const AnswerCard = ({ answer, index, readOnly = false }) => {
       />
     </>
   );
-};
+});
