@@ -76,13 +76,15 @@ export const AnswerCard = React.memo(function AnswerCard({ answer, index, readOn
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isRetryConfirmOpen, setIsRetryConfirmOpen] = useState(false);
   const [retryInstruction, setRetryInstruction] = useState('');
+  const [referenceAnswer, setReferenceAnswer] = useState('');
 
   const handleRetry = async () => {
     if (readOnly) return;
     setIsRetryConfirmOpen(false);
     setIsRetrying(true);
-    await retryAnswer(answer.id, retryInstruction);
+    await retryAnswer(answer.id, retryInstruction, referenceAnswer);
     setRetryInstruction('');
+    setReferenceAnswer('');
     setIsRetrying(false);
   };
 
@@ -219,9 +221,15 @@ export const AnswerCard = React.memo(function AnswerCard({ answer, index, readOn
         onInputChange={setRetryInstruction}
         inputLabel="Add your own instructions (optional)"
         inputPlaceholder="e.g. make it shorter, add a diagram, focus on real-world examples..."
+        withSecondInput
+        secondInputValue={referenceAnswer}
+        onSecondInputChange={setReferenceAnswer}
+        secondInputLabel="Reference answer (optional)"
+        secondInputPlaceholder="Paste an answer to steer regeneration. To keep it word-for-word, type 'use this answer exactly' in the instructions above."
         onConfirm={handleRetry}
         onCancel={() => {
           setRetryInstruction('');
+          setReferenceAnswer('');
           setIsRetryConfirmOpen(false);
         }}
       />

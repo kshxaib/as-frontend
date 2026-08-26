@@ -17,6 +17,11 @@ export const ConfirmationModal = ({
   onInputChange,
   inputLabel,
   inputPlaceholder,
+  withSecondInput = false,
+  secondInputValue = '',
+  onSecondInputChange,
+  secondInputLabel,
+  secondInputPlaceholder,
 }) => {
   if (!isOpen) return null;
 
@@ -74,6 +79,25 @@ export const ConfirmationModal = ({
               disabled={isLoading}
               placeholder={inputPlaceholder}
               className="w-full rounded-[8px] border border-[var(--border)] bg-[var(--surface-well)] p-3 text-xs sm:text-sm text-[var(--text-primary)] placeholder-[var(--text-disabled)] focus:border-[var(--primary)] focus:outline-none leading-relaxed transition-colors disabled:opacity-50"
+            />
+          </div>
+        )}
+
+        {/* Optional second (reference-answer) input */}
+        {withSecondInput && (
+          <div className="mt-4">
+            {secondInputLabel && (
+              <label className="block font-mono text-[11px] uppercase tracking-wider text-[var(--text-secondary)] mb-1.5">
+                {secondInputLabel}
+              </label>
+            )}
+            <textarea
+              rows={7}
+              value={secondInputValue}
+              onChange={(e) => onSecondInputChange?.(e.target.value)}
+              disabled={isLoading}
+              placeholder={secondInputPlaceholder}
+              className="w-full rounded-[8px] border border-[var(--border)] bg-[var(--surface-well)] p-3 text-xs sm:text-sm text-[var(--text-primary)] placeholder-[var(--text-disabled)] focus:border-[var(--primary)] focus:outline-none leading-relaxed transition-colors disabled:opacity-50 font-mono"
             />
           </div>
         )}

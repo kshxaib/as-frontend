@@ -337,7 +337,7 @@ export const useQuestionBankStore = create((set, get) => ({
     }
   },
 
-  retryAnswer: async (answerId, userInstruction = '') => {
+  retryAnswer: async (answerId, userInstruction = '', referenceAnswer = '') => {
     if (!get().hasAllRequiredKeys()) {
       get().triggerKeyModal('Answer Regeneration');
       return;
@@ -351,6 +351,7 @@ export const useQuestionBankStore = create((set, get) => ({
     try {
       const res = await api.post(`/answers/${answerId}/retry`, {
         user_instruction: userInstruction?.trim() || null,
+        reference_answer: referenceAnswer?.trim() || null,
       });
 
       const returned = res.data;
