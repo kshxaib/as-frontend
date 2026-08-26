@@ -63,12 +63,14 @@ export const AnswerCard = ({ answer, index, readOnly = false }) => {
   const [isRetrying, setIsRetrying] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isRetryConfirmOpen, setIsRetryConfirmOpen] = useState(false);
+  const [retryInstruction, setRetryInstruction] = useState('');
 
   const handleRetry = async () => {
     if (readOnly) return;
     setIsRetryConfirmOpen(false);
     setIsRetrying(true);
-    await retryAnswer(answer.id);
+    await retryAnswer(answer.id, retryInstruction);
+    setRetryInstruction('');
     setIsRetrying(false);
   };
 
@@ -200,8 +202,16 @@ export const AnswerCard = ({ answer, index, readOnly = false }) => {
         cancelText="Cancel"
         confirmVariant="primary"
         iconType="ai"
+        withInput
+        inputValue={retryInstruction}
+        onInputChange={setRetryInstruction}
+        inputLabel="Add your own instructions (optional)"
+        inputPlaceholder="e.g. make it shorter, add a diagram, focus on real-world examples..."
         onConfirm={handleRetry}
-        onCancel={() => setIsRetryConfirmOpen(false)}
+        onCancel={() => {
+          setRetryInstruction('');
+          setIsRetryConfirmOpen(false);
+        }}
       />
     </>
   );

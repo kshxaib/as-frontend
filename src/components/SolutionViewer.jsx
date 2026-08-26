@@ -24,6 +24,7 @@ export const SolutionViewer = () => {
     questionBanks,
     currentQuestionBank,
     currentAnswerSet,
+    answerSetsList,
     isGeneratingAnswers,
     isLoading,
     fetchQuestionBanks,
@@ -31,6 +32,7 @@ export const SolutionViewer = () => {
     generateAnswers,
     downloadSolvedPdf,
     toggleAnswerSetShare,
+    shareUpdatedAnswerSet,
     setActiveTab,
     error,
     successMessage,
@@ -96,6 +98,12 @@ export const SolutionViewer = () => {
   );
 
   const isShared = currentAnswerSet?.visibility === 'community';
+
+  // A previously-shared version of this bank exists, but the current (regenerated)
+  // set is not the shared one — offer to push the update into that Hub entry.
+  const sharedSibling = (answerSetsList || []).find(
+    (a) => a.visibility === 'community' && a.id !== currentAnswerSet?.id
+  );
 
   return (
     <div className="min-h-screen bg-[var(--background)] pb-24 text-[var(--text-primary)]">
@@ -228,6 +236,18 @@ export const SolutionViewer = () => {
                       <Share2 className="h-3.5 w-3.5 stroke-[1.5]" />
                       <span>{isShared ? 'Shared with The Commons' : 'Share with The Commons'}</span>
                     </button>
+
+                    {/* Share Updated Answer Set — updates the existing Hub entry in place (no duplicate) */}
+                    {!isShared && sharedSibling && (
+                      <button
+                        onClick={() => shareUpdatedAnswerSet(currentAnswerSet.id)}
+                        className="inline-flex items-center gap-2 rounded-[8px] border border-[rgba(200,168,32,0.3)] bg-[rgba(200,168,32,0.1)] px-3 py-1.5 text-xs font-medium text-[var(--community)] hover:opacity-90 transition-all"
+                        title="Replace the version already shared in The Commons with this regenerated set (no duplicate)"
+                      >
+                        <RefreshCw className="h-3.5 w-3.5 stroke-[1.5]" />
+                        <span>Share Updated Answer Set</span>
+                      </button>
+                    )}
                   </>
                 )}
               </div>

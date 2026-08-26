@@ -337,7 +337,7 @@ export const useQuestionBankStore = create((set, get) => ({
     }
   },
 
-  retryAnswer: async (answerId) => {
+  retryAnswer: async (answerId, userInstruction = '') => {
     if (!get().hasAllRequiredKeys()) {
       get().triggerKeyModal('Answer Regeneration');
       return;
@@ -349,11 +349,36 @@ export const useQuestionBankStore = create((set, get) => ({
     }));
 
     try {
-      const res = await api.post(`/answers/${answerId}/retry`);
+      const res = await api.post(`/answers/${answerId}/retry`, {
+        user_instruction: userInstruction?.trim() || null,
+      });
+
+      const returned = res.data;
+      const { currentAnswerSet, currentQuestionBank } = get();
+
+      // If the backend forked a private working copy (because the set was shared
+      // to The Commons), the returned answer lives in a NEW answer set. Reload the
+      // bank so we switch to that private working copy and the frozen community
+      // sibling is picked up — the Hub stays unchanged until the user explicitly
+      // clicks "Share Updated Answer Set".
+      const forked =
+        currentAnswerSet && returned.answer_set_id !== currentAnswerSet.id;
+
+      if (forked) {
+        set((state) => ({
+          isRetryingAnswer: { ...state.isRetryingAnswer, [answerId]: false },
+          successMessage:
+            'Answer regenerated in your private copy. The shared version is unchanged — click "Share Updated Answer Set" to publish it.',
+        }));
+        const bankId = currentQuestionBank?.id ?? currentAnswerSet?.question_bank_id;
+        if (bankId) await get().selectQuestionBank(bankId);
+        return;
+      }
+
       set((state) => {
         if (!state.currentAnswerSet) return state;
         const updatedAnswers = (state.currentAnswerSet.answers || []).map((ans) =>
-          ans.id === answerId ? res.data : ans
+          ans.id === answerId ? returned : ans
         );
         return {
           currentAnswerSet: {
@@ -361,7 +386,7 @@ export const useQuestionBankStore = create((set, get) => ({
             answers: updatedAnswers,
           },
           isRetryingAnswer: { ...state.isRetryingAnswer, [answerId]: false },
-          successMessage: `Answer for Question ${res.data.question_number} regenerated successfully!`,
+          successMessage: `Answer for Question ${returned.question_number} regenerated successfully!`,
         };
       });
     } catch (err) {
@@ -525,6 +550,30 @@ export const useQuestionBankStore = create((set, get) => ({
       get().fetchCommunityFeed();
     } catch (err) {
       set({ error: getErrorMessage(err, 'Failed to toggle answer set sharing.') });
+    }
+  },
+
+  // Push an updated/regenerated answer set to The Commons as the single copy for
+  // its question bank; the backend retires any previously-shared version so no
+  // duplicate appears in the Hub.
+  shareUpdatedAnswerSet: async (answerSetId) => {
+    try {
+      const res = await api.post(`/community/answer-sets/${answerSetId}/share-update`);
+      const retiredIds = res.data.retired_ids || [];
+      set((state) => ({
+        answerSetsList: state.answerSetsList.map((a) => {
+          if (a.id === answerSetId) return { ...a, visibility: 'community' };
+          if (retiredIds.includes(a.id)) return { ...a, visibility: 'private' };
+          return a;
+        }),
+        currentAnswerSet: state.currentAnswerSet?.id === answerSetId
+          ? { ...state.currentAnswerSet, visibility: 'community' }
+          : state.currentAnswerSet,
+        successMessage: 'Shared answer set updated in The Commons.',
+      }));
+      get().fetchCommunityFeed();
+    } catch (err) {
+      set({ error: getErrorMessage(err, 'Failed to update shared answer set.') });
     }
   },
 
