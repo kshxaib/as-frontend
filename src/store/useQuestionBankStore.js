@@ -356,22 +356,45 @@ export const useQuestionBankStore = create((set, get) => ({
       const returned = res.data;
       const { currentAnswerSet, currentQuestionBank } = get();
 
-      // If the backend forked a private working copy (because the set was shared
-      // to The Commons), the returned answer lives in a NEW answer set. Reload the
-      // bank so we switch to that private working copy and the frozen community
-      // sibling is picked up — the Hub stays unchanged until the user explicitly
-      // clicks "Share Updated Answer Set".
+      // A changed answer_set_id means the set was shared to The Commons and the
+      // backend regenerated into a NEW private working copy (fresh answer ids).
+      // Fetch ONLY that one set — no global isLoading, no bank refetch — and swap
+      // it in surgically, so the current tab, scroll position and expand/collapse
+      // state are all preserved. The frozen community sibling stays in
+      // answerSetsList, so "Share Updated Answer Set" still appears.
       const forked =
         currentAnswerSet && returned.answer_set_id !== currentAnswerSet.id;
 
       if (forked) {
-        set((state) => ({
-          isRetryingAnswer: { ...state.isRetryingAnswer, [answerId]: false },
-          successMessage:
-            'Answer regenerated in your private copy. The shared version is unchanged — click "Share Updated Answer Set" to publish it.',
-        }));
-        const bankId = currentQuestionBank?.id ?? currentAnswerSet?.question_bank_id;
-        if (bankId) await get().selectQuestionBank(bankId);
+        try {
+          const setRes = await api.get(`/answer-sets/${returned.answer_set_id}`);
+          const workingSet = { ...setRes.data, visibility: 'private' };
+          set((state) => {
+            // Keep answerSetsList rows lean (no embedded answers), matching the
+            // shape the list endpoint returns.
+            const workingRow = { ...workingSet };
+            delete workingRow.answers;
+            const others = (state.answerSetsList || []).filter(
+              (a) => a.id !== workingSet.id
+            );
+            return {
+              currentAnswerSet: workingSet,
+              answerSetsList: [workingRow, ...others],
+              isRetryingAnswer: { ...state.isRetryingAnswer, [answerId]: false },
+              successMessage:
+                'Answer regenerated in your private copy — the shared version is unchanged. Click "Share Updated Answer Set" to publish it.',
+            };
+          });
+        } catch {
+          // Rare network fallback only: a full reload keeps state correct even if
+          // the lightweight swap fails.
+          set((state) => ({
+            isRetryingAnswer: { ...state.isRetryingAnswer, [answerId]: false },
+          }));
+          const bankId =
+            currentQuestionBank?.id ?? currentAnswerSet?.question_bank_id;
+          if (bankId) await get().selectQuestionBank(bankId);
+        }
         return;
       }
 

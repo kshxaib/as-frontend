@@ -336,7 +336,15 @@ export const SolutionViewer = () => {
             </div>
           ) : filteredAnswers.length > 0 ? (
             filteredAnswers.map((answer, index) => (
-              <AnswerCard key={answer.id} answer={answer} index={index} />
+              // Key on the stable question_id (copied verbatim across a private
+              // fork) rather than answer.id, which changes when a shared set is
+              // regenerated into a working copy. This keeps each card's instance
+              // mounted so its expand/collapse state and scroll position survive.
+              <AnswerCard
+                key={answer.question_id ?? answer.id}
+                answer={answer}
+                index={index}
+              />
             ))
           ) : (
             <EmptyState
