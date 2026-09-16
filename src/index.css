@@ -31,7 +31,8 @@
   --border-subtle: #161e28;
   --border-strong: #374151;
 
-  --primary: #14b8a6;          /* Scholar Teal */
+  --primary: #14b8a6;
+  /* Scholar Teal */
   --primary-hover: #2dd4bf;
   --primary-active: #0d9488;
   --primary-foreground: #042f2e;
@@ -40,11 +41,13 @@
   --secondary-hover: #1f2937;
   --secondary-foreground: #bcc4cd;
 
-  --ai: #f59e0b;                 /* Manuscript Amber */
+  --ai: #f59e0b;
+  /* Manuscript Amber */
   --ai-hover: #fbbf24;
   --ai-foreground: #451a03;
 
-  --community: #c8a820;          /* Laurel Gold */
+  --community: #c8a820;
+  /* Laurel Gold */
   --community-hover: #dbc230;
   --community-foreground: #4a3a0b;
 
@@ -123,8 +126,14 @@ body {
 }
 
 /* ── Scrollbar Hide ────────────────────────────────────────────────────────── */
-.scrollbar-none::-webkit-scrollbar { display: none; }
-.scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
 
 /* ── KaTeX & Math Styling ──────────────────────────────────────────────────── */
 
@@ -153,7 +162,7 @@ body {
   overflow-y: hidden !important;
 }
 
-.katex-display > .katex {
+.katex-display>.katex {
   display: block !important;
   text-align: center !important;
 }
@@ -182,9 +191,17 @@ body {
   letter-spacing: -0.01em;
 }
 
-.markdown-answer-body h1 { font-size: 1.2rem; }
-.markdown-answer-body h2 { font-size: 1.1rem; }
-.markdown-answer-body h3 { font-size: 1rem; }
+.markdown-answer-body h1 {
+  font-size: 1.2rem;
+}
+
+.markdown-answer-body h2 {
+  font-size: 1.1rem;
+}
+
+.markdown-answer-body h3 {
+  font-size: 1rem;
+}
 
 .markdown-answer-body p {
   margin-bottom: 0.875rem;
@@ -283,4 +300,160 @@ body {
 
 .markdown-answer-body tr:nth-child(even) {
   background-color: var(--surface-muted);
+}
+
+/* ─── Mermaid Diagram Component ─────────────────────────────────────────── */
+.mermaid-diagram-wrapper {
+  margin: 1rem 0;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  overflow: hidden;
+  background: rgba(15, 17, 23, 0.6);
+  backdrop-filter: blur(6px);
+}
+
+.mermaid-diagram-wrapper.mermaid-error {
+  border-color: rgba(239, 68, 68, 0.3);
+}
+
+.mermaid-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 12px;
+  background: rgba(30, 41, 59, 0.5);
+  border-bottom: 1px solid var(--border-subtle);
+  gap: 8px;
+}
+
+.mermaid-toolbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.mermaid-badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--community);
+  padding: 2px 8px;
+  border-radius: 4px;
+  background: rgba(200, 168, 32, 0.1);
+  border: 1px solid rgba(200, 168, 32, 0.2);
+}
+
+.mermaid-badge--error {
+  color: var(--error);
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+.mermaid-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mermaid-btn:hover {
+  background: rgba(148, 163, 184, 0.1);
+  border-color: var(--border-subtle);
+  color: var(--text-primary);
+}
+
+.mermaid-svg-container {
+  display: flex;
+  justify-content: center;
+  padding: 20px 16px;
+  overflow-x: auto;
+}
+
+.mermaid-svg-container svg {
+  max-width: 100%;
+  height: auto;
+}
+
+.mermaid-code-fallback {
+  margin: 0;
+  padding: 14px 16px;
+  background: rgba(15, 23, 42, 0.5);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+  overflow-x: auto;
+  white-space: pre;
+  border-radius: 0;
+  border: none;
+}
+
+.mermaid-code-fallback code {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  background: transparent;
+  padding: 0;
+}
+
+* Instruction pill in toolbar */ .mermaid-instruction-pill {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9.5px;
+  color: #94a3b8;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  opacity: 0.85;
+}
+
+@media (max-width: 640px) {
+  .mermaid-instruction-pill {
+    display: none;
+  }
+}
+
+.mermaid-svg-container .node:hover .nodeLabel {
+  filter: brightness(1.2);
+}
+
+/* Edge hover */
+.mermaid-svg-container .edgePath:hover path {
+  stroke: #a5b4fc !important;
+  stroke-width: 2.5px !important;
+  filter: drop-shadow(0 0 6px rgba(165, 180, 252, 0.4));
+  transition: all 0.2s ease;
+}
+
+/* ─── Code Fallback ─────────────────────────────────────────────────────── */
+.mermaid-code-fallback {
+  margin: 0;
+  padding: 14px 16px;
+  background: rgba(15, 23, 42, 0.5);
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+  overflow-x: auto;
+  white-space: pre;
+  border-radius: 0;
+  border: none;
+}
+
+.mermaid-code-fallback code {
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+  background: transparent;
+  padding: 0;
 }
