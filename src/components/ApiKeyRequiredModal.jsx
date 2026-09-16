@@ -1,5 +1,5 @@
 import React from 'react';
-import { KeyRound, ArrowRight, X, Sparkles, ExternalLink } from 'lucide-react';
+import { KeyRound, ArrowRight, X, Sparkles } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { StatusBadge } from './ui/StatusBadge';
@@ -53,7 +53,7 @@ export const ApiKeyRequiredModal = () => {
             <div className="flex items-center justify-between text-xs pb-2 border-b border-[var(--border-subtle)]">
               <div className="flex items-center gap-2">
                 <Sparkles className="h-3.5 w-3.5 text-[var(--primary)]" />
-                <span className="font-semibold text-[var(--text-primary)]">OpenAI API (GPT-4o Mini)</span>
+                <span className="font-semibold text-[var(--text-primary)]">OpenAI API (GPT-4o Mini / 4o)</span>
               </div>
               {hasOpenAI ? (
                 <StatusBadge variant="success">Active</StatusBadge>
@@ -69,7 +69,7 @@ export const ApiKeyRequiredModal = () => {
           </div>
 
           <p className="text-[11px] text-[var(--text-muted)] text-center">
-            Encrypted with AES-256 before storage · Strict BYOK.
+            Encrypted with AES-256 before storage · Strictly your own API key (BYOK).
           </p>
         </div>
 
