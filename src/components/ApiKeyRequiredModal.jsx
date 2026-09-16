@@ -1,5 +1,5 @@
 import React from 'react';
-import { KeyRound, ArrowRight, X, CheckCircle2, AlertCircle } from 'lucide-react';
+import { KeyRound, ArrowRight, X, Sparkles, ExternalLink } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { StatusBadge } from './ui/StatusBadge';
@@ -15,20 +15,11 @@ export const ApiKeyRequiredModal = () => {
     setActiveTab('profile');
   };
 
-  const keyList = [
-    { name: 'Google Gemini', isSet: !!user?.has_gemini_key, role: 'Vector Embeddings & RAG' },
-    { name: 'Groq Cloud', isSet: !!user?.has_groq_key, role: 'Fast RAG Generation' },
-    { name: 'OpenRouter', isSet: !!user?.has_openrouter_key, role: 'Question Extraction (free models)' },
-    { name: 'NVIDIA NIM', isSet: !!user?.has_nvidia_key, role: 'Academic Reviewer (10k RPD)' },
-  ];
-
-  const configuredCount = keyList.filter((k) => k.isSet).length;
+  const hasOpenAI = !!user?.has_openai_key;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[var(--overlay)] p-4 backdrop-blur-sm animate-in fade-in duration-150">
       <div className="relative w-full max-w-md rounded-[20px] border border-[var(--border)] bg-[var(--surface-elevated)] p-6 sm:p-7 shadow-[var(--shadow-lg)] my-auto">
-
-        
         {/* Close Button */}
         <button
           onClick={closeKeyModal}
@@ -39,12 +30,12 @@ export const ApiKeyRequiredModal = () => {
 
         {/* Icon Header */}
         <div className="flex items-start gap-3.5">
-          <div className="flex h-11 w-11 items-center justify-center rounded-[12px] bg-[rgba(245,158,11,0.1)] border border-[rgba(245,158,11,0.25)] text-[var(--ai)] shrink-0">
+          <div className="flex h-11 w-11 items-center justify-center rounded-[12px] bg-[rgba(20,184,166,0.1)] border border-[rgba(20,184,166,0.25)] text-[var(--primary)] shrink-0">
             <KeyRound className="h-5 w-5 stroke-[1.5]" />
           </div>
           <div>
             <h3 className="font-display text-lg font-normal text-[var(--text-primary)] tracking-tight">
-              API Keys Configuration Required
+              OpenAI API Key Required
             </h3>
             <p className="text-xs text-[var(--text-muted)] mt-0.5">
               Action Blocked: <span className="font-mono text-[var(--warning)]">{keyModalFeature || 'AI Pipeline Task'}</span>
@@ -55,27 +46,30 @@ export const ApiKeyRequiredModal = () => {
         {/* Body */}
         <div className="mt-5 space-y-3">
           <p className="text-xs text-[var(--text-secondary)] leading-relaxed">
-            To ensure zero downtime and prevent rate limit failure, 4 free provider keys are used for failover routing:
+            AcademicStack runs 100% on OpenAI. Add your OpenAI API key in Profile settings to unlock:
           </p>
 
-          <div className="space-y-1.5 rounded-[8px] bg-[var(--surface-well)] border border-[var(--border)] p-3">
-            {keyList.map((k) => (
-              <div key={k.name} className="flex items-center justify-between text-xs py-1 border-b border-[var(--border-subtle)] last:border-0">
-                <div>
-                  <span className="font-medium text-[var(--text-primary)]">{k.name}</span>
-                  <span className="text-[10px] font-mono text-[var(--text-muted)] ml-2">({k.role})</span>
-                </div>
-                {k.isSet ? (
-                  <StatusBadge variant="success">Active</StatusBadge>
-                ) : (
-                  <StatusBadge variant="error">Missing</StatusBadge>
-                )}
+          <div className="space-y-2 rounded-[10px] bg-[var(--surface-well)] border border-[var(--border)] p-3.5">
+            <div className="flex items-center justify-between text-xs pb-2 border-b border-[var(--border-subtle)]">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-3.5 w-3.5 text-[var(--primary)]" />
+                <span className="font-semibold text-[var(--text-primary)]">OpenAI API (GPT-4o Mini)</span>
               </div>
-            ))}
+              {hasOpenAI ? (
+                <StatusBadge variant="success">Active</StatusBadge>
+              ) : (
+                <StatusBadge variant="error">Missing</StatusBadge>
+              )}
+            </div>
+            <div className="text-[11px] text-[var(--text-muted)] space-y-1">
+              <p>• 1536-dim Vector Embeddings (PDF indexing)</p>
+              <p>• Automated Question Bank extraction</p>
+              <p>• Syllabus-grounded RAG answers & AI Review</p>
+            </div>
           </div>
 
-          <p className="font-mono text-[11px] text-[var(--text-muted)] text-center">
-            {configuredCount}/4 keys active · All 4 providers offer 100% free tiers.
+          <p className="text-[11px] text-[var(--text-muted)] text-center">
+            Encrypted with AES-256 before storage · Strict BYOK.
           </p>
         </div>
 
@@ -91,7 +85,7 @@ export const ApiKeyRequiredModal = () => {
             onClick={handleGoToProfile}
             className="w-full sm:w-2/3 inline-flex items-center justify-center gap-2 rounded-[8px] bg-[var(--primary)] py-2 text-xs font-semibold text-[var(--primary-foreground)] hover:opacity-90 transition-all shadow-sm"
           >
-            <span>Add Keys in Profile</span>
+            <span>Add OpenAI Key</span>
             <ArrowRight className="h-3.5 w-3.5 stroke-[2]" />
           </button>
         </div>

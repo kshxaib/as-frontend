@@ -54,23 +54,18 @@ export const useQuestionBankStore = create((set, get) => ({
   communityViewerAnswers: [],
   isLoadingCommunityViewer: false,
 
-  // Helper: check if user has configured ALL 4 required free AI keys (Gemini, Groq, Cerebras, NVIDIA)
+  // Helper: check if user has configured required OpenAI API key
   hasAllRequiredKeys: () => {
     const user = useAuthStore.getState().user;
-    return !!(
-      user?.has_gemini_key &&
-      user?.has_groq_key &&
-      user?.has_openrouter_key &&
-      user?.has_nvidia_key
-    );
+    return !!user?.has_openai_key;
   },
 
-
-  // Helper: check if user has embedding key (Gemini or OpenAI)
+  // Helper: check if user has embedding key (OpenAI)
   hasEmbeddingKey: () => {
     const user = useAuthStore.getState().user;
-    return !!(user?.has_gemini_key || user?.has_openai_key);
+    return !!user?.has_openai_key;
   },
+
 
   // ----------------------------------------------------
   // Resources Operations
@@ -259,7 +254,7 @@ export const useQuestionBankStore = create((set, get) => ({
         successMessage: `Successfully extracted ${res.data.questions_extracted || 0} questions!`,
       }));
     } catch (err) {
-      const msg = getErrorMessage(err, 'Extraction failed. Check your OpenRouter/Groq/Gemini keys in Profile.');
+      const msg = getErrorMessage(err, 'Extraction failed. Check your Google Gemini API key in Profile.');
       set((state) => ({
         error: msg,
         extractingQBs: { ...state.extractingQBs, [id]: false },
@@ -329,7 +324,7 @@ export const useQuestionBankStore = create((set, get) => ({
         successMessage: `Successfully generated ${res.data.completed_questions} answers with AI Review & citations!`,
       });
     } catch (err) {
-      const msg = getErrorMessage(err, 'Answer generation failed. Check your Groq/Gemini/OpenRouter keys in Profile.');
+      const msg = getErrorMessage(err, 'Answer generation failed. Check your Google Gemini API key in Profile.');
       set({
         error: msg,
         isGeneratingAnswers: false,

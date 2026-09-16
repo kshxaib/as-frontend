@@ -18,7 +18,6 @@ import {
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { ConfirmationModal } from './ConfirmationModal';
-import { ThemeToggle } from './ui/ThemeToggle';
 
 export const Navbar = () => {
   const { activeTab, setActiveTab, currentAnswerSet } = useQuestionBankStore();
@@ -63,9 +62,7 @@ export const Navbar = () => {
     setActiveTab(item.id);
   };
 
-  const requiredKeys = ['has_gemini_key', 'has_groq_key', 'has_openrouter_key', 'has_nvidia_key'];
-  const configuredRequiredCount = requiredKeys.filter((k) => user?.[k]).length;
-  const allRequiredPresent = configuredRequiredCount === 4;
+  const hasOpenAIKey = !!user?.has_openai_key;
 
   const handleConfirmLogout = () => {
     setIsLogoutModalOpen(false);
@@ -126,10 +123,8 @@ export const Navbar = () => {
             })}
           </nav>
 
-          {/* ── Right Actions: Theme Toggle & User Account Dropdown ── */}
+          {/* ── Right Actions: User Account Dropdown ── */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Theme Switcher */}
-            <ThemeToggle compact />
 
             {isAuthenticated && user ? (
               <div className="relative" ref={userMenuRef}>
@@ -190,12 +185,12 @@ export const Navbar = () => {
                         </div>
                         <span
                           className={`font-mono text-[10px] px-1.5 py-0.5 rounded border ${
-                            allRequiredPresent
+                            hasOpenAIKey
                               ? 'bg-[rgba(34,197,94,0.1)] text-[var(--success)] border-[rgba(34,197,94,0.25)]'
                               : 'bg-[rgba(245,158,11,0.1)] text-[var(--warning)] border-[rgba(245,158,11,0.25)]'
                           }`}
                         >
-                          {allRequiredPresent ? '4/4 Ready' : `${configuredRequiredCount}/4 Keys`}
+                          {hasOpenAIKey ? 'OpenAI Ready' : 'Key Needed'}
                         </span>
                       </button>
                     </div>

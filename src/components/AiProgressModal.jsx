@@ -61,7 +61,7 @@ export const AiProgressModal = ({
 
   const indexingSteps = [
     { label: 'Chunking Document Text', icon: FileText, desc: 'Semantic chapter chunking' },
-    { label: 'Computing Vector Embeddings', icon: Cpu, desc: '3072-dimensional vector computation' },
+    { label: 'Computing Vector Embeddings', icon: Cpu, desc: '1536-dimensional vector computation' },
     { label: 'Indexing into Qdrant', icon: Database, desc: 'Storing searchable vector points' },
     { label: 'Document Library Ready', icon: CheckCircle2, desc: 'Resource verified' },
   ];
@@ -162,7 +162,7 @@ export const AiProgressModal = ({
         <div className="mt-5 rounded-[8px] bg-[var(--surface-well)] border border-[var(--border)] p-2.5 text-center">
           <p className="text-[11px] text-[var(--text-muted)] font-mono flex items-center justify-center gap-2">
             <span className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--success)]" />
-            <span>Multi-provider failover active (Gemini · Groq · OpenRouter · NVIDIA)</span>
+            <span>OpenAI API active (GPT-4o Mini · Text-Embedding-3-Small)</span>
           </p>
         </div>
 

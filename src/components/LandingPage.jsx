@@ -95,7 +95,7 @@ export const LandingPage = ({ justLoggedOut }) => {
         </h1>
 
         <p className="mt-6 mx-auto max-w-2xl text-sm sm:text-base text-[var(--text-secondary)] leading-relaxed font-normal">
-          An academic workspace for syllabus-grounded exam preparation powered by <span className="text-[var(--text-primary)] font-semibold border-b border-[var(--primary)]/60 pb-0.5">autonomous multi-agent orchestration</span>. Index your lecture notes, extract past papers with structured mark allocation, and synthesize citation-verified examination answers with <span className="text-[var(--text-primary)] font-semibold border-b border-[var(--primary)]/60 pb-0.5">0% downtime</span> across multi-provider AI failover.
+          An academic workspace for syllabus-grounded exam preparation powered by <span className="text-[var(--text-primary)] font-semibold border-b border-[var(--primary)]/60 pb-0.5">autonomous AI orchestration</span>. Index your lecture notes, extract past papers with structured mark allocation, and synthesize citation-verified examination answers powered by <span className="text-[var(--text-primary)] font-semibold border-b border-[var(--primary)]/60 pb-0.5">OpenAI GPT-4o Mini</span>.
         </p>
 
 
