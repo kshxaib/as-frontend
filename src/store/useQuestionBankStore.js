@@ -539,7 +539,7 @@ export const useQuestionBankStore = create((set, get) => ({
       link.click();
       link.remove();
       setTimeout(() => window.URL.revokeObjectURL(blobUrl), 2000);
-    } catch (err) {
+    } catch {
       // Fallback: open in new tab
       window.open(url, '_blank');
     }

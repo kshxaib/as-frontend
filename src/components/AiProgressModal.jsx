@@ -10,8 +10,7 @@ import {
   Check,
 } from 'lucide-react';
 
-export const AiProgressModal = ({
-  isOpen,
+const AiProgressModalContent = ({
   type = 'extraction', // 'extraction' | 'generation' | 'indexing'
   title = 'AI Processing in Progress',
   subtitle = 'Please wait while AcademicStack processes your academic materials.',
@@ -22,12 +21,6 @@ export const AiProgressModal = ({
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
 
   useEffect(() => {
-    if (!isOpen) {
-      setActiveStep(0);
-      setElapsedSeconds(0);
-      return;
-    }
-
     const timer = setInterval(() => {
       setElapsedSeconds((prev) => prev + 1);
     }, 1000);
@@ -41,9 +34,7 @@ export const AiProgressModal = ({
       clearInterval(timer);
       clearInterval(stepInterval);
     };
-  }, [isOpen]);
-
-  if (!isOpen) return null;
+  }, []);
 
   const extractionSteps = [
     { label: 'Reading PDF & Extracting Text', icon: FileText, desc: 'PyMuPDF layout parsing' },
@@ -92,7 +83,9 @@ export const AiProgressModal = ({
                 {elapsedSeconds}s
               </span>
             </div>
-            <p className="text-xs text-[var(--text-muted)] mt-0.5 truncate">{subtitle}</p>
+            <p className="text-xs text-[var(--text-muted)] mt-0.5 truncate">
+              {subtitle} {totalItems > 0 ? `(${currentItem} / ${totalItems})` : ''}
+            </p>
           </div>
         </div>
 
@@ -169,4 +162,9 @@ export const AiProgressModal = ({
       </div>
     </div>
   );
+};
+
+export const AiProgressModal = (props) => {
+  if (!props.isOpen) return null;
+  return <AiProgressModalContent {...props} />;
 };

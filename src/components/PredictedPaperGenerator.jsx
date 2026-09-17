@@ -15,7 +15,6 @@ import {
   ShieldCheck,
   CheckCircle2,
   FolderOpen,
-  Share2,
   Globe,
 } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
@@ -45,15 +44,24 @@ export const PredictedPaperGenerator = ({ sharedToken, onClearShared }) => {
 
   const { user, openAuthModal } = useAuthStore();
 
+  // Form State
+  const [subject, setSubject] = useState('');
+  const [title, setTitle] = useState('');
+  const [paperRows, setPaperRows] = useState([
+    { id: 1, type: 'upload', file: null, qbId: null, qbName: '', session: '' },
+    { id: 2, type: 'upload', file: null, qbId: null, qbName: '', session: '' },
+  ]);
+  const [copySuccess, setCopySuccess] = useState(false);
+  const [validationError, setValidationError] = useState('');
+  const [savedQbInfo, setSavedQbInfo] = useState(null);
+
   // Sharing & Community State
   const [sharedInfo, setSharedInfo] = useState(null);
-  const [isLoadingShared, setIsLoadingShared] = useState(false);
   const [isSharing, setIsSharing] = useState(false);
   const [communityPaperId, setCommunityPaperId] = useState(null);
   const [isCommunityShared, setIsCommunityShared] = useState(false);
   const [shareMessage, setShareMessage] = useState('');
   const [synthesisError, setSynthesisError] = useState('');
-
 
   useEffect(() => {
     fetchQuestionBanks();
@@ -61,9 +69,7 @@ export const PredictedPaperGenerator = ({ sharedToken, onClearShared }) => {
 
   useEffect(() => {
     if (sharedToken) {
-      setIsLoadingShared(true);
       fetchSharedPredictedPaper(sharedToken).then((res) => {
-        setIsLoadingShared(false);
         if (res.success && res.data) {
           setSharedInfo(res.data);
           setPredictedPaper(res.data.paper_data);
@@ -75,17 +81,6 @@ export const PredictedPaperGenerator = ({ sharedToken, onClearShared }) => {
       });
     }
   }, [sharedToken, fetchSharedPredictedPaper, setPredictedPaper]);
-
-  // Form State
-  const [subject, setSubject] = useState('');
-  const [title, setTitle] = useState('');
-  const [paperRows, setPaperRows] = useState([
-    { id: 1, type: 'upload', file: null, qbId: null, qbName: '', session: '' },
-    { id: 2, type: 'upload', file: null, qbId: null, qbName: '', session: '' },
-  ]);
-  const [copySuccess, setCopySuccess] = useState(false);
-  const [validationError, setValidationError] = useState('');
-  const [savedQbInfo, setSavedQbInfo] = useState(null);
 
   // Add row (up to MAX_PAPERS)
   const handleAddRow = () => {

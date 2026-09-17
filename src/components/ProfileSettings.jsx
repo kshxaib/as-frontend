@@ -14,7 +14,6 @@ import {
   Database,
   Lock,
   Zap,
-  Info,
 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import { StatusBadge } from './ui/StatusBadge';

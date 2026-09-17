@@ -81,11 +81,13 @@ export const SolutionViewer = () => {
   }, [questionBanks, currentQuestionBank, selectQuestionBank]);
 
   // 3. If currentQuestionBank is set but currentAnswerSet is missing or lacks answers, refresh it
+  const currentBankId = currentQuestionBank?.id;
+  const currentAnswerSetBankId = currentAnswerSet?.question_bank_id;
   useEffect(() => {
-    if (currentQuestionBank && (!currentAnswerSet || currentAnswerSet.question_bank_id !== currentQuestionBank.id)) {
-      selectQuestionBank(currentQuestionBank.id);
+    if (currentBankId && (!currentAnswerSetBankId || currentAnswerSetBankId !== currentBankId)) {
+      selectQuestionBank(currentBankId);
     }
-  }, [currentQuestionBank?.id]);
+  }, [currentBankId, currentAnswerSetBankId, selectQuestionBank]);
 
   // 4. Auto dismiss feedback
   useEffect(() => {

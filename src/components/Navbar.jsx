@@ -4,7 +4,6 @@ import {
   Layers,
   FileCheck2,
   Globe,
-  User,
   LogIn,
   LogOut,
   FileText,
@@ -12,8 +11,6 @@ import {
   KeyRound,
   ChevronDown,
   Library,
-  ShieldCheck,
-  AlertCircle,
   Sparkles,
 } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';

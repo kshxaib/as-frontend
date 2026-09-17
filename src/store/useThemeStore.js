@@ -10,7 +10,7 @@ const applyThemeToDOM = () => {
   root.setAttribute('data-theme', 'dark');
 };
 
-export const useThemeStore = create((set) => ({
+export const useThemeStore = create(() => ({
   theme: 'dark',
   initTheme: () => {
     if (typeof window !== 'undefined') {

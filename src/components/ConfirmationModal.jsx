@@ -8,7 +8,7 @@ export const ConfirmationModal = ({
   confirmText = 'Confirm',
   cancelText = 'Cancel',
   confirmVariant = 'primary', // 'primary' | 'danger' | 'warning' | 'emerald'
-  iconType, // kept for API compat, no longer renders an icon
+  _iconType, // kept for API compat, no longer renders an icon
   isLoading = false,
   onConfirm,
   onCancel,

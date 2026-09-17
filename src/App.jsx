@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Navbar } from './components/Navbar';
 import { LandingPage } from './components/LandingPage';
 import { ResourceManager } from './components/ResourceManager';
@@ -21,9 +21,6 @@ function App() {
   const { initTheme } = useThemeStore();
   const [justLoggedOut, setJustLoggedOut] = useState(false);
 
-  // Track previous auth state to detect logout transitions
-  const [prevAuth, setPrevAuth] = useState(isAuthenticated);
-
   // Detect public predicted paper share link (?predict=token)
   const [sharedPredictToken, setSharedPredictToken] = useState(() => {
     const params = new URLSearchParams(window.location.search);
@@ -37,17 +34,22 @@ function App() {
     initAuth();
   }, [initTheme, initAuth]);
 
+  const prevAuthRef = useRef(isAuthenticated);
+
   // Detect logout → show logged-out message
   useEffect(() => {
-    if (prevAuth && !isAuthenticated) {
-      setJustLoggedOut(true);
-      // Reset to landing state
+    if (prevAuthRef.current && !isAuthenticated) {
+      const showTimer = setTimeout(() => setJustLoggedOut(true), 0);
       setActiveTab('resources');
-      const timer = setTimeout(() => setJustLoggedOut(false), 5000);
-      return () => clearTimeout(timer);
+      const hideTimer = setTimeout(() => setJustLoggedOut(false), 5000);
+      prevAuthRef.current = isAuthenticated;
+      return () => {
+        clearTimeout(showTimer);
+        clearTimeout(hideTimer);
+      };
     }
-    setPrevAuth(isAuthenticated);
-  }, [isAuthenticated, prevAuth, setActiveTab]);
+    prevAuthRef.current = isAuthenticated;
+  }, [isAuthenticated, setActiveTab]);
 
   // ─── Determine what to render ───────────────────────────────────────────────
   // Strictly require authentication for all app tabs including The Commons

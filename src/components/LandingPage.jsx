@@ -14,11 +14,9 @@ import {
   Download,
 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
-import { useQuestionBankStore } from '../store/useQuestionBankStore';
 
 export const LandingPage = ({ justLoggedOut, hasSharedToken }) => {
   const { openAuthModal } = useAuthStore();
-  const { setActiveTab } = useQuestionBankStore();
 
   const workflowModules = [
     {

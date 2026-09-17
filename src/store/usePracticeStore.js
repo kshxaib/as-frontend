@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 
 export const usePracticeStore = create(
   persist(
-    (set, get) => ({
+    (set) => ({
       // Active recall test mode
       isTestMode: false,
       toggleTestMode: () => set((state) => ({ isTestMode: !state.isTestMode })),
