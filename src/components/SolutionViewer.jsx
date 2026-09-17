@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
+  FileCheck2,
   RefreshCw,
   Search,
   BookOpen,
@@ -9,6 +10,8 @@ import {
   AlertCircle,
   Layers,
   Check,
+  Zap,
+  Workflow,
 } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
 import { AnswerCard } from './AnswerCard';
@@ -39,6 +42,7 @@ export const SolutionViewer = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showHighYieldOnly, setShowHighYieldOnly] = useState(false);
   const [selectedMarkFilter, setSelectedMarkFilter] = useState('ALL');
+  const [isExamHallMode, setIsExamHallMode] = useState(false);
   const [isRegenerateConfirmOpen, setIsRegenerateConfirmOpen] = useState(false);
 
   // 1. On mount: Fetch question banks if list is empty or ensure current is selected
@@ -337,13 +341,26 @@ export const SolutionViewer = () => {
 
             <button
               onClick={() => setShowHighYieldOnly(!showHighYieldOnly)}
-              className={`shrink-0 h-8 px-3 rounded-[6px] border font-mono text-[11px] font-medium transition-colors ${
+              className={`shrink-0 h-8 px-3 rounded-[6px] border font-mono text-[11px] font-medium transition-colors cursor-pointer ${
                 showHighYieldOnly
                   ? 'border-orange-500/50 bg-orange-500/10 text-orange-500'
                   : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-secondary)] hover:bg-[var(--surface-muted)]'
               }`}
             >
               🔥 High-Yield Only
+            </button>
+
+            <button
+              onClick={() => setIsExamHallMode(!isExamHallMode)}
+              className={`shrink-0 h-8 px-3 rounded-[6px] border font-mono text-[11px] font-medium transition-colors cursor-pointer flex items-center gap-1.5 ${
+                isExamHallMode
+                  ? 'border-amber-500/50 bg-amber-500/15 text-amber-400 font-semibold shadow-xs'
+                  : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] hover:text-amber-400'
+              }`}
+              title="Toggle 2-Minute Quick Recall Mode across all answers"
+            >
+              <Zap className={`h-3 w-3 ${isExamHallMode ? 'fill-amber-400 text-amber-400' : 'text-amber-400'}`} />
+              <span>⚡ Exam-Hall Mode</span>
             </button>
 
             <span className="font-mono text-[11px] text-[var(--text-muted)] ml-auto hidden sm:inline shrink-0">
@@ -377,6 +394,7 @@ export const SolutionViewer = () => {
                 key={answer.question_id ?? answer.id}
                 answer={answer}
                 index={index}
+                globalTldrMode={isExamHallMode}
               />
             ))
           ) : (

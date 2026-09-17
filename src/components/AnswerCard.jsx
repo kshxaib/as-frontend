@@ -3,11 +3,153 @@ import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
-import { BookOpen, CheckCircle2, AlertCircle, RefreshCw, ChevronDown, ChevronUp } from 'lucide-react';
+import { BookOpen, CheckCircle2, AlertCircle, RefreshCw, ChevronDown, ChevronUp, Zap } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
 import { ConfirmationModal } from './ConfirmationModal';
 import { MermaidDiagram } from './MermaidDiagram';
 import { StatusBadge } from './ui/StatusBadge';
+
+// ─── Quick Recall Extractor ──────────────────────────────────────────────────
+function extractFirstSentence(text, maxWords = 18) {
+  if (!text) return '';
+  const cleaned = text.replace(/^[:—–-]\s*/, '').trim();
+  const sentenceMatch = cleaned.match(/^([^.?!]+[.?!])(?:\s|$)/);
+  let first = sentenceMatch ? sentenceMatch[1].trim() : cleaned;
+  const words = first.split(/\s+/);
+  if (words.length > maxWords) {
+    first = words.slice(0, maxWords).join(' ') + '...';
+  }
+  return first;
+}
+
+const BLACKLIST_TERM_REGEX = /^(step\s*\d+|given|total\s*outcomes?|favorable\s*outcomes?|outcomes?|total|sample\s*space|example|calculation|dice|coin|note|figure|table|proof|solution|assume|marks?|q\d+|case\s*\d+|where|let|using\s+the\s+formula)/i;
+
+function extractQuickRecall(rawContent, questionText = '') {
+  if (!rawContent) return null;
+
+  // 1. Explicit Quick Recall block (from prompt or blockquote / heading)
+  const explicitMatch = rawContent.match(
+    /(?:^|\n)\s*(?:>\s*)?(?:\*{0,2}|#{1,4}\s*)⚡?\s*(?:2-Min\s+)?Quick\s+Recall[^\n]*\n([\s\S]*?)(?=\n\s*(?:#{1,4}\s+|[A-Z][A-Za-z0-9\s]{2,40}\n={2,}|\n(?![>*-]))|$)/i
+  );
+
+  if (explicitMatch && explicitMatch[1]) {
+    const lines = explicitMatch[1]
+      .split('\n')
+      .map((l) => l.replace(/^>\s*/, '').trim())
+      .filter((l) => l && (l.startsWith('-') || l.startsWith('*') || l.startsWith('•') || /^\d+\./.test(l)))
+      .map((l) => l.replace(/^(?:[-*•]|\d+\.)\s*/, '').trim())
+      .filter(Boolean);
+
+    if (lines.length > 0) {
+      return lines;
+    }
+  }
+
+  // Also check standard blockquote lines matching Quick Recall
+  const blockquoteLinesMatch = rawContent.match(
+    />\s*\*{0,2}⚡?\s*(?:2-Min\s+)?Quick\s+Recall[^\n]*\*{0,2}\s*\n((?:>\s*[-*•\d].*\n?)+)/i
+  );
+  if (blockquoteLinesMatch && blockquoteLinesMatch[1]) {
+    const lines = blockquoteLinesMatch[1]
+      .split('\n')
+      .map((l) => l.replace(/^>\s*[-*•\d.]*\s*/, '').trim())
+      .filter(Boolean);
+    if (lines.length > 0) return lines;
+  }
+
+  // 2. Legacy / Fallback Strategy for existing answers without explicit block
+  const points = [];
+  const lines = rawContent.split('\n').map((l) => l.trim()).filter(Boolean);
+
+  // 2a. Always extract Core Definition / Core Concept from the opening paragraph or summary
+  const introPara = lines.find(
+    (l) =>
+      !l.startsWith('#') &&
+      !l.startsWith('```') &&
+      !l.startsWith('>') &&
+      !l.startsWith('|') &&
+      !/^(?:\d+\.|\*|-)/.test(l) &&
+      l.length > 30 &&
+      /\b(is a|is an|is the|refers to|deals with|defined as|measures|models|describes|difference between|two ways to|captures)\b/i.test(l)
+  );
+  if (introPara) {
+    const coreSentence = extractFirstSentence(introPara, 24);
+    points.push(`**Core Concept** — ${coreSentence}`);
+  }
+
+  // 2b. Extract from Markdown Comparison Table if present (e.g. | Aspect | Fuzziness | Probability |)
+  const tableRows = lines.filter((l) => l.startsWith('|') && l.endsWith('|') && !l.includes('---'));
+  if (tableRows.length >= 2) {
+    const headerRow = tableRows[0].split('|').map((c) => c.trim()).filter(Boolean);
+    const colA = headerRow[1] || 'Concept A';
+    const colB = headerRow[2] || 'Concept B';
+
+    for (let r = 1; r < tableRows.length; r++) {
+      const cells = tableRows[r].split('|').map((c) => c.trim()).filter(Boolean);
+      if (cells.length >= 3) {
+        const aspect = cells[0].replace(/^\*\*|\*\*$/g, '').trim();
+        const valA = extractFirstSentence(cells[1], 12);
+        const valB = extractFirstSentence(cells[2], 12);
+        if (aspect && valA && valB && !BLACKLIST_TERM_REGEX.test(aspect)) {
+          points.push(`**${aspect}** — ${colA}: ${valA} | ${colB}: ${valB}`);
+        }
+      }
+    }
+  }
+
+  // 2c. Check for lines with "Term: Explanation" or "**Term**: Explanation" or "- **Term**: Explanation"
+  // (e.g. "States (S): These are...", "**Actions (A)**: These are...", "- **Probability**: Measures...")
+  const termLineRegex = /^(?:[-*•]|\d+\.)?\s*(?:\*\*)?([A-Za-z0-9\s/()_–—\\]{2,35})(?:\*\*)?\s*[:—–-]\s*(.+)$/;
+
+  for (const line of lines) {
+    if (line.startsWith('#') || line.startsWith('```') || line.startsWith('|')) continue;
+    const match = line.match(termLineRegex);
+    if (match) {
+      const term = match[1].trim().replace(/^\*\*|\*\*$/g, '');
+      const rawExp = match[2].trim();
+      if (!BLACKLIST_TERM_REGEX.test(term) && term.length >= 2 && rawExp.length > 5) {
+        const crispExp = extractFirstSentence(rawExp);
+        // Avoid adding duplicate term if already covered
+        if (!points.some((p) => p.toLowerCase().includes(term.toLowerCase()))) {
+          points.push(`**${term}** — ${crispExp}`);
+        }
+      }
+    }
+  }
+
+  // 2d. Check bullet points fallback if points are still few
+  if (points.length < 3) {
+    const bulletMatches = rawContent.match(/^(?:[-*•]|\d+\.)\s+(.+)$/gm);
+    if (bulletMatches && bulletMatches.length > 0) {
+      for (const b of bulletMatches) {
+        const cleanB = b.replace(/^(?:[-*•]|\d+\.)\s+/, '').trim();
+        const boldLead = cleanB.match(/^\*\*([^*]+)\*\*[:—–-]?\s*(.*)$/);
+        if (boldLead) {
+          const term = boldLead[1].trim();
+          if (!BLACKLIST_TERM_REGEX.test(term) && !points.some((p) => p.toLowerCase().includes(term.toLowerCase()))) {
+            const exp = extractFirstSentence(boldLead[2]);
+            points.push(`**${term}** — ${exp}`);
+          }
+        } else if (!BLACKLIST_TERM_REGEX.test(cleanB)) {
+          points.push(extractFirstSentence(cleanB, 20));
+        }
+        if (points.length >= 6) break;
+      }
+    }
+  }
+
+  // Final guarantee: Core concept must always exist
+  if (points.length === 0) {
+    const firstPara = lines.find((l) => !l.startsWith('#') && !l.startsWith('```') && !l.startsWith('>') && l.length > 25);
+    if (firstPara) {
+      points.push(`**Core Concept** — ${extractFirstSentence(firstPara, 25)}`);
+    } else {
+      points.push('**Core Concept** — Key academic concept reviewed and grounded in study material.');
+    }
+  }
+
+  return points.slice(0, 8);
+}
 
 // ─── LaTeX & Markdown Preprocessor ──────────────────────────────────────────
 function formatMarkdownMath(content) {
@@ -68,7 +210,7 @@ function formatMarkdownMath(content) {
   return processed.join('').trim();
 }
 
-export const AnswerCard = React.memo(function AnswerCard({ answer, index, readOnly = false }) {
+export const AnswerCard = React.memo(function AnswerCard({ answer, index, readOnly = false, globalTldrMode = false }) {
   // Subscribe only to the retryAnswer action (a stable reference) so this card
   // does NOT re-render when unrelated store slices change (success banner,
   // other answers' retry flags, or the currentAnswerSet swap for other cards).
@@ -77,6 +219,7 @@ export const AnswerCard = React.memo(function AnswerCard({ answer, index, readOn
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isRetryConfirmOpen, setIsRetryConfirmOpen] = useState(false);
   const [retryInstruction, setRetryInstruction] = useState('');
+  const [cardTab, setCardTab] = useState('full'); // 'full' | 'tldr'
 
   const handleRetry = async () => {
     if (readOnly) return;
@@ -93,6 +236,11 @@ export const AnswerCard = React.memo(function AnswerCard({ answer, index, readOn
     return formatMarkdownMath(answer.content);
   }, [answer.content]);
 
+  const quickRecallPoints = useMemo(() => {
+    return extractQuickRecall(answer.content, answer.question_text);
+  }, [answer.content, answer.question_text]);
+
+  const isTldrActive = globalTldrMode || cardTab === 'tldr';
   const formattedQNum = String(answer.question_number || index + 1).padStart(2, '0');
 
   return (
@@ -156,6 +304,44 @@ export const AnswerCard = React.memo(function AnswerCard({ answer, index, readOn
         </div>
 
 
+        {/* Sub-navigation Strip: Full Solution vs 2-Min Quick Recall */}
+        {!isCollapsed && answer.status === 'completed' && (
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border-subtle)] px-6 py-2.5 bg-[var(--surface-well)]/40">
+            <div className="inline-flex rounded-[8px] bg-[var(--surface-well)] p-0.5 border border-[var(--border-subtle)] text-xs font-mono">
+              <button
+                onClick={() => setCardTab('full')}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-[6px] transition-all cursor-pointer ${
+                  !isTldrActive
+                    ? 'bg-[var(--surface)] text-[var(--primary)] font-semibold shadow-xs border border-[var(--border-subtle)]'
+                    : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)]'
+                }`}
+              >
+                <BookOpen className="h-3.5 w-3.5 stroke-[1.5]" />
+                <span>Full Solution</span>
+              </button>
+              <button
+                onClick={() => setCardTab('tldr')}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded-[6px] transition-all cursor-pointer ${
+                  isTldrActive
+                    ? 'bg-amber-500/15 text-amber-400 font-semibold shadow-xs border border-amber-500/30'
+                    : 'text-[var(--text-muted)] hover:text-amber-400/80'
+                }`}
+              >
+                <Zap className="h-3.5 w-3.5 stroke-[1.5] text-amber-400 fill-amber-400/20" />
+                <span>⚡ 2-Min Quick Recall</span>
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2 font-mono text-[11px] text-[var(--text-muted)]">
+              {isTldrActive ? (
+                <span className="text-amber-400 font-medium">⚡ Exam-Hall Fast Scan (30s)</span>
+              ) : (
+                <span>{answer.marks <= 2 ? '2M Crisp Mode' : answer.marks <= 7 ? '5-7M Core + Flow' : '10M Deep + Architecture'}</span>
+              )}
+            </div>
+          </div>
+        )}
+
         {/* Answer Content */}
         {!isCollapsed && (
           <div className="p-6">
@@ -169,6 +355,46 @@ export const AnswerCard = React.memo(function AnswerCard({ answer, index, readOn
                 >
                   <RefreshCw className="h-3 w-3 stroke-[1.5]" /> Retry Solution
                 </button>
+              </div>
+            ) : isTldrActive && quickRecallPoints && quickRecallPoints.length > 0 ? (
+              <div className="rounded-[10px] border border-amber-500/25 bg-amber-500/[0.04] p-5">
+                <div className="flex items-center justify-between gap-2 mb-4 pb-2.5 border-b border-amber-500/15">
+                  <div className="flex items-center gap-2 font-mono text-[11px] font-semibold text-amber-400 uppercase tracking-wider">
+                    <Zap className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                    <span>Exam-Hall Quick Recall · 2-Min Revision</span>
+                  </div>
+                  <span className="font-mono text-[10px] text-amber-400/80 bg-amber-500/10 px-2 py-0.5 rounded-[4px] border border-amber-500/20 font-medium">
+                    ⚡ 30s Read
+                  </span>
+                </div>
+
+                <div className="space-y-3">
+                  {quickRecallPoints.map((pt, i) => (
+                    <div key={i} className="flex items-start gap-3 text-sm leading-relaxed text-[var(--text-primary)]">
+                      <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-amber-500/20 font-mono text-[10px] font-bold text-amber-400">
+                        {i + 1}
+                      </span>
+                      <div className="markdown-answer-body text-sm font-sans">
+                        <ReactMarkdown
+                          remarkPlugins={[remarkGfm, remarkMath]}
+                          rehypePlugins={[rehypeKatex]}
+                        >
+                          {pt}
+                        </ReactMarkdown>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-5 pt-3 border-t border-amber-500/15 flex flex-wrap items-center justify-between gap-2 text-xs font-mono text-[var(--text-muted)]">
+                  <span>Memorize keywords before entering exam hall</span>
+                  <button
+                    onClick={() => setCardTab('full')}
+                    className="text-amber-400 hover:underline flex items-center gap-1 cursor-pointer font-medium"
+                  >
+                    View complete {answer.marks}M solution &rarr;
+                  </button>
+                </div>
               </div>
             ) : (
               <div className="markdown-answer-body">
