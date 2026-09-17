@@ -394,7 +394,7 @@ export const PredictedPaperGenerator = () => {
                       </div>
                       {!row.session && (row.file || row.qbId) && (
                         <p className="mt-1 text-[10px] text-amber-500/90 font-mono">
-                          * Enter session date above
+                          * Session date required
                         </p>
                       )}
                     </div>
@@ -423,9 +423,10 @@ export const PredictedPaperGenerator = () => {
                       <span className="text-[var(--text-muted)] font-normal font-sans">(Optional)</span>
                     </h3>
                     <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">
-                      Click any Question Bank below to include it into the papers list above. Please enter its exam session date in the list above (niche sirf select karein, date upar list me dalen).
+                      Select any Question Bank below to include it in the papers list above. Specify the exam session date in the corresponding row above.
                     </p>
                   </div>
+
 
                   {paperRows.filter((r) => r.type === 'existing_qb').length > 0 && (
                     <span className="font-mono text-[11px] bg-[rgba(15,118,110,0.1)] text-[var(--primary)] px-2.5 py-1 rounded-[6px] border border-[rgba(15,118,110,0.2)] font-medium">
