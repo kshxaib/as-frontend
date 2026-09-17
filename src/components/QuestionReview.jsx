@@ -11,6 +11,7 @@ import {
   BarChart3,
   Layers,
   Workflow,
+  Download,
 } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
 import { QuestionCard } from './QuestionCard';
@@ -35,6 +36,7 @@ export const QuestionReview = () => {
     extractQuestions,
     generateAnswers,
     clearFeedback,
+    downloadQuestionsPdf,
   } = useQuestionBankStore();
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -43,7 +45,6 @@ export const QuestionReview = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMarkFilter, setSelectedMarkFilter] = useState('ALL');
   const [selectedSourceFilter, setSelectedSourceFilter] = useState('ALL');
-  const [showHighYieldOnly, setShowHighYieldOnly] = useState(false);
 
   useEffect(() => {
     fetchQuestionBanks();
@@ -71,8 +72,7 @@ export const QuestionReview = () => {
       selectedMarkFilter === 'ALL' || Number(q.marks) === Number(selectedMarkFilter);
     const matchesSource =
       selectedSourceFilter === 'ALL' || q.marks_source === selectedSourceFilter;
-    const matchesHighYield = showHighYieldOnly ? (q.repeat_count > 1) : true;
-    return matchesSearch && matchesMarks && matchesSource && matchesHighYield;
+    return matchesSearch && matchesMarks && matchesSource;
   });
 
   return (
@@ -169,6 +169,21 @@ export const QuestionReview = () => {
                 <span>Add Question</span>
               </button>
             )}
+
+            {currentQuestionBank && questions.length > 0 && (
+              <button
+                onClick={() =>
+                  downloadQuestionsPdf(
+                    currentQuestionBank.id,
+                    `Questions_${(currentQuestionBank.name || 'QB').replace(/\s+/g, '_')}.pdf`
+                  )
+                }
+                className="inline-flex items-center gap-1.5 rounded-[8px] border border-[var(--border)] bg-[var(--surface-well)] px-3.5 py-2 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-muted)] transition-all"
+              >
+                <Download className="h-3.5 w-3.5 stroke-[2]" />
+                <span>Download Questions PDF</span>
+              </button>
+            )}
           </div>
         </div>
 
@@ -223,10 +238,10 @@ export const QuestionReview = () => {
           />
         )}
 
-        {/* Filter and Search Bar */}
+        {/* Search Bar */}
         {currentQuestionBank && questions.length > 0 && (
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between rounded-[10px] border border-[var(--border)] bg-[var(--surface-well)] p-3">
-            <div className="relative flex-1 max-w-md">
+          <div className="mt-6 rounded-[10px] border border-[var(--border)] bg-[var(--surface-well)] p-3">
+            <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-muted)]" />
               <input
                 type="text"
@@ -235,49 +250,6 @@ export const QuestionReview = () => {
                 placeholder="Filter questions by keyword..."
                 className="w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] py-1.5 pl-9 pr-3 text-xs text-[var(--text-primary)] placeholder-[var(--text-disabled)] focus:border-[var(--primary)] focus:outline-none"
               />
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="font-mono text-[11px] text-[var(--text-muted)] mr-1 uppercase">
-                Filter:
-              </span>
-              {['ALL', 2, 5, 10].map((filter) => (
-                <button
-                  key={filter}
-                  onClick={() => setSelectedMarkFilter(filter)}
-                  className={`rounded-[4px] px-2 py-0.5 font-mono text-[11px] font-medium transition-all ${
-                    selectedMarkFilter === filter
-                      ? 'bg-[var(--primary)] text-[var(--primary-foreground)] font-semibold shadow-xs'
-                      : 'border border-[var(--border)] bg-[var(--surface)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-                  }`}
-                >
-                  {filter === 'ALL' ? 'All' : `${filter}M`}
-                </button>
-              ))}
-
-              <div className="h-4 w-px bg-[var(--border)] mx-1" />
-
-              <select
-                value={selectedSourceFilter}
-                onChange={(e) => setSelectedSourceFilter(e.target.value)}
-                className="h-8 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] pl-3 pr-8 font-mono text-[11px] text-[var(--text-secondary)] focus:border-[var(--primary)] focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
-              >
-                <option value="ALL">All Sources</option>
-                <option value="explicit">Explicit</option>
-                <option value="ai_estimated">AI Estimated</option>
-                <option value="user_modified">User Verified</option>
-              </select>
-
-              <button
-                onClick={() => setShowHighYieldOnly(!showHighYieldOnly)}
-                className={`h-8 px-3 rounded-[6px] border font-mono text-[11px] font-medium transition-colors ${
-                  showHighYieldOnly 
-                    ? 'border-orange-500/50 bg-orange-500/10 text-orange-500' 
-                    : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-secondary)] hover:bg-[var(--surface-well)]'
-                }`}
-              >
-                🔥 High-Yield Only
-              </button>
             </div>
           </div>
         )}

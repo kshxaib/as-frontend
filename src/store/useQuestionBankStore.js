@@ -473,6 +473,25 @@ export const useQuestionBankStore = create((set, get) => ({
     }
   },
 
+  downloadQuestionsPdf: async (qbId, filename = 'Questions.pdf') => {
+    try {
+      const res = await api.get(`/question-banks/${qbId}/questions-pdf`, {
+        responseType: 'blob',
+      });
+      const blob = new Blob([res.data], { type: 'application/pdf' });
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.setAttribute('download', filename.endsWith('.pdf') ? filename : `${filename}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => window.URL.revokeObjectURL(blobUrl), 2000);
+    } catch (err) {
+      set({ error: getErrorMessage(err, 'Failed to download questions PDF.') });
+    }
+  },
+
   downloadSolvedPdf: async (answerSetId, filename = 'Solved_Question_Bank.pdf') => {
     try {
       const res = await api.get(`/answer-sets/${answerSetId}/pdf`, {

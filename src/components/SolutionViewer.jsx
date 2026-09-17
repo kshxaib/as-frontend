@@ -40,6 +40,8 @@ export const SolutionViewer = () => {
   } = useQuestionBankStore();
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [showHighYieldOnly, setShowHighYieldOnly] = useState(false);
+  const [selectedMarkFilter, setSelectedMarkFilter] = useState('ALL');
   const [isRegenerateConfirmOpen, setIsRegenerateConfirmOpen] = useState(false);
 
   // 1. On mount: Fetch question banks if list is empty or ensure current is selected
@@ -92,10 +94,14 @@ export const SolutionViewer = () => {
     .filter((a) => a.status === 'completed')
     .reduce((sum, a) => sum + (Number(a.marks) || 0), 0);
 
-  const filteredAnswers = answers.filter((a) =>
-    a.question_text.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (a.content && a.content.toLowerCase().includes(searchQuery.toLowerCase()))
-  );
+  const filteredAnswers = answers.filter((a) => {
+    const matchesSearch =
+      a.question_text.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (a.content && a.content.toLowerCase().includes(searchQuery.toLowerCase()));
+    const matchesHighYield = showHighYieldOnly ? (a.repeat_count > 1) : true;
+    const matchesMarks = selectedMarkFilter === 'ALL' || Number(a.marks) === Number(selectedMarkFilter);
+    return matchesSearch && matchesHighYield && matchesMarks;
+  });
 
   const isShared = currentAnswerSet?.visibility === 'community';
 
@@ -300,10 +306,10 @@ export const SolutionViewer = () => {
           </div>
         )}
 
-        {/* ── Search Bar ── */}
+        {/* ── Search + Filter Bar ── */}
         {answers.length > 0 && (
-          <div className="mt-6 flex items-center justify-between rounded-[10px] border border-[var(--border)] bg-[var(--surface-well)] p-3">
-            <div className="relative flex-1 max-w-md">
+          <div className="mt-6 flex flex-wrap items-center gap-2 rounded-[10px] border border-[var(--border)] bg-[var(--surface-well)] p-3">
+            <div className="relative flex-1 min-w-[180px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-muted)]" />
               <input
                 type="text"
@@ -313,7 +319,37 @@ export const SolutionViewer = () => {
                 className="w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] py-1.5 pl-9 pr-3 text-xs text-[var(--text-primary)] placeholder-[var(--text-disabled)] focus:border-[var(--primary)] focus:outline-none"
               />
             </div>
-            <span className="font-mono text-[11px] text-[var(--text-muted)] hidden sm:inline mr-2">
+
+            <div className="h-4 w-px bg-[var(--border)]" />
+
+            {['ALL', 2, 5, 10].map((f) => (
+              <button
+                key={f}
+                onClick={() => setSelectedMarkFilter(f)}
+                className={`rounded-[4px] px-2 py-0.5 font-mono text-[11px] font-medium transition-all ${
+                  selectedMarkFilter === f
+                    ? 'bg-[var(--primary)] text-[var(--primary-foreground)] font-semibold shadow-xs'
+                    : 'border border-[var(--border)] bg-[var(--surface)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                }`}
+              >
+                {f === 'ALL' ? 'All' : `${f}M`}
+              </button>
+            ))}
+
+            <div className="h-4 w-px bg-[var(--border)]" />
+
+            <button
+              onClick={() => setShowHighYieldOnly(!showHighYieldOnly)}
+              className={`shrink-0 h-8 px-3 rounded-[6px] border font-mono text-[11px] font-medium transition-colors ${
+                showHighYieldOnly
+                  ? 'border-orange-500/50 bg-orange-500/10 text-orange-500'
+                  : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-secondary)] hover:bg-[var(--surface-muted)]'
+              }`}
+            >
+              🔥 High-Yield Only
+            </button>
+
+            <span className="font-mono text-[11px] text-[var(--text-muted)] ml-auto hidden sm:inline shrink-0">
               Showing {filteredAnswers.length} of {answers.length} Solutions
             </span>
           </div>
