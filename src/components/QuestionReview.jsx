@@ -33,6 +33,8 @@ export const QuestionReview = () => {
     fetchQuestionBanks,
     selectQuestionBank,
     extractQuestions,
+    generateAnswers,
+    clearFeedback,
     downloadQuestionsPdf,
     triggerKeyModal,
   } = useQuestionBankStore();
