@@ -12,7 +12,6 @@ import {
   Eye,
 } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
-import { StatusBadge } from './ui/StatusBadge';
 import { EmptyState } from './ui/EmptyState';
 import { CommunityAnswerViewer } from './CommunityAnswerViewer';
 

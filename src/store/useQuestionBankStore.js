@@ -34,7 +34,6 @@ export const useQuestionBankStore = create((set, get) => ({
   questions: [],
   isUploadingQuestionBank: false,
   extractingQBs: {}, // map of questionBankId -> boolean for per-QB extraction state
-  isSavingQuestions: false,
 
 
   // Answers State (Phase 6, 7, 8)

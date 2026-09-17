@@ -1,8 +1,6 @@
 @import "tailwindcss";
-@import "katex/dist/katex.min.css";
-
-/* ── Typography Imports ─────────────────────────────────────────────────────── */
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Geist:wght@100..900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import "katex/dist/katex.min.css";
 
 /* ── Theme Definitions (§3 & §4 of DESIGN_TOKENS.md) ───────────────────────── */
 
@@ -407,7 +405,8 @@ body {
   padding: 0;
 }
 
-* Instruction pill in toolbar */ .mermaid-instruction-pill {
+/* Instruction pill in toolbar */
+.mermaid-instruction-pill {
   font-family: 'JetBrains Mono', monospace;
   font-size: 9.5px;
   color: #94a3b8;

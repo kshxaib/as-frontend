@@ -5,12 +5,9 @@ import {
   ArrowRight,
   RefreshCw,
   Search,
-  SlidersHorizontal,
   CheckCircle2,
   AlertCircle,
-  BarChart3,
   Layers,
-  Workflow,
   Download,
 } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
@@ -43,8 +40,6 @@ export const QuestionReview = () => {
   const [isGenerateConfirmOpen, setIsGenerateConfirmOpen] = useState(false);
   const [isReExtractConfirmOpen, setIsReExtractConfirmOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedMarkFilter, setSelectedMarkFilter] = useState('ALL');
-  const [selectedSourceFilter, setSelectedSourceFilter] = useState('ALL');
 
   useEffect(() => {
     fetchQuestionBanks();
@@ -61,19 +56,11 @@ export const QuestionReview = () => {
   // Calculations for stats
   const totalQuestions = questions.length;
   const totalMarks = questions.reduce((sum, q) => sum + (Number(q.marks) || 0), 0);
-  const explicitCount = questions.filter((q) => q.marks_source === 'explicit').length;
-  const aiEstimatedCount = questions.filter((q) => q.marks_source === 'ai_estimated').length;
-  const userModifiedCount = questions.filter((q) => q.marks_source === 'user_modified').length;
 
-  // Filtered questions
-  const filteredQuestions = questions.filter((q) => {
-    const matchesSearch = q.question_text.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesMarks =
-      selectedMarkFilter === 'ALL' || Number(q.marks) === Number(selectedMarkFilter);
-    const matchesSource =
-      selectedSourceFilter === 'ALL' || q.marks_source === selectedSourceFilter;
-    return matchesSearch && matchesMarks && matchesSource;
-  });
+  // Filtered questions by search query
+  const filteredQuestions = questions.filter((q) =>
+    q.question_text.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <div className="min-h-screen bg-[var(--background)] pb-32 text-[var(--text-primary)]">

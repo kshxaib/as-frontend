@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import {
-  FileCheck2,
   RefreshCw,
   Search,
   BookOpen,
@@ -9,14 +8,12 @@ import {
   CheckCircle2,
   AlertCircle,
   Layers,
-  Workflow,
   Check,
 } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
 import { AnswerCard } from './AnswerCard';
 import { ConfirmationModal } from './ConfirmationModal';
 import { AiProgressModal } from './AiProgressModal';
-import { StatusBadge } from './ui/StatusBadge';
 import { EmptyState } from './ui/EmptyState';
 
 export const SolutionViewer = () => {

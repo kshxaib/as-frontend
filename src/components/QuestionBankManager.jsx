@@ -8,13 +8,10 @@ import {
   Search,
   CheckCircle2,
   AlertCircle,
-  Workflow,
   Link,
   Layers,
   X,
   Loader2,
-  ChevronDown,
-  BookOpen,
 } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
 import { useAuthStore } from '../store/useAuthStore';
