@@ -491,9 +491,10 @@ export const useQuestionBankStore = create((set, get) => ({
     }
   },
 
-  downloadSolvedPdf: async (answerSetId, filename = 'Solved_Question_Bank.pdf') => {
+
+  downloadCheatsheetPdf: async (answerSetId, filename = 'Cheatsheet.pdf') => {
     try {
-      const res = await api.get(`/answer-sets/${answerSetId}/pdf`, {
+      const res = await api.get(`/answer-sets/${answerSetId}/cheatsheet-pdf`, {
         responseType: 'blob',
       });
       const blob = new Blob([res.data], { type: 'application/pdf' });
@@ -506,7 +507,7 @@ export const useQuestionBankStore = create((set, get) => ({
       link.remove();
       setTimeout(() => window.URL.revokeObjectURL(blobUrl), 2000);
     } catch (err) {
-      set({ error: err.response?.data?.detail || 'Failed to download solved PDF.' });
+      set({ error: err.response?.data?.detail || 'Failed to download exam cheatsheet PDF.' });
     }
   },
 

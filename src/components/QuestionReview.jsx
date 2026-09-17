@@ -9,13 +9,13 @@ import {
   AlertCircle,
   Layers,
   Download,
+  Workflow,
 } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
 import { QuestionCard } from './QuestionCard';
 import { AddQuestionModal } from './AddQuestionModal';
 import { ConfirmationModal } from './ConfirmationModal';
 import { AiProgressModal } from './AiProgressModal';
-import { StatusBadge } from './ui/StatusBadge';
 import { EmptyState } from './ui/EmptyState';
 
 export const QuestionReview = () => {
@@ -54,12 +54,15 @@ export const QuestionReview = () => {
   }, [successMessage, error, clearFeedback]);
 
   // Calculations for stats
-  const totalQuestions = questions.length;
-  const totalMarks = questions.reduce((sum, q) => sum + (Number(q.marks) || 0), 0);
+  const totalQuestions = (questions || []).length;
+  const totalMarks = (questions || []).reduce((sum, q) => sum + (Number(q.marks) || 0), 0);
+  const explicitCount = (questions || []).filter((q) => q.marks_source === 'explicit').length;
+  const aiEstimatedCount = (questions || []).filter((q) => q.marks_source === 'ai_estimated').length;
+  const userModifiedCount = (questions || []).filter((q) => q.marks_source === 'user_modified' || (!q.marks_source && q.marks)).length;
 
   // Filtered questions by search query
-  const filteredQuestions = questions.filter((q) =>
-    q.question_text.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredQuestions = (questions || []).filter((q) =>
+    (q.question_text || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (

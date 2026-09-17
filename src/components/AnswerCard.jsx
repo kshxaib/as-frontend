@@ -25,7 +25,7 @@ function extractFirstSentence(text, maxWords = 18) {
 
 const BLACKLIST_TERM_REGEX = /^(step\s*\d+|given|total\s*outcomes?|favorable\s*outcomes?|outcomes?|total|sample\s*space|example|calculation|dice|coin|note|figure|table|proof|solution|assume|marks?|q\d+|case\s*\d+|where|let|using\s+the\s+formula)/i;
 
-function extractQuickRecall(rawContent, questionText = '') {
+function extractQuickRecall(rawContent, _questionText = '') {
   if (!rawContent) return null;
 
   // 1. Explicit Quick Recall block (from prompt or blockquote / heading)
@@ -494,9 +494,6 @@ export const AnswerCard = React.memo(function AnswerCard({ answer, index, readOn
                         <Zap className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
                         <span>Exam-Hall Quick Recall · 2-Min Revision</span>
                       </div>
-                      <span className="font-mono text-[10px] text-amber-400/80 bg-amber-500/10 px-2 py-0.5 rounded-[4px] border border-amber-500/20 font-medium">
-                        ⚡ 30s Read
-                      </span>
                     </div>
 
                     <div className="space-y-3">

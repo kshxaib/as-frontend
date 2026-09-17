@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import {
-  FileText,
   Plus,
   ArrowRight,
   Download,
@@ -12,6 +11,9 @@ import {
   Layers,
   X,
   Loader2,
+  Workflow,
+  BookOpen,
+  ChevronDown,
 } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
 import { useAuthStore } from '../store/useAuthStore';
@@ -89,9 +91,9 @@ export const QuestionBankManager = () => {
     setActiveTab('review');
   };
 
-  const filteredBanks = questionBanks.filter((qb) =>
-    qb.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    qb.subject.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredBanks = (questionBanks || []).filter((qb) =>
+    (qb.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
+    (qb.subject || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   return (

@@ -9,7 +9,6 @@ import {
   CheckCircle2,
   AlertCircle,
   Layers,
-  Check,
   Zap,
   Workflow,
   Eye,
@@ -36,6 +35,7 @@ export const SolutionViewer = () => {
     selectQuestionBank,
     generateAnswers,
     downloadSolvedPdf,
+    downloadCheatsheetPdf,
     toggleAnswerSetShare,
     shareUpdatedAnswerSet,
     setActiveTab,
@@ -262,6 +262,21 @@ export const SolutionViewer = () => {
                     >
                       <Download className="h-3.5 w-3.5 stroke-[2]" />
                       <span>Download Solved PDF</span>
+                    </button>
+
+                    {/* Export 2-Page Cheatsheet Button */}
+                    <button
+                      onClick={() =>
+                        downloadCheatsheetPdf(
+                          currentAnswerSet.id,
+                          `AcademicStack_${(currentQuestionBank?.subject || 'Subject').replace(/\s+/g, '_')}_${(currentQuestionBank?.name || 'QB').replace(/\s+/g, '_')}_Cheatsheet.pdf`
+                        )
+                      }
+                      className="inline-flex items-center gap-2 rounded-[8px] border border-amber-500/35 bg-amber-500/10 px-3.5 py-1.5 text-xs font-semibold text-amber-400 hover:bg-amber-500/20 transition-all shadow-sm cursor-pointer"
+                      title="Export dense 2-column formula, diagram & definition cheatsheet (4x-5x more compact than full PDF)"
+                    >
+                      <Download className="h-3.5 w-3.5 stroke-[2]" />
+                      <span>Export Cheatsheet (Compact)</span>
                     </button>
 
                     {/* Share to Community */}

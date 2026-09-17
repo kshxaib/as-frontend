@@ -10,10 +10,9 @@ import {
   AlertCircle,
   RefreshCw,
   Search,
-  FileText,
-  ExternalLink,
   X,
   Loader2,
+  Workflow,
 } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
 import { useAuthStore } from '../store/useAuthStore';
