@@ -53,7 +53,7 @@ export const QuestionBankManager = () => {
   const [name, setName] = useState('');
   const [subject, setSubject] = useState('');
   const [selectedResourceIds, setSelectedResourceIds] = useState([]);
-  const [file, setFile] = useState(null);
+  const [files, setFiles] = useState([]);
 
   useEffect(() => {
     fetchQuestionBanks();
@@ -68,14 +68,14 @@ export const QuestionBankManager = () => {
 
   const handleUploadSubmit = async (e) => {
     e.preventDefault();
-    if (!file) return;
+    if (!files || files.length === 0) return;
 
     const formData = new FormData();
     formData.append('user_id', user?.id || 1);
     formData.append('name', name);
     formData.append('subject', subject);
     formData.append('resource_ids', selectedResourceIds.join(','));
-    formData.append('file', file);
+    files.forEach((f) => formData.append('files', f));
 
     const res = await uploadQuestionBank(formData);
     if (res.success) {
@@ -83,7 +83,7 @@ export const QuestionBankManager = () => {
       setName('');
       setSubject('');
       setSelectedResourceIds([]);
-      setFile(null);
+      setFiles([]);
     }
   };
 
@@ -469,15 +469,26 @@ export const QuestionBankManager = () => {
 
                 <div>
                   <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
-                    Exam Paper PDF *
+                    Exam Paper PDF(s) *
                   </label>
                   <input
                     type="file"
                     required
+                    multiple
                     accept="application/pdf"
-                    onChange={(e) => setFile(e.target.files?.[0] || null)}
+                    onChange={(e) => setFiles(Array.from(e.target.files))}
                     className="w-full text-xs text-[var(--text-muted)] file:mr-4 file:py-1.5 file:px-3 file:rounded-[6px] file:border-0 file:text-xs file:font-semibold file:bg-[var(--surface-well)] file:text-[var(--text-primary)] hover:file:bg-[var(--surface-muted)] cursor-pointer"
                   />
+                  {files.length > 0 && (
+                    <div className="mt-2 text-[10px] text-[var(--text-muted)]">
+                      {files.length} file(s) selected:
+                      <ul className="list-disc pl-4 mt-1">
+                        {files.map((f, i) => (
+                          <li key={i}>{f.name}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
                 </div>
 
                 <div className="mt-6 flex items-center justify-end gap-3 pt-3 border-t border-[var(--border-subtle)]">

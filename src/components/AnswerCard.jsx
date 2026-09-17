@@ -113,6 +113,11 @@ export const AnswerCard = React.memo(function AnswerCard({ answer, index, readOn
                 <span className="bg-[var(--surface)] px-2 py-0.5 rounded-[4px] border border-[var(--border-subtle)] text-[var(--text-secondary)] font-medium">
                   {answer.marks} Marks
                 </span>
+                {answer.repeat_count > 1 && (
+                  <span className="flex items-center gap-1 font-mono text-[10px] font-semibold text-orange-500 bg-orange-500/10 px-2 py-0.5 rounded-[4px] border border-orange-500/20">
+                    🔥 Repeated {answer.repeat_count}x
+                  </span>
+                )}
                 {answer.status === 'completed' && (
                   <StatusBadge variant="success" icon={CheckCircle2}>
                     Grounded Solution

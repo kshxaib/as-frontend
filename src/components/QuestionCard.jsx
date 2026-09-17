@@ -58,6 +58,11 @@ export const QuestionCard = ({ question, index }) => {
               Q{formattedQNum}
             </span>
             {getSourceBadge(question.marks_source)}
+            {question.repeat_count > 1 && (
+              <span className="flex items-center gap-1 font-mono text-[10px] font-semibold text-orange-500 bg-orange-500/10 px-2 py-0.5 rounded-[4px] border border-orange-500/20">
+                🔥 Repeated {question.repeat_count}x
+              </span>
+            )}
           </div>
 
           {/* Action Controls */}

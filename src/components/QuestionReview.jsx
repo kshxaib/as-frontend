@@ -43,6 +43,7 @@ export const QuestionReview = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedMarkFilter, setSelectedMarkFilter] = useState('ALL');
   const [selectedSourceFilter, setSelectedSourceFilter] = useState('ALL');
+  const [showHighYieldOnly, setShowHighYieldOnly] = useState(false);
 
   useEffect(() => {
     fetchQuestionBanks();
@@ -70,7 +71,8 @@ export const QuestionReview = () => {
       selectedMarkFilter === 'ALL' || Number(q.marks) === Number(selectedMarkFilter);
     const matchesSource =
       selectedSourceFilter === 'ALL' || q.marks_source === selectedSourceFilter;
-    return matchesSearch && matchesMarks && matchesSource;
+    const matchesHighYield = showHighYieldOnly ? (q.repeat_count > 1) : true;
+    return matchesSearch && matchesMarks && matchesSource && matchesHighYield;
   });
 
   return (
@@ -258,13 +260,24 @@ export const QuestionReview = () => {
               <select
                 value={selectedSourceFilter}
                 onChange={(e) => setSelectedSourceFilter(e.target.value)}
-                className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 font-mono text-xs text-[var(--text-primary)] focus:border-[var(--primary)] focus:outline-none"
+                className="h-8 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] pl-3 pr-8 font-mono text-[11px] text-[var(--text-secondary)] focus:border-[var(--primary)] focus:outline-none focus:ring-1 focus:ring-[var(--primary)]"
               >
                 <option value="ALL">All Sources</option>
                 <option value="explicit">Explicit</option>
                 <option value="ai_estimated">AI Estimated</option>
                 <option value="user_modified">User Verified</option>
               </select>
+
+              <button
+                onClick={() => setShowHighYieldOnly(!showHighYieldOnly)}
+                className={`h-8 px-3 rounded-[6px] border font-mono text-[11px] font-medium transition-colors ${
+                  showHighYieldOnly 
+                    ? 'border-orange-500/50 bg-orange-500/10 text-orange-500' 
+                    : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-secondary)] hover:bg-[var(--surface-well)]'
+                }`}
+              >
+                🔥 High-Yield Only
+              </button>
             </div>
           </div>
         )}
