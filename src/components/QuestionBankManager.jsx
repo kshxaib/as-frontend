@@ -15,6 +15,8 @@ import {
   BookOpen,
   ChevronDown,
   Sparkles,
+  Share2,
+  Globe,
 } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
 import { useAuthStore } from '../store/useAuthStore';
@@ -42,6 +44,7 @@ export const QuestionBankManager = () => {
     downloadQuestionBankFile,
     clearFeedback,
     triggerKeyModal,
+    toggleQuestionBankShare,
   } = useQuestionBankStore();
 
   const { user, isAuthenticated, openAuthModal } = useAuthStore();
@@ -203,13 +206,21 @@ export const QuestionBankManager = () => {
                         <span className="font-mono text-[11px] font-medium text-[var(--text-muted)] bg-[var(--surface-well)] px-2 py-0.5 rounded-[4px] border border-[var(--border-subtle)] truncate">
                           {qb.subject}
                         </span>
-                        {qb.status === 'extracted' ? (
-                          <StatusBadge variant="success">Extracted</StatusBadge>
-                        ) : isExtracting ? (
-                          <StatusBadge variant="amber" pulse>Extracting...</StatusBadge>
-                        ) : (
-                          <StatusBadge variant="neutral">Pending</StatusBadge>
-                        )}
+                        <div className="flex items-center gap-1.5">
+                          {qb.visibility === 'community' && (
+                            <span className="font-mono text-[10px] font-medium text-[var(--community)] bg-[rgba(200,168,32,0.1)] px-1.5 py-0.5 rounded-[4px] border border-[rgba(200,168,32,0.25)] flex items-center gap-1">
+                              <Globe className="h-2.5 w-2.5" />
+                              Commons
+                            </span>
+                          )}
+                          {qb.status === 'extracted' ? (
+                            <StatusBadge variant="success">Extracted</StatusBadge>
+                          ) : isExtracting ? (
+                            <StatusBadge variant="amber" pulse>Extracting...</StatusBadge>
+                          ) : (
+                            <StatusBadge variant="neutral">Pending</StatusBadge>
+                          )}
+                        </div>
                       </div>
 
                       <h3 className="font-display text-base font-normal text-[var(--text-primary)] line-clamp-1">
@@ -262,6 +273,19 @@ export const QuestionBankManager = () => {
                           className="rounded-[6px] p-1 text-[var(--text-muted)] hover:bg-[var(--surface-well)] hover:text-[var(--text-primary)] transition-colors"
                         >
                           <Download className="h-3.5 w-3.5 stroke-[1.5]" />
+                        </button>
+
+                        <button
+                          onClick={() => toggleQuestionBankShare(qb.id)}
+                          disabled={isExtracting || isUploadingQuestionBank}
+                          title={qb.visibility === 'community' ? 'Make Private' : 'Share with The Commons'}
+                          className={`rounded-[6px] p-1 transition-colors disabled:opacity-40 ${
+                            qb.visibility === 'community'
+                              ? 'text-[var(--community)] hover:bg-[rgba(200,168,32,0.1)]'
+                              : 'text-[var(--text-muted)] hover:bg-[var(--surface-well)] hover:text-[var(--text-primary)]'
+                          }`}
+                        >
+                          <Share2 className="h-3.5 w-3.5 stroke-[1.5]" />
                         </button>
                       </div>
 

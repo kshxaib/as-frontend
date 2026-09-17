@@ -46,18 +46,27 @@ export const useQuestionBankStore = create((set, get) => ({
   communityResources: [],
   communityAnswerSets: [],
   communityPredictedPapers: [],
+  communityQuestionBanks: [],
   isLoadingCommunity: false,
+
+  // Community Question Bank Viewer State
+  communityQBViewerOpen: false,
+  communityQBViewerData: null,
+  isLoadingCommunityQBViewer: false,
+  isCloningCommunityQB: false,
 
   // Community Answer Viewer State
   communityViewerOpen: false,
   communityViewerMeta: null,   // { answer_set_id, question_bank_name, subject, author_name, total_questions, created_at }
   communityViewerAnswers: [],
   isLoadingCommunityViewer: false,
+  isCloningCommunityAnswerSet: false,
 
   // Community Predicted Paper Viewer State
   communityPredictedViewerOpen: false,
   communityPredictedViewerPaper: null,
   isLoadingCommunityPredictedViewer: false,
+  isCloningCommunityPredictedPaper: false,
 
   // Helper: check if user has configured required OpenAI API key
   hasAllRequiredKeys: () => {
@@ -542,15 +551,17 @@ export const useQuestionBankStore = create((set, get) => ({
   fetchCommunityFeed: async () => {
     set({ isLoadingCommunity: true, error: null });
     try {
-      const [resResources, resAnswerSets, resPredicted] = await Promise.all([
+      const [resResources, resAnswerSets, resPredicted, resQBs] = await Promise.all([
         api.get('/community/resources'),
         api.get('/community/answer-sets'),
         api.get('/community/predicted-papers').catch(() => ({ data: { predicted_papers: [] } })),
+        api.get('/community/question-banks').catch(() => ({ data: { question_banks: [] } })),
       ]);
       set({
         communityResources: resResources.data.resources || [],
         communityAnswerSets: resAnswerSets.data.answer_sets || [],
         communityPredictedPapers: resPredicted.data.predicted_papers || [],
+        communityQuestionBanks: resQBs.data.question_banks || [],
         isLoadingCommunity: false,
       });
     } catch (err) {
@@ -701,6 +712,112 @@ export const useQuestionBankStore = create((set, get) => ({
       const msg = getErrorMessage(err, 'Failed to toggle predicted paper sharing.');
       set({ error: msg });
       return { success: false, error: msg };
+    }
+  },
+
+  // Community Question Bank Operations
+  toggleQuestionBankShare: async (bankId) => {
+    try {
+      const res = await api.post(`/community/question-banks/${bankId}/share`);
+      set((state) => ({
+        questionBanks: state.questionBanks.map((qb) =>
+          qb.id === bankId ? { ...qb, visibility: res.data.visibility } : qb
+        ),
+        successMessage: `Question Bank visibility set to ${res.data.visibility}.`,
+      }));
+      get().fetchCommunityFeed();
+      return { success: true, visibility: res.data.visibility };
+    } catch (err) {
+      set({ error: getErrorMessage(err, 'Failed to toggle question bank sharing.') });
+      return { success: false };
+    }
+  },
+
+  openCommunityQBViewer: async (bankId) => {
+    set({
+      communityQBViewerOpen: true,
+      isLoadingCommunityQBViewer: true,
+      communityQBViewerData: null,
+    });
+    try {
+      const res = await api.get(`/community/question-banks/${bankId}/questions`);
+      set({
+        communityQBViewerData: res.data,
+        isLoadingCommunityQBViewer: false,
+      });
+    } catch (err) {
+      set({
+        error: getErrorMessage(err, 'Failed to load community question bank details.'),
+        isLoadingCommunityQBViewer: false,
+        communityQBViewerOpen: false,
+      });
+    }
+  },
+
+  closeCommunityQBViewer: () => {
+    set({
+      communityQBViewerOpen: false,
+      communityQBViewerData: null,
+      isLoadingCommunityQBViewer: false,
+    });
+  },
+
+  cloneQuestionBankToWorkspace: async (bankId) => {
+    set({ isCloningCommunityQB: true });
+    try {
+      const res = await api.post(`/community/question-banks/${bankId}/clone`);
+      const clonedQB = res.data.question_bank;
+      // Refresh personal question banks list
+      await get().fetchQuestionBanks();
+      set({
+        isCloningCommunityQB: false,
+        successMessage: res.data.message || 'Question bank cloned to your workspace!',
+      });
+      return { success: true, question_bank: clonedQB };
+    } catch (err) {
+      set({
+        isCloningCommunityQB: false,
+        error: getErrorMessage(err, 'Failed to clone question bank to workspace.'),
+      });
+      return { success: false };
+    }
+  },
+
+  cloneCommunityAnswerSetToWorkspace: async (answerSetId) => {
+    set({ isCloningCommunityAnswerSet: true });
+    try {
+      const res = await api.post(`/community/answer-sets/${answerSetId}/clone`);
+      await Promise.all([get().fetchQuestionBanks(), get().fetchAnswerSetsList()]);
+      set({
+        isCloningCommunityAnswerSet: false,
+        successMessage: res.data.message || 'Solved Question Bank cloned to your workspace!',
+      });
+      return { success: true, data: res.data };
+    } catch (err) {
+      set({
+        isCloningCommunityAnswerSet: false,
+        error: getErrorMessage(err, 'Failed to clone solved question bank to workspace.'),
+      });
+      return { success: false };
+    }
+  },
+
+  cloneCommunityPredictedPaperToWorkspace: async (paperId) => {
+    set({ isCloningCommunityPredictedPaper: true });
+    try {
+      const res = await api.post(`/community/predicted-papers/${paperId}/clone`);
+      await get().fetchQuestionBanks();
+      set({
+        isCloningCommunityPredictedPaper: false,
+        successMessage: res.data.message || 'Predicted Paper cloned to your Question Banks!',
+      });
+      return { success: true, data: res.data };
+    } catch (err) {
+      set({
+        isCloningCommunityPredictedPaper: false,
+        error: getErrorMessage(err, 'Failed to clone predicted paper to workspace.'),
+      });
+      return { success: false };
     }
   },
 

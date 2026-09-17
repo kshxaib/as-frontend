@@ -14,6 +14,7 @@ import {
   ChevronRight,
   ListOrdered,
   FileText,
+  FolderPlus,
 } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
 import { AnswerCard } from './AnswerCard';
@@ -26,6 +27,8 @@ export const CommunityAnswerViewer = () => {
     isLoadingCommunityViewer,
     closeCommunityViewer,
     downloadSolvedPdf,
+    cloneCommunityAnswerSetToWorkspace,
+    isCloningCommunityAnswerSet,
   } = useQuestionBankStore();
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -112,6 +115,20 @@ export const CommunityAnswerViewer = () => {
             <span className="text-[var(--text-muted)]">Shared by:</span>
             <strong className="text-[var(--text-primary)] font-semibold">{meta.author_name || 'AcademicStack Scholar'}</strong>
           </div>
+
+          <button
+            onClick={() => meta.answer_set_id && cloneCommunityAnswerSetToWorkspace(meta.answer_set_id)}
+            disabled={isCloningCommunityAnswerSet}
+            className="inline-flex items-center gap-1.5 rounded-[8px] border border-[var(--community)] bg-[rgba(200,168,32,0.1)] px-3.5 py-2 font-mono text-xs font-semibold text-[var(--community)] hover:bg-[var(--community)] hover:text-[var(--community-foreground)] transition-all shadow-xs disabled:opacity-50"
+            title="Clone this Solved Question Bank to your workspace"
+          >
+            {isCloningCommunityAnswerSet ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <FolderPlus className="h-3.5 w-3.5 stroke-[2]" />
+            )}
+            <span>{isCloningCommunityAnswerSet ? 'Cloning...' : 'Clone to Workspace'}</span>
+          </button>
 
           <button
             onClick={handleDownload}

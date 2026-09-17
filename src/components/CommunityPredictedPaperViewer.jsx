@@ -10,6 +10,8 @@ import {
   RefreshCw,
   Copy,
   Check,
+  FolderPlus,
+  Loader2,
 } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
 
@@ -20,6 +22,8 @@ export const CommunityPredictedPaperViewer = () => {
     isLoadingCommunityPredictedViewer,
     closeCommunityPredictedViewer,
     downloadPredictedPaperPdf,
+    cloneCommunityPredictedPaperToWorkspace,
+    isCloningCommunityPredictedPaper,
   } = useQuestionBankStore();
 
   const [copied, setCopied] = React.useState(false);
@@ -125,6 +129,20 @@ export const CommunityPredictedPaperViewer = () => {
           >
             {copied ? <Check className="h-3.5 w-3.5 text-[var(--success)]" /> : <Copy className="h-3.5 w-3.5" />}
             <span className="hidden md:inline">{copied ? 'Copied' : 'Copy'}</span>
+          </button>
+
+          <button
+            onClick={() => paper?.id && cloneCommunityPredictedPaperToWorkspace(paper.id)}
+            disabled={isCloningCommunityPredictedPaper}
+            className="inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--primary)] bg-[rgba(15,118,110,0.1)] px-3.5 py-1.5 font-mono text-xs font-semibold text-[var(--primary)] hover:bg-[var(--primary)] hover:text-[var(--primary-foreground)] transition-all shadow-xs disabled:opacity-50"
+            title="Clone this Predicted Paper to your personal Question Banks"
+          >
+            {isCloningCommunityPredictedPaper ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <FolderPlus className="h-3.5 w-3.5 stroke-[2]" />
+            )}
+            <span>{isCloningCommunityPredictedPaper ? 'Cloning...' : 'Clone as Question Bank'}</span>
           </button>
 
           <button
