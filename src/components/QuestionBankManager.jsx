@@ -22,6 +22,7 @@ import { ConfirmationModal } from './ConfirmationModal';
 import { AiProgressModal } from './AiProgressModal';
 import { StatusBadge } from './ui/StatusBadge';
 import { EmptyState } from './ui/EmptyState';
+import { ApiKeyBanner } from './ui/ApiKeyBanner';
 
 export const QuestionBankManager = () => {
   const {
@@ -40,6 +41,7 @@ export const QuestionBankManager = () => {
     setActiveTab,
     downloadQuestionBankFile,
     clearFeedback,
+    triggerKeyModal,
   } = useQuestionBankStore();
 
   const { user, isAuthenticated, openAuthModal } = useAuthStore();
@@ -121,6 +123,9 @@ export const QuestionBankManager = () => {
             <button onClick={clearFeedback} className="text-xs hover:underline font-mono">Dismiss</button>
           </div>
         )}
+
+        {/* OpenAI Key Gating Alert */}
+        <ApiKeyBanner feature="AI Question Extraction" />
 
         {/* Top Masthead */}
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between pb-6 border-b border-[var(--border)]">
@@ -234,6 +239,10 @@ export const QuestionBankManager = () => {
                       <div className="flex items-center gap-2">
                         <button
                           onClick={() => {
+                            if (!user?.has_openai_key) {
+                              triggerKeyModal('AI Question Bank Extraction');
+                              return;
+                            }
                             if (qb.status === 'extracted') {
                               setReExtractCandidate(qb);
                             } else {
@@ -289,6 +298,11 @@ export const QuestionBankManager = () => {
           confirmVariant="warning"
           iconType="sparkles"
           onConfirm={() => {
+            if (!user?.has_openai_key) {
+              setReExtractCandidate(null);
+              triggerKeyModal('AI Question Bank Extraction');
+              return;
+            }
             if (reExtractCandidate) {
               extractQuestions(reExtractCandidate.id);
               setReExtractCandidate(null);

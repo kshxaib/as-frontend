@@ -65,6 +65,7 @@ export const ApiKeyRequiredModal = () => {
               <p>• 1536-dim Vector Embeddings (PDF indexing)</p>
               <p>• Automated Question Bank extraction</p>
               <p>• Syllabus-grounded RAG answers & AI Review</p>
+              <p>• Multi-Paper Predicted Examination Paper Synthesis</p>
             </div>
           </div>
 

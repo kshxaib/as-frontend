@@ -20,6 +20,7 @@ import { ConfirmationModal } from './ConfirmationModal';
 import { AiProgressModal } from './AiProgressModal';
 import { StatusBadge } from './ui/StatusBadge';
 import { EmptyState } from './ui/EmptyState';
+import { ApiKeyBanner } from './ui/ApiKeyBanner';
 
 export const ResourceManager = () => {
   const {
@@ -36,6 +37,7 @@ export const ResourceManager = () => {
     toggleResourceShare,
     downloadResourceFile,
     clearFeedback,
+    triggerKeyModal,
   } = useQuestionBankStore();
 
   const { user, isAuthenticated, openAuthModal } = useAuthStore();
@@ -116,6 +118,9 @@ export const ResourceManager = () => {
             <button onClick={clearFeedback} className="text-xs hover:underline font-mono">Dismiss</button>
           </div>
         )}
+
+        {/* OpenAI Key Gating Alert */}
+        <ApiKeyBanner feature="Vector Indexing & RAG Retrieval" />
 
         {/* Top Masthead */}
         <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between pb-6 border-b border-[var(--border)]">
@@ -239,7 +244,13 @@ export const ResourceManager = () => {
                         {/* Direct Index Action for unindexed resources */}
                         {res.status !== 'indexed' && (
                           <button
-                            onClick={() => indexResource(res.id)}
+                            onClick={() => {
+                              if (!user?.has_openai_key) {
+                                triggerKeyModal('PDF Vector Indexing');
+                                return;
+                              }
+                              indexResource(res.id);
+                            }}
                             disabled={isIndexing || Object.values(isIndexingResource).some(Boolean) || isUploadingResource}
                             className="inline-flex items-center gap-1.5 rounded-[6px] border border-[rgba(245,158,11,0.3)] bg-[rgba(245,158,11,0.08)] px-2.5 py-1 font-mono text-[11px] font-medium text-[var(--ai)] hover:bg-[rgba(245,158,11,0.15)] transition-all disabled:opacity-40"
                           >

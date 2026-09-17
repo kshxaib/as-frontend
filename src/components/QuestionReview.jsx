@@ -12,11 +12,13 @@ import {
   Workflow,
 } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
+import { useAuthStore } from '../store/useAuthStore';
 import { QuestionCard } from './QuestionCard';
 import { AddQuestionModal } from './AddQuestionModal';
 import { ConfirmationModal } from './ConfirmationModal';
 import { AiProgressModal } from './AiProgressModal';
 import { EmptyState } from './ui/EmptyState';
+import { ApiKeyBanner } from './ui/ApiKeyBanner';
 
 export const QuestionReview = () => {
   const {
@@ -31,10 +33,11 @@ export const QuestionReview = () => {
     fetchQuestionBanks,
     selectQuestionBank,
     extractQuestions,
-    generateAnswers,
-    clearFeedback,
     downloadQuestionsPdf,
+    triggerKeyModal,
   } = useQuestionBankStore();
+
+  const { user } = useAuthStore();
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isGenerateConfirmOpen, setIsGenerateConfirmOpen] = useState(false);
@@ -94,6 +97,9 @@ export const QuestionReview = () => {
           </div>
         )}
 
+        {/* OpenAI Key Gating Alert */}
+        <ApiKeyBanner feature="Solution Generation & AI Review" />
+
         {/* Top Control Bar */}
         <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between pb-6 border-b border-[var(--border)]">
           <div>
@@ -130,6 +136,10 @@ export const QuestionReview = () => {
             {currentQuestionBank && (
               <button
                 onClick={() => {
+                  if (!user?.has_openai_key) {
+                    triggerKeyModal('AI Question Extraction');
+                    return;
+                  }
                   if (currentQuestionBank.status === 'extracted') {
                     setIsReExtractConfirmOpen(true);
                   } else {
@@ -288,7 +298,13 @@ export const QuestionReview = () => {
             </div>
 
             <button
-              onClick={() => setIsGenerateConfirmOpen(true)}
+              onClick={() => {
+                if (!user?.has_openai_key) {
+                  triggerKeyModal('RAG Answer Generation & AI Review');
+                  return;
+                }
+                setIsGenerateConfirmOpen(true);
+              }}
               disabled={isGeneratingAnswers}
               className="inline-flex items-center gap-2 rounded-[8px] bg-[var(--primary)] px-5 py-2 text-xs font-semibold text-[var(--primary-foreground)] hover:opacity-90 transition-all disabled:opacity-50 shadow-sm"
             >
@@ -311,6 +327,11 @@ export const QuestionReview = () => {
           confirmVariant="warning"
           iconType="sparkles"
           onConfirm={() => {
+            if (!user?.has_openai_key) {
+              setIsReExtractConfirmOpen(false);
+              triggerKeyModal('AI Question Extraction');
+              return;
+            }
             setIsReExtractConfirmOpen(false);
             extractQuestions(currentQuestionBank.id);
           }}
@@ -329,6 +350,11 @@ export const QuestionReview = () => {
           confirmVariant="primary"
           iconType="ai"
           onConfirm={() => {
+            if (!user?.has_openai_key) {
+              setIsGenerateConfirmOpen(false);
+              triggerKeyModal('RAG Answer Generation & AI Review');
+              return;
+            }
             setIsGenerateConfirmOpen(false);
             generateAnswers(currentQuestionBank.id);
           }}

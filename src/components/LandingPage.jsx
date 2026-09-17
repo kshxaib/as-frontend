@@ -16,7 +16,7 @@ import {
 import { useAuthStore } from '../store/useAuthStore';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
 
-export const LandingPage = ({ justLoggedOut }) => {
+export const LandingPage = ({ justLoggedOut, hasSharedToken }) => {
   const { openAuthModal } = useAuthStore();
   const { setActiveTab } = useQuestionBankStore();
 
@@ -83,6 +83,21 @@ export const LandingPage = ({ justLoggedOut }) => {
           </div>
         )}
 
+        {hasSharedToken && (
+          <div className="mb-8 mx-auto flex items-center justify-between gap-3 rounded-[10px] border border-[rgba(15,118,110,0.3)] bg-[rgba(15,118,110,0.08)] px-4 py-3 text-xs text-[var(--text-primary)] shadow-sm">
+            <div className="flex items-center gap-2.5">
+              <ShieldCheck className="h-4 w-4 text-[var(--primary)] shrink-0" />
+              <span>You have been invited to view a Predicted Examination Paper. Sign in or register to open it.</span>
+            </div>
+            <button
+              onClick={() => openAuthModal('login')}
+              className="font-mono font-semibold text-[var(--primary)] hover:underline whitespace-nowrap"
+            >
+              Sign In →
+            </button>
+          </div>
+        )}
+
         <div className="inline-flex items-center gap-2 rounded-[6px] border border-[var(--border)] bg-[var(--surface-well)] px-3.5 py-1 font-mono text-[11px] uppercase tracking-wider text-[var(--text-muted)] mb-8 shadow-xs">
           <Cpu className="h-3 w-3 text-[var(--primary)]" />
           <span>Multi-Agent Research & Exam Workspace</span>
@@ -117,11 +132,11 @@ export const LandingPage = ({ justLoggedOut }) => {
           </button>
 
           <button
-            onClick={() => setActiveTab('community')}
+            onClick={() => openAuthModal('login')}
             className="inline-flex items-center gap-2 rounded-[8px] border border-[rgba(200,168,32,0.3)] bg-[rgba(200,168,32,0.06)] px-5 py-2.5 text-xs font-medium text-[var(--community)] hover:bg-[rgba(200,168,32,0.12)] transition-all"
           >
             <Globe className="h-3.5 w-3.5 stroke-[1.5]" />
-            <span>Browse The Commons</span>
+            <span>Sign In to Browse The Commons</span>
           </button>
         </div>
       </section>
@@ -196,13 +211,13 @@ export const LandingPage = ({ justLoggedOut }) => {
             <button onClick={() => openAuthModal('register')} className="hover:text-[var(--text-primary)] transition-colors">
               Register
             </button>
-            <button onClick={() => setActiveTab('community')} className="text-[var(--community)] hover:opacity-80 transition-colors">
+            <button onClick={() => openAuthModal('login')} className="text-[var(--community)] hover:opacity-80 transition-colors">
               The Commons
             </button>
           </div>
         </div>
       </footer>
-
     </div>
   );
 };
+

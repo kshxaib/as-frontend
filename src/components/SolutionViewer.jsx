@@ -17,11 +17,13 @@ import {
   Target,
 } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
+import { useAuthStore } from '../store/useAuthStore';
 import { usePracticeStore } from '../store/usePracticeStore';
 import { AnswerCard } from './AnswerCard';
 import { ConfirmationModal } from './ConfirmationModal';
 import { AiProgressModal } from './AiProgressModal';
 import { EmptyState } from './ui/EmptyState';
+import { ApiKeyBanner } from './ui/ApiKeyBanner';
 
 export const SolutionViewer = () => {
   const {
@@ -42,7 +44,10 @@ export const SolutionViewer = () => {
     error,
     successMessage,
     clearFeedback,
+    triggerKeyModal,
   } = useQuestionBankStore();
+
+  const { user } = useAuthStore();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [showHighYieldOnly, setShowHighYieldOnly] = useState(false);
@@ -169,6 +174,9 @@ export const SolutionViewer = () => {
             <button onClick={clearFeedback} className="text-xs hover:underline font-mono">Dismiss</button>
           </div>
         )}
+
+        {/* OpenAI Key Gating Alert */}
+        <ApiKeyBanner feature="Solution Manuscript Synthesis & AI Review" />
 
         {/* ── Top Bar: Navigation, Question Bank Switcher & Actions ── */}
         <div className="flex flex-col gap-6 pb-6 border-b border-[var(--border)]">
@@ -309,6 +317,10 @@ export const SolutionViewer = () => {
 
               <button
                 onClick={() => {
+                  if (!user?.has_openai_key) {
+                    triggerKeyModal('RAG Answer Generation & AI Review');
+                    return;
+                  }
                   if (answers.length > 0) {
                     setIsRegenerateConfirmOpen(true);
                   } else {
@@ -574,6 +586,11 @@ export const SolutionViewer = () => {
             confirmVariant="warning"
             iconType="ai"
             onConfirm={() => {
+              if (!user?.has_openai_key) {
+                setIsRegenerateConfirmOpen(false);
+                triggerKeyModal('RAG Answer Generation & AI Review');
+                return;
+              }
               setIsRegenerateConfirmOpen(false);
               generateAnswers(currentQuestionBank.id);
             }}

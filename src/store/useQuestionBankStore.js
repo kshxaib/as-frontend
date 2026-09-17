@@ -116,9 +116,9 @@ export const useQuestionBankStore = create((set, get) => ({
   },
 
   indexResource: async (resourceId) => {
-    // Check if user has configured all 4 required AI keys
+    // Check if user has configured required OpenAI API key
     if (!get().hasAllRequiredKeys()) {
-      get().triggerKeyModal('PDF Vector Indexing (Gemini Embeddings)');
+      get().triggerKeyModal('PDF Vector Indexing (OpenAI Embeddings)');
       return;
     }
 
@@ -712,6 +712,11 @@ export const useQuestionBankStore = create((set, get) => ({
   setPredictedPaper: (paper) => set({ predictedPaper: paper }),
 
   predictPaper: async (formData) => {
+    if (!get().hasAllRequiredKeys()) {
+      get().triggerKeyModal('AI Examination Paper Prediction');
+      return { success: false, error: 'OpenAI API key is required to predict question papers.' };
+    }
+
     set({ isPredictingPaper: true, error: null });
     try {
       const res = await api.post('/predictor/generate', formData, {

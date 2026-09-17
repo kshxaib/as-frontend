@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
 import { useAuthStore } from '../store/useAuthStore';
+import { ApiKeyBanner } from './ui/ApiKeyBanner';
 
 const MAX_PAPERS = 10;
 
@@ -39,6 +40,7 @@ export const PredictedPaperGenerator = ({ sharedToken, onClearShared }) => {
     isSavingPredictedQb,
     setActiveTab,
     selectQuestionBank,
+    triggerKeyModal,
   } = useQuestionBankStore();
 
   const { user, openAuthModal } = useAuthStore();
@@ -218,6 +220,7 @@ export const PredictedPaperGenerator = ({ sharedToken, onClearShared }) => {
     }
 
     if (!user?.has_openai_key) {
+      triggerKeyModal('AI Examination Paper Prediction');
       setSynthesisError('OpenAI API Key is missing. Please add your OpenAI API key in Profile settings to enable AI features.');
       return;
     }
@@ -356,6 +359,11 @@ export const PredictedPaperGenerator = ({ sharedToken, onClearShared }) => {
             </button>
           </div>
         )}
+
+        {/* OpenAI Key Gating Alert */}
+        <div className="mt-4">
+          <ApiKeyBanner feature="Examination Paper Prediction" />
+        </div>
 
         {/* ── Main Layout: Input Form vs Generated Paper ── */}
         {!predictedPaper ? (

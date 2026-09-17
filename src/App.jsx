@@ -50,9 +50,8 @@ function App() {
   }, [isAuthenticated, prevAuth, setActiveTab]);
 
   // ─── Determine what to render ───────────────────────────────────────────────
-  // Community tab is public — accessible to guests too
-  const isCommunityTab = activeTab === 'community';
-  const showApp = isAuthenticated || isCommunityTab || isPredictShare;
+  // Strictly require authentication for all app tabs including The Commons
+  const showApp = isAuthenticated;
 
   return (
     <div className="min-h-screen bg-[var(--background)] text-[var(--text-primary)] font-sans antialiased selection:bg-[var(--primary)] selection:text-[var(--primary-foreground)]">
@@ -62,17 +61,20 @@ function App() {
 
       {/* Main content area */}
       <main>
-        {/* ── LANDING PAGE ── (unauthenticated, non-community tab) */}
+        {/* ── UNATHENTICATED: LANDING PAGE ONLY ── */}
         {!showApp && (
           <div key="landing">
-            <LandingPage justLoggedOut={justLoggedOut} />
+            <LandingPage
+              justLoggedOut={justLoggedOut}
+              hasSharedToken={isPredictShare}
+            />
           </div>
         )}
 
-        {/* ── AUTHENTICATED APP + COMMUNITY + SHARED PREDICTED PAPER (public) ── */}
+        {/* ── AUTHENTICATED APP WORKSPACE ── */}
         {showApp && (
           <div key="app">
-            {/* Direct Public Shared Predicted Paper View */}
+            {/* Direct Predicted Paper View if opened via share link */}
             {isPredictShare ? (
               <PredictedPaperGenerator
                 sharedToken={sharedPredictToken}
@@ -86,25 +88,13 @@ function App() {
               />
             ) : (
               <>
-                {/* Community tab — accessible without auth */}
+                {activeTab === 'resources' && <ResourceManager />}
+                {activeTab === 'question_banks' && <QuestionBankManager />}
+                {activeTab === 'review' && <QuestionReview />}
+                {activeTab === 'solutions' && <SolutionViewer />}
+                {activeTab === 'predictor' && <PredictedPaperGenerator />}
                 {activeTab === 'community' && <CommunityHub />}
-
-                {/* Below tabs require authentication */}
-                {isAuthenticated && (
-                  <>
-                    {activeTab === 'resources' && <ResourceManager />}
-                    {activeTab === 'question_banks' && <QuestionBankManager />}
-                    {activeTab === 'review' && <QuestionReview />}
-                    {activeTab === 'solutions' && <SolutionViewer />}
-                    {activeTab === 'predictor' && <PredictedPaperGenerator />}
-                    {activeTab === 'profile' && <ProfileSettings />}
-                  </>
-                )}
-
-                {/* Safety fallback for guests */}
-                {!isAuthenticated && activeTab !== 'community' && (
-                  <LandingPage justLoggedOut={justLoggedOut} />
-                )}
+                {activeTab === 'profile' && <ProfileSettings />}
               </>
             )}
           </div>

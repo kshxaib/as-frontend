@@ -42,22 +42,21 @@ export const Navbar = () => {
     };
   }, [isUserMenuOpen]);
 
-  // Main study navigation items
+  // Main study navigation items (all require login)
   const navItems = [
     { id: 'resources', label: 'Study Resources', icon: BookOpen, requiresAuth: true },
     { id: 'question_banks', label: 'Question Banks', icon: FileText, requiresAuth: true },
     { id: 'review', label: 'Question Review', icon: Layers, requiresAuth: true },
     { id: 'solutions', label: 'Solved Answers', icon: FileCheck2, requiresAuth: true, badge: currentAnswerSet?.completed_questions },
     { id: 'predictor', label: 'Paper Predictor', icon: Sparkles, requiresAuth: true },
-    { id: 'community', label: 'Community Hub', icon: Globe, requiresAuth: false },
+    { id: 'community', label: 'Community Hub', icon: Globe, requiresAuth: true },
   ];
 
-  const visibleTabs = isAuthenticated
-    ? navItems
-    : navItems.filter((item) => !item.requiresAuth);
+  // Guests see NO internal tabs — strictly login/register on Landing Page
+  const visibleTabs = isAuthenticated ? navItems : [];
 
   const handleTabClick = (item) => {
-    if (item.requiresAuth && !isAuthenticated) {
+    if (!isAuthenticated) {
       openAuthModal('login');
       return;
     }
@@ -239,27 +238,29 @@ export const Navbar = () => {
           </div>
         </div>
 
-        {/* ── Mobile Nav ── */}
-        <div className="flex md:hidden overflow-x-auto border-t border-[var(--border-subtle)] bg-[var(--surface-muted)] px-3 py-1.5 scrollbar-none gap-1">
-          {visibleTabs.map((item) => {
-            const Icon = item.icon;
-            const isActive = activeTab === item.id;
-            return (
-              <button
-                key={item.id}
-                onClick={() => handleTabClick(item)}
-                className={`flex items-center gap-1.5 rounded-[6px] px-2.5 py-1 text-xs font-medium whitespace-nowrap transition-all ${
-                  isActive
-                    ? 'bg-[var(--primary)] text-[var(--primary-foreground)] font-semibold'
-                    : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
-                }`}
-              >
-                <Icon className="h-3 w-3 stroke-[1.5]" />
-                <span>{item.label}</span>
-              </button>
-            );
-          })}
-        </div>
+        {/* ── Mobile Nav (Authenticated Only) ── */}
+        {visibleTabs.length > 0 && (
+          <div className="flex md:hidden overflow-x-auto border-t border-[var(--border-subtle)] bg-[var(--surface-muted)] px-3 py-1.5 scrollbar-none gap-1">
+            {visibleTabs.map((item) => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => handleTabClick(item)}
+                  className={`flex items-center gap-1.5 rounded-[6px] px-2.5 py-1 text-xs font-medium whitespace-nowrap transition-all ${
+                    isActive
+                      ? 'bg-[var(--primary)] text-[var(--primary-foreground)] font-semibold'
+                      : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+                  }`}
+                >
+                  <Icon className="h-3 w-3 stroke-[1.5]" />
+                  <span>{item.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        )}
       </header>
 
       {/* Logout Confirmation Modal */}
