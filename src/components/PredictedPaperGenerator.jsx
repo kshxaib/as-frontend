@@ -15,19 +15,24 @@ import {
   ShieldCheck,
   CheckCircle2,
   FolderOpen,
+  Share2,
+  Globe,
 } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
 import { useAuthStore } from '../store/useAuthStore';
 
 const MAX_PAPERS = 10;
 
-export const PredictedPaperGenerator = () => {
+export const PredictedPaperGenerator = ({ sharedToken, onClearShared }) => {
   const {
     questionBanks,
     fetchQuestionBanks,
     predictPaper,
     savePredictedPaperAsQb,
     downloadPredictedPaperPdf,
+    sharePredictedPaper,
+    togglePredictedPaperShare,
+    fetchSharedPredictedPaper,
     predictedPaper,
     setPredictedPaper,
     isPredictingPaper,
@@ -36,11 +41,38 @@ export const PredictedPaperGenerator = () => {
     selectQuestionBank,
   } = useQuestionBankStore();
 
-  const { user } = useAuthStore();
+  const { user, openAuthModal } = useAuthStore();
+
+  // Sharing & Community State
+  const [sharedInfo, setSharedInfo] = useState(null);
+  const [isLoadingShared, setIsLoadingShared] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
+  const [communityPaperId, setCommunityPaperId] = useState(null);
+  const [isCommunityShared, setIsCommunityShared] = useState(false);
+  const [shareMessage, setShareMessage] = useState('');
+  const [synthesisError, setSynthesisError] = useState('');
+
 
   useEffect(() => {
     fetchQuestionBanks();
   }, [fetchQuestionBanks]);
+
+  useEffect(() => {
+    if (sharedToken) {
+      setIsLoadingShared(true);
+      fetchSharedPredictedPaper(sharedToken).then((res) => {
+        setIsLoadingShared(false);
+        if (res.success && res.data) {
+          setSharedInfo(res.data);
+          setPredictedPaper(res.data.paper_data);
+          setCommunityPaperId(res.data.id);
+          setIsCommunityShared(res.data.visibility === 'community');
+          if (res.data.subject) setSubject(res.data.subject);
+          if (res.data.title) setTitle(res.data.title);
+        }
+      });
+    }
+  }, [sharedToken, fetchSharedPredictedPaper, setPredictedPaper]);
 
   // Form State
   const [subject, setSubject] = useState('');
@@ -177,15 +209,78 @@ export const PredictedPaperGenerator = () => {
       formData.append('existing_qbs_meta', JSON.stringify(qbMetaList));
     }
 
+    setSynthesisError('');
+
+    if (!user) {
+      setSynthesisError('Please log in to your account before synthesizing question papers.');
+      openAuthModal?.('login');
+      return;
+    }
+
+    if (!user?.has_openai_key) {
+      setSynthesisError('OpenAI API Key is missing. Please add your OpenAI API key in Profile settings to enable AI features.');
+      return;
+    }
+
     const res = await predictPaper(formData);
     if (res.success) {
       setSavedQbInfo(null);
+      setSynthesisError('');
+      // Reset community share status for new prediction
+      setCommunityPaperId(null);
+      setIsCommunityShared(false);
+      setShareMessage('');
+    } else {
+      setSynthesisError(res.error || 'Failed to synthesize predicted question paper.');
+    }
+  };
+
+  // Handle Community Share Toggle (Private vs Community)
+  const handleToggleCommunityShare = async () => {
+    if (!predictedPaper) return;
+    if (!user) {
+      openAuthModal?.('login');
+      return;
+    }
+
+    setIsSharing(true);
+    setShareMessage('');
+
+    if (!communityPaperId) {
+      // First time sharing: save to database with visibility='community'
+      const creator = user.name || 'Student Scholar';
+      const res = await sharePredictedPaper(predictedPaper, creator, 'community');
+      setIsSharing(false);
+      if (res.success && res.data) {
+        setCommunityPaperId(res.data.id);
+        setIsCommunityShared(true);
+        setShareMessage('Predicted paper published to The Commons! Fellow students can now view it under the Predicted Papers tab.');
+        setTimeout(() => setShareMessage(''), 8000);
+      }
+    } else {
+      // Already saved: toggle visibility between community and private
+      const res = await togglePredictedPaperShare(communityPaperId);
+      setIsSharing(false);
+      if (res.success) {
+        const isNowShared = res.visibility === 'community';
+        setIsCommunityShared(isNowShared);
+        setShareMessage(
+          isNowShared
+            ? 'Predicted paper shared with The Commons! Visible to peers in the Community Hub.'
+            : 'Predicted paper visibility changed to Private.'
+        );
+        setTimeout(() => setShareMessage(''), 8000);
+      }
     }
   };
 
   // Handle Save to Question Banks
   const handleSaveAsQb = async () => {
     if (!predictedPaper) return;
+    if (!user) {
+      openAuthModal?.('login');
+      return;
+    }
     const res = await savePredictedPaperAsQb(predictedPaper);
     if (res.success) {
       setSavedQbInfo(res.data);
@@ -451,7 +546,9 @@ export const PredictedPaperGenerator = () => {
                         >
                           <div className="truncate pr-2">
                             <p className="font-medium truncate text-xs">{qb.name}</p>
-                            <p className="font-mono text-[10px] text-[var(--text-muted)] mt-0.5">{qb.subject}</p>
+                            <p className="font-mono text-[10px] text-[var(--text-muted)] mt-0.5">
+                              {qb.question_count ? `${qb.question_count} Questions` : 'Exam Paper PDF'} • {qb.subject}
+                            </p>
                           </div>
                           <div className={`h-6 px-2.5 rounded-[5px] text-[10px] font-mono font-medium flex items-center gap-1 shrink-0 ${
                             isSelected ? 'bg-[var(--primary)] text-[var(--primary-foreground)]' : 'bg-[var(--surface)] border border-[var(--border)] text-[var(--text-muted)]'
@@ -479,6 +576,43 @@ export const PredictedPaperGenerator = () => {
                 )}
               </div>
             </div>
+
+            {/* Inline Error & API Key Notice */}
+            {synthesisError && (
+              <div className="rounded-[10px] border border-red-500/30 bg-red-500/10 p-4 text-xs text-red-500 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                <div className="flex items-start gap-2.5 min-w-0">
+                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-red-500" />
+                  <div>
+                    <p className="font-semibold text-red-600 dark:text-red-400">{synthesisError}</p>
+                    {synthesisError.toLowerCase().includes('openai api key') && (
+                      <p className="text-[11px] text-red-500/80 mt-0.5">
+                        Your OpenAI API key is required to analyze multiple past papers and synthesize authentic questions.
+                      </p>
+                    )}
+                  </div>
+                </div>
+                {synthesisError.toLowerCase().includes('openai api key') && (
+                  <button
+                    type="button"
+                    onClick={() => setActiveTab('profile')}
+                    className="inline-flex items-center gap-1.5 rounded-[6px] bg-red-600 px-3.5 py-1.5 font-medium text-xs text-white hover:bg-red-700 transition-colors shrink-0 shadow-sm"
+                  >
+                    <span>Configure API Key in Profile</span>
+                    <ArrowRight className="h-3 w-3" />
+                  </button>
+                )}
+                {!user && (
+                  <button
+                    type="button"
+                    onClick={() => openAuthModal?.('login')}
+                    className="inline-flex items-center gap-1.5 rounded-[6px] bg-red-600 px-3.5 py-1.5 font-medium text-xs text-white hover:bg-red-700 transition-colors shrink-0 shadow-sm"
+                  >
+                    <span>Log In</span>
+                    <ArrowRight className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+            )}
 
             {/* Step 3: Synthesis Action */}
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-[12px] border border-[var(--border)] bg-[var(--surface-well)] p-5">
@@ -527,6 +661,25 @@ export const PredictedPaperGenerator = () => {
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
+                {/* Native Community Sharing Toggle */}
+                <button
+                  onClick={handleToggleCommunityShare}
+                  disabled={isSharing}
+                  className={`inline-flex items-center gap-1.5 rounded-[8px] border px-3.5 py-2 text-xs font-semibold transition-all shadow-sm disabled:opacity-50 ${
+                    isCommunityShared
+                      ? 'border-[rgba(200,168,32,0.4)] bg-[rgba(200,168,32,0.12)] text-[var(--community)]'
+                      : 'border-[var(--border)] bg-[var(--surface-well)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--primary)]'
+                  }`}
+                  title={isCommunityShared ? 'Make Private (Remove from The Commons)' : 'Share with The Commons (Public in Community Hub)'}
+                >
+                  {isSharing ? (
+                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Globe className="h-3.5 w-3.5 stroke-[1.5]" />
+                  )}
+                  <span>{isCommunityShared ? 'Shared with The Commons' : 'Share with The Commons'}</span>
+                </button>
+
                 <button
                   onClick={handleDownloadPdf}
                   className="inline-flex items-center gap-1.5 rounded-[8px] bg-[var(--primary)] px-3.5 py-2 text-xs font-semibold text-[var(--primary-foreground)] hover:opacity-90 transition-all shadow-sm"
@@ -609,6 +762,47 @@ export const PredictedPaperGenerator = () => {
                     ))}
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* ── Creator Highlight Banner (when viewing shared paper) ── */}
+            {sharedInfo && (
+              <div className="rounded-[12px] border border-[var(--primary)]/40 bg-gradient-to-r from-[rgba(15,118,110,0.12)] via-[rgba(15,118,110,0.05)] to-transparent p-5 shadow-sm">
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div className="flex items-center gap-3.5">
+                    <div className="h-11 w-11 rounded-full bg-[var(--primary)] text-[var(--primary-foreground)] flex items-center justify-center font-bold text-base shadow-sm shrink-0 uppercase">
+                      {(sharedInfo.creator_name || 'S')[0]}
+                    </div>
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono text-[10px] uppercase font-bold tracking-wider text-[var(--primary)] bg-[var(--surface)] px-2 py-0.5 rounded border border-[var(--primary)]/30">
+                          Shared Predicted Paper
+                        </span>
+                        <span className="font-mono text-[11px] text-[var(--text-muted)]">
+                          • {sharedInfo.views || 1} view{sharedInfo.views === 1 ? '' : 's'}
+                        </span>
+                      </div>
+                      <h3 className="text-sm sm:text-base font-bold text-[var(--text-primary)] mt-1">
+                        Curated & Shared by <span className="text-[var(--primary)] underline decoration-[var(--primary)]/40 underline-offset-2 font-black">{sharedInfo.creator_name}</span>
+                      </h3>
+                      <p className="text-xs text-[var(--text-secondary)] mt-0.5">
+                        AI Predicted Examination Blueprint for <b>{sharedInfo.subject}</b> • AcademicStack
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-2 shrink-0">
+                    {onClearShared && (
+                      <button
+                        onClick={onClearShared}
+                        className="inline-flex items-center gap-1.5 rounded-[8px] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 text-xs font-semibold text-[var(--text-primary)] hover:border-[var(--primary)] transition-all shadow-sm"
+                      >
+                        <Sparkles className="h-3.5 w-3.5 text-[var(--primary)]" />
+                        <span>Predict Your Own Exam Paper</span>
+                      </button>
+                    )}
+                  </div>
+                </div>
               </div>
             )}
 
@@ -742,6 +936,23 @@ export const PredictedPaperGenerator = () => {
                 <span>Download Model Paper PDF</span>
               </button>
             </div>
+
+            {/* Share Notification Banner */}
+            {shareMessage && (
+              <div className="flex items-center justify-between rounded-[8px] border border-[rgba(200,168,32,0.4)] bg-[rgba(200,168,32,0.08)] p-3 text-xs text-[var(--community)]">
+                <div className="flex items-center gap-2">
+                  <Globe className="h-4 w-4 shrink-0" />
+                  <span>{shareMessage}</span>
+                </div>
+                <button
+                  onClick={() => setActiveTab('community')}
+                  className="font-mono text-xs font-semibold underline hover:opacity-80 flex items-center gap-1 shrink-0 ml-3"
+                >
+                  <span>Go to The Commons</span>
+                  <ArrowRight className="h-3 w-3" />
+                </button>
+              </div>
+            )}
           </div>
         )}
       </div>

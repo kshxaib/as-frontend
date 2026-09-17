@@ -24,6 +24,14 @@ function App() {
   // Track previous auth state to detect logout transitions
   const [prevAuth, setPrevAuth] = useState(isAuthenticated);
 
+  // Detect public predicted paper share link (?predict=token)
+  const [sharedPredictToken, setSharedPredictToken] = useState(() => {
+    const params = new URLSearchParams(window.location.search);
+    return params.get('predict') || null;
+  });
+
+  const isPredictShare = Boolean(sharedPredictToken);
+
   useEffect(() => {
     initTheme();
     initAuth();
@@ -44,7 +52,7 @@ function App() {
   // ─── Determine what to render ───────────────────────────────────────────────
   // Community tab is public — accessible to guests too
   const isCommunityTab = activeTab === 'community';
-  const showApp = isAuthenticated || isCommunityTab;
+  const showApp = isAuthenticated || isCommunityTab || isPredictShare;
 
   return (
     <div className="min-h-screen bg-[var(--background)] text-[var(--text-primary)] font-sans antialiased selection:bg-[var(--primary)] selection:text-[var(--primary-foreground)]">
@@ -61,27 +69,43 @@ function App() {
           </div>
         )}
 
-        {/* ── AUTHENTICATED APP + COMMUNITY (public) ── */}
+        {/* ── AUTHENTICATED APP + COMMUNITY + SHARED PREDICTED PAPER (public) ── */}
         {showApp && (
           <div key="app">
-            {/* Community tab — accessible without auth */}
-            {activeTab === 'community' && <CommunityHub />}
-
-            {/* Below tabs require authentication */}
-            {isAuthenticated && (
+            {/* Direct Public Shared Predicted Paper View */}
+            {isPredictShare ? (
+              <PredictedPaperGenerator
+                sharedToken={sharedPredictToken}
+                onClearShared={() => {
+                  const url = new URL(window.location.href);
+                  url.searchParams.delete('predict');
+                  window.history.replaceState({}, '', url.pathname + url.search);
+                  setSharedPredictToken(null);
+                  setActiveTab('predictor');
+                }}
+              />
+            ) : (
               <>
-                {activeTab === 'resources' && <ResourceManager />}
-                {activeTab === 'question_banks' && <QuestionBankManager />}
-                {activeTab === 'review' && <QuestionReview />}
-                {activeTab === 'solutions' && <SolutionViewer />}
-                {activeTab === 'predictor' && <PredictedPaperGenerator />}
-                {activeTab === 'profile' && <ProfileSettings />}
-              </>
-            )}
+                {/* Community tab — accessible without auth */}
+                {activeTab === 'community' && <CommunityHub />}
 
-            {/* Safety fallback for guests */}
-            {!isAuthenticated && activeTab !== 'community' && (
-              <LandingPage justLoggedOut={justLoggedOut} />
+                {/* Below tabs require authentication */}
+                {isAuthenticated && (
+                  <>
+                    {activeTab === 'resources' && <ResourceManager />}
+                    {activeTab === 'question_banks' && <QuestionBankManager />}
+                    {activeTab === 'review' && <QuestionReview />}
+                    {activeTab === 'solutions' && <SolutionViewer />}
+                    {activeTab === 'predictor' && <PredictedPaperGenerator />}
+                    {activeTab === 'profile' && <ProfileSettings />}
+                  </>
+                )}
+
+                {/* Safety fallback for guests */}
+                {!isAuthenticated && activeTab !== 'community' && (
+                  <LandingPage justLoggedOut={justLoggedOut} />
+                )}
+              </>
             )}
           </div>
         )}

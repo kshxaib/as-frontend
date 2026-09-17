@@ -45,6 +45,7 @@ export const useQuestionBankStore = create((set, get) => ({
   // Community State (Phase 10 & 11)
   communityResources: [],
   communityAnswerSets: [],
+  communityPredictedPapers: [],
   isLoadingCommunity: false,
 
   // Community Answer Viewer State
@@ -52,6 +53,11 @@ export const useQuestionBankStore = create((set, get) => ({
   communityViewerMeta: null,   // { answer_set_id, question_bank_name, subject, author_name, total_questions, created_at }
   communityViewerAnswers: [],
   isLoadingCommunityViewer: false,
+
+  // Community Predicted Paper Viewer State
+  communityPredictedViewerOpen: false,
+  communityPredictedViewerPaper: null,
+  isLoadingCommunityPredictedViewer: false,
 
   // Helper: check if user has configured required OpenAI API key
   hasAllRequiredKeys: () => {
@@ -536,13 +542,15 @@ export const useQuestionBankStore = create((set, get) => ({
   fetchCommunityFeed: async () => {
     set({ isLoadingCommunity: true, error: null });
     try {
-      const [resResources, resAnswerSets] = await Promise.all([
+      const [resResources, resAnswerSets, resPredicted] = await Promise.all([
         api.get('/community/resources'),
         api.get('/community/answer-sets'),
+        api.get('/community/predicted-papers').catch(() => ({ data: { predicted_papers: [] } })),
       ]);
       set({
         communityResources: resResources.data.resources || [],
         communityAnswerSets: resAnswerSets.data.answer_sets || [],
+        communityPredictedPapers: resPredicted.data.predicted_papers || [],
         isLoadingCommunity: false,
       });
     } catch (err) {
@@ -652,6 +660,50 @@ export const useQuestionBankStore = create((set, get) => ({
     });
   },
 
+  // Community Predicted Paper Viewer Operations
+  openCommunityPredictedViewer: async (paperId) => {
+    set({ isLoadingCommunityPredictedViewer: true, communityPredictedViewerOpen: true, error: null });
+    try {
+      const res = await api.get(`/community/predicted-papers/${paperId}`);
+      set({
+        communityPredictedViewerPaper: res.data,
+        isLoadingCommunityPredictedViewer: false,
+      });
+    } catch (err) {
+      set({
+        error: getErrorMessage(err, 'Failed to load predicted paper from The Commons.'),
+        isLoadingCommunityPredictedViewer: false,
+        communityPredictedViewerOpen: false,
+      });
+    }
+  },
+
+  closeCommunityPredictedViewer: () => {
+    set({
+      communityPredictedViewerOpen: false,
+      communityPredictedViewerPaper: null,
+    });
+  },
+
+  togglePredictedPaperShare: async (paperId) => {
+    try {
+      const res = await api.post(`/community/predicted-papers/${paperId}/toggle-share`);
+      const newVis = res.data.visibility;
+      set((state) => ({
+        communityPredictedPapers: state.communityPredictedPapers.map((p) =>
+          p.id === paperId ? { ...p, visibility: newVis } : p
+        ),
+        successMessage: `Predicted paper visibility set to ${newVis}.`,
+      }));
+      get().fetchCommunityFeed();
+      return { success: true, visibility: newVis };
+    } catch (err) {
+      const msg = getErrorMessage(err, 'Failed to toggle predicted paper sharing.');
+      set({ error: msg });
+      return { success: false, error: msg };
+    }
+  },
+
   // ─── Paper Predictor State & Actions ─────────────────────────────────────
   predictedPaper: null,
   isPredictingPaper: false,
@@ -719,6 +771,41 @@ export const useQuestionBankStore = create((set, get) => ({
       setTimeout(() => window.URL.revokeObjectURL(blobUrl), 2000);
     } catch (err) {
       set({ error: getErrorMessage(err, 'Failed to download predicted paper PDF.') });
+    }
+  },
+
+  sharePredictedPaper: async (paperData, creatorName, visibility = 'community') => {
+    const user = useAuthStore.getState().user;
+    try {
+      const res = await api.post('/predictor/share', {
+        paper_data: paperData,
+        creator_name: creatorName || user?.name || 'Student Scholar',
+        user_id: user?.id || null,
+        visibility,
+      });
+      // Refresh community feed so the newly shared paper appears immediately in The Commons
+      get().fetchCommunityFeed();
+      return { success: true, data: res.data };
+    } catch (err) {
+      const msg = getErrorMessage(err, 'Failed to share predicted paper.');
+      set({ error: msg });
+      return { success: false, error: msg };
+    }
+  },
+
+  fetchSharedPredictedPaper: async (token) => {
+    set({ isLoadingSharedPaper: true, error: null });
+    try {
+      const res = await api.get(`/predictor/shared/${token}`);
+      set({
+        sharedPaperInfo: res.data,
+        isLoadingSharedPaper: false,
+      });
+      return { success: true, data: res.data };
+    } catch (err) {
+      const msg = getErrorMessage(err, 'Shared predicted paper not found or link expired.');
+      set({ error: msg, isLoadingSharedPaper: false, sharedPaperInfo: null });
+      return { success: false, error: msg };
     }
   },
 }));
