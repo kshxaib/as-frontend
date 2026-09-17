@@ -5,6 +5,7 @@ import { ResourceManager } from './components/ResourceManager';
 import { QuestionBankManager } from './components/QuestionBankManager';
 import { QuestionReview } from './components/QuestionReview';
 import { SolutionViewer } from './components/SolutionViewer';
+import { PredictedPaperGenerator } from './components/PredictedPaperGenerator';
 import { CommunityHub } from './components/CommunityHub';
 import { ProfileSettings } from './components/ProfileSettings';
 import { AuthModal } from './components/AuthModal';
@@ -73,6 +74,7 @@ function App() {
                 {activeTab === 'question_banks' && <QuestionBankManager />}
                 {activeTab === 'review' && <QuestionReview />}
                 {activeTab === 'solutions' && <SolutionViewer />}
+                {activeTab === 'predictor' && <PredictedPaperGenerator />}
                 {activeTab === 'profile' && <ProfileSettings />}
               </>
             )}

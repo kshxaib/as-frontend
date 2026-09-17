@@ -14,6 +14,7 @@ import {
   Workflow,
   BookOpen,
   ChevronDown,
+  Sparkles,
 } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
 import { useAuthStore } from '../store/useAuthStore';
@@ -136,7 +137,15 @@ export const QuestionBankManager = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5">
+            <button
+              onClick={() => setActiveTab('predictor')}
+              className="inline-flex items-center gap-1.5 rounded-[8px] border border-[rgba(15,118,110,0.3)] bg-[rgba(15,118,110,0.08)] px-3.5 py-2 text-xs font-semibold text-[var(--primary)] hover:bg-[rgba(15,118,110,0.15)] transition-all"
+            >
+              <Sparkles className="h-3.5 w-3.5 stroke-[2]" />
+              <span>Predict Exam Paper</span>
+            </button>
+
             <button
               onClick={() => {
                 if (!isAuthenticated) {

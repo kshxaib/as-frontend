@@ -14,6 +14,7 @@ import {
   Library,
   ShieldCheck,
   AlertCircle,
+  Sparkles,
 } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
 import { useAuthStore } from '../store/useAuthStore';
@@ -47,6 +48,7 @@ export const Navbar = () => {
     { id: 'question_banks', label: 'Question Banks', icon: FileText, requiresAuth: true },
     { id: 'review', label: 'Question Review', icon: Layers, requiresAuth: true },
     { id: 'solutions', label: 'Solved Answers', icon: FileCheck2, requiresAuth: true, badge: currentAnswerSet?.completed_questions },
+    { id: 'predictor', label: 'Paper Predictor', icon: Sparkles, requiresAuth: true },
     { id: 'community', label: 'Community Hub', icon: Globe, requiresAuth: false },
   ];
 

@@ -651,4 +651,74 @@ export const useQuestionBankStore = create((set, get) => ({
       communityViewerAnswers: [],
     });
   },
+
+  // ─── Paper Predictor State & Actions ─────────────────────────────────────
+  predictedPaper: null,
+  isPredictingPaper: false,
+  isSavingPredictedQb: false,
+
+  setPredictedPaper: (paper) => set({ predictedPaper: paper }),
+
+  predictPaper: async (formData) => {
+    set({ isPredictingPaper: true, error: null });
+    try {
+      const res = await api.post('/predictor/generate', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        timeout: 120000, // 2 minutes for deep multi-paper analysis
+      });
+      set({
+        predictedPaper: res.data,
+        isPredictingPaper: false,
+        successMessage: 'Predicted Question Paper synthesized successfully!',
+      });
+      return { success: true, data: res.data };
+    } catch (err) {
+      const msg = getErrorMessage(err, 'Failed to synthesize predicted question paper.');
+      set({ error: msg, isPredictingPaper: false });
+      return { success: false, error: msg };
+    }
+  },
+
+  savePredictedPaperAsQb: async (paperData) => {
+    const user = useAuthStore.getState().user;
+    if (!user) return { success: false, error: 'User not authenticated' };
+
+    set({ isSavingPredictedQb: true, error: null });
+    try {
+      const res = await api.post('/predictor/save-as-qb', {
+        user_id: user.id,
+        paper_data: paperData,
+      });
+      // Refresh Question Banks list so the newly saved QB appears immediately
+      await get().fetchQuestionBanks();
+      set({
+        isSavingPredictedQb: false,
+        successMessage: 'Predicted Paper saved to Question Banks! You can now generate grounded solutions.',
+      });
+      return { success: true, data: res.data };
+    } catch (err) {
+      const msg = getErrorMessage(err, 'Failed to save predicted paper as Question Bank.');
+      set({ error: msg, isSavingPredictedQb: false });
+      return { success: false, error: msg };
+    }
+  },
+
+  downloadPredictedPaperPdf: async (paperData, filename = 'Predicted_Examination_Paper.pdf') => {
+    try {
+      const res = await api.post('/predictor/pdf', { paper_data: paperData }, {
+        responseType: 'blob',
+      });
+      const blob = new Blob([res.data], { type: 'application/pdf' });
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = blobUrl;
+      link.setAttribute('download', filename.endsWith('.pdf') ? filename : `${filename}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      setTimeout(() => window.URL.revokeObjectURL(blobUrl), 2000);
+    } catch (err) {
+      set({ error: getErrorMessage(err, 'Failed to download predicted paper PDF.') });
+    }
+  },
 }));
