@@ -3,8 +3,9 @@ import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
-import { BookOpen, CheckCircle2, AlertCircle, RefreshCw, ChevronDown, ChevronUp, Zap } from 'lucide-react';
+import { BookOpen, CheckCircle2, AlertCircle, RefreshCw, ChevronDown, ChevronUp, Zap, Eye, EyeOff, Check, RotateCcw } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
+import { usePracticeStore } from '../store/usePracticeStore';
 import { ConfirmationModal } from './ConfirmationModal';
 import { MermaidDiagram } from './MermaidDiagram';
 import { StatusBadge } from './ui/StatusBadge';
@@ -221,6 +222,14 @@ export const AnswerCard = React.memo(function AnswerCard({ answer, index, readOn
   const [retryInstruction, setRetryInstruction] = useState('');
   const [cardTab, setCardTab] = useState('full'); // 'full' | 'tldr'
 
+  // Active Recall practice store
+  const isTestMode = usePracticeStore((s) => s.isTestMode);
+  const masteryStatus = usePracticeStore((s) => s.masteryMap[answer.id]);
+  const isRevealed = usePracticeStore((s) => !!s.revealedMap[answer.id]);
+  const revealAnswer = usePracticeStore((s) => s.revealAnswer);
+  const hideAnswer = usePracticeStore((s) => s.hideAnswer);
+  const setMastery = usePracticeStore((s) => s.setMastery);
+
   const handleRetry = async () => {
     if (readOnly) return;
     setIsRetryConfirmOpen(false);
@@ -243,9 +252,17 @@ export const AnswerCard = React.memo(function AnswerCard({ answer, index, readOn
   const isTldrActive = globalTldrMode || cardTab === 'tldr';
   const formattedQNum = String(answer.question_number || index + 1).padStart(2, '0');
 
+  const cardBorderClass = isTestMode
+    ? masteryStatus === 'mastered'
+      ? 'border-emerald-500/40 bg-emerald-500/[0.015] shadow-xs'
+      : masteryStatus === 'need_practice'
+      ? 'border-amber-500/40 bg-amber-500/[0.015] shadow-xs'
+      : 'border-[var(--border)] bg-[var(--surface)]'
+    : 'border-[var(--border)] bg-[var(--surface)]';
+
   return (
     <>
-      <div className="rounded-[12px] border border-[var(--border)] bg-[var(--surface)] transition-all">
+      <div className={`rounded-[12px] border ${cardBorderClass} transition-all`}>
         
         {/* Manuscript Entry Header */}
         <div className="flex items-start justify-between gap-4 p-5 border-b border-[var(--border-subtle)] bg-[var(--surface-well)]">
@@ -266,7 +283,26 @@ export const AnswerCard = React.memo(function AnswerCard({ answer, index, readOn
                     🔥 Repeated {answer.repeat_count}x
                   </span>
                 )}
-                {answer.status === 'completed' && (
+                {isTestMode && (
+                  <>
+                    {masteryStatus === 'mastered' && (
+                      <span className="inline-flex items-center gap-1 font-mono text-[10px] font-semibold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-[4px] border border-emerald-500/25">
+                        <Check className="h-3 w-3 stroke-[2.5]" /> Mastered
+                      </span>
+                    )}
+                    {masteryStatus === 'need_practice' && (
+                      <span className="inline-flex items-center gap-1 font-mono text-[10px] font-semibold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-[4px] border border-amber-500/25">
+                        <RotateCcw className="h-3 w-3 stroke-[2]" /> Needs Practice
+                      </span>
+                    )}
+                    {!masteryStatus && (
+                      <span className="inline-flex items-center gap-1 font-mono text-[10px] text-[var(--text-muted)] bg-[var(--surface)] px-2 py-0.5 rounded-[4px] border border-[var(--border-subtle)]">
+                        ⚪ Untested
+                      </span>
+                    )}
+                  </>
+                )}
+                {!isTestMode && answer.status === 'completed' && (
                   <StatusBadge variant="success" icon={CheckCircle2}>
                     Grounded Solution
                   </StatusBadge>
@@ -282,6 +318,21 @@ export const AnswerCard = React.memo(function AnswerCard({ answer, index, readOn
 
           {/* Controls */}
           <div className="flex items-center gap-1.5 shrink-0">
+            {isTestMode && answer.status === 'completed' && (
+              <button
+                onClick={() => (isRevealed ? hideAnswer(answer.id) : revealAnswer(answer.id))}
+                className={`flex items-center gap-1 rounded-[6px] border px-2.5 py-1 font-mono text-[11px] font-medium transition-all ${
+                  isRevealed
+                    ? 'border-indigo-500/30 bg-indigo-500/10 text-indigo-400'
+                    : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+                }`}
+                title={isRevealed ? 'Conceal solution' : 'Reveal solution'}
+              >
+                {isRevealed ? <EyeOff className="h-3 w-3 stroke-[1.5]" /> : <Eye className="h-3 w-3 stroke-[1.5]" />}
+                <span className="hidden sm:inline">{isRevealed ? 'Hide' : 'Reveal'}</span>
+              </button>
+            )}
+
             {!readOnly && (
               <button
                 onClick={() => setIsRetryConfirmOpen(true)}
@@ -305,7 +356,7 @@ export const AnswerCard = React.memo(function AnswerCard({ answer, index, readOn
 
 
         {/* Sub-navigation Strip: Full Solution vs 2-Min Quick Recall */}
-        {!isCollapsed && answer.status === 'completed' && (
+        {!isCollapsed && answer.status === 'completed' && (!isTestMode || isRevealed) && (
           <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--border-subtle)] px-6 py-2.5 bg-[var(--surface-well)]/40">
             <div className="inline-flex rounded-[8px] bg-[var(--surface-well)] p-0.5 border border-[var(--border-subtle)] text-xs font-mono">
               <button
@@ -356,66 +407,148 @@ export const AnswerCard = React.memo(function AnswerCard({ answer, index, readOn
                   <RefreshCw className="h-3 w-3 stroke-[1.5]" /> Retry Solution
                 </button>
               </div>
-            ) : isTldrActive && quickRecallPoints && quickRecallPoints.length > 0 ? (
-              <div className="rounded-[10px] border border-amber-500/25 bg-amber-500/[0.04] p-5">
-                <div className="flex items-center justify-between gap-2 mb-4 pb-2.5 border-b border-amber-500/15">
-                  <div className="flex items-center gap-2 font-mono text-[11px] font-semibold text-amber-400 uppercase tracking-wider">
-                    <Zap className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
-                    <span>Exam-Hall Quick Recall · 2-Min Revision</span>
+            ) : isTestMode && !isRevealed ? (
+              /* ── Active Recall Concealment Canvas ── */
+              <div className="py-10 px-6 text-center rounded-[10px] border border-dashed border-[var(--border)] bg-[var(--surface-well)]/40">
+                <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[var(--surface)] border border-[var(--border)] text-indigo-400 mb-3 shadow-xs">
+                  <EyeOff className="h-5 w-5 stroke-[1.5]" />
+                </div>
+                <h4 className="font-display text-base font-normal text-[var(--text-primary)]">
+                  Active Recall Challenge
+                </h4>
+                <p className="mt-1.5 text-xs text-[var(--text-secondary)] max-w-md mx-auto leading-relaxed">
+                  Don't rely on recognition. Test yourself: jot down keywords, steps, or equations on rough paper before checking the answer.
+                </p>
+
+                {masteryStatus && (
+                  <div className="mt-3 inline-flex items-center gap-1.5 font-mono text-[11px]">
+                    <span className="text-[var(--text-muted)]">Previous rating:</span>
+                    {masteryStatus === 'mastered' ? (
+                      <span className="text-emerald-500 font-semibold">Mastered</span>
+                    ) : (
+                      <span className="text-amber-500 font-semibold">Needs Practice</span>
+                    )}
                   </div>
-                  <span className="font-mono text-[10px] text-amber-400/80 bg-amber-500/10 px-2 py-0.5 rounded-[4px] border border-amber-500/20 font-medium">
-                    ⚡ 30s Read
-                  </span>
-                </div>
+                )}
 
-                <div className="space-y-3">
-                  {quickRecallPoints.map((pt, i) => (
-                    <div key={i} className="flex items-start gap-3 text-sm leading-relaxed text-[var(--text-primary)]">
-                      <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-amber-500/20 font-mono text-[10px] font-bold text-amber-400">
-                        {i + 1}
-                      </span>
-                      <div className="markdown-answer-body text-sm font-sans">
-                        <ReactMarkdown
-                          remarkPlugins={[remarkGfm, remarkMath]}
-                          rehypePlugins={[rehypeKatex]}
-                        >
-                          {pt}
-                        </ReactMarkdown>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="mt-5 pt-3 border-t border-amber-500/15 flex flex-wrap items-center justify-between gap-2 text-xs font-mono text-[var(--text-muted)]">
-                  <span>Memorize keywords before entering exam hall</span>
+                <div className="mt-5 flex flex-wrap items-center justify-center gap-3">
                   <button
-                    onClick={() => setCardTab('full')}
-                    className="text-amber-400 hover:underline flex items-center gap-1 cursor-pointer font-medium"
+                    onClick={() => revealAnswer(answer.id)}
+                    className="inline-flex items-center gap-2 rounded-[8px] bg-[var(--primary)] px-4 py-2 font-mono text-xs font-semibold text-[var(--primary-foreground)] hover:opacity-90 transition-all shadow-xs cursor-pointer"
                   >
-                    View complete {answer.marks}M solution &rarr;
+                    <Eye className="h-3.5 w-3.5 stroke-[2]" />
+                    <span>Reveal Solution</span>
                   </button>
                 </div>
               </div>
             ) : (
-              <div className="markdown-answer-body">
-                <ReactMarkdown
-                  remarkPlugins={[remarkGfm, remarkMath]}
-                  rehypePlugins={[rehypeKatex]}
-                  components={{
-                    code({ className, children, ...props }) {
-                      const match = /language-(\w+)/.exec(className || '');
-                      const lang = match ? match[1] : '';
-                      if (lang === 'mermaid') {
-                        return <MermaidDiagram chart={String(children).replace(/\n$/, '')} />;
-                      }
-                      // Standard code block rendering
-                      return <code className={className} {...props}>{children}</code>;
-                    },
-                  }}
-                >
-                  {formattedContent || '_No answer generated yet._'}
-                </ReactMarkdown>
-              </div>
+              <>
+                {/* Self-Assessment Bar (when in Test Mode and revealed) */}
+                {isTestMode && isRevealed && (
+                  <div className="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-[8px] border border-indigo-500/25 bg-indigo-500/[0.05] p-3">
+                    <div className="flex items-center gap-2 text-xs font-mono text-[var(--text-primary)]">
+                      <span className="text-indigo-400 font-semibold">Self-Assessment:</span>
+                      <span className="text-[var(--text-secondary)]">How well did you recall this answer?</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setMastery(answer.id, 'mastered')}
+                        className={`inline-flex items-center gap-1.5 rounded-[6px] px-3 py-1 font-mono text-xs transition-all cursor-pointer ${
+                          masteryStatus === 'mastered'
+                            ? 'bg-emerald-500 text-white font-semibold shadow-xs'
+                            : 'border border-emerald-500/30 bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20'
+                        }`}
+                      >
+                        <Check className="h-3.5 w-3.5 stroke-[2.5]" />
+                        <span>Mastered</span>
+                      </button>
+
+                      <button
+                        onClick={() => setMastery(answer.id, 'need_practice')}
+                        className={`inline-flex items-center gap-1.5 rounded-[6px] px-3 py-1 font-mono text-xs transition-all cursor-pointer ${
+                          masteryStatus === 'need_practice'
+                            ? 'bg-amber-500 text-black font-semibold shadow-xs'
+                            : 'border border-amber-500/30 bg-amber-500/10 text-amber-400 hover:bg-amber-500/20'
+                        }`}
+                      >
+                        <RotateCcw className="h-3.5 w-3.5 stroke-[2]" />
+                        <span>Need Practice</span>
+                      </button>
+
+                      <button
+                        onClick={() => hideAnswer(answer.id)}
+                        className="inline-flex items-center gap-1 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 font-mono text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-all cursor-pointer"
+                        title="Hide answer to practice again"
+                      >
+                        <EyeOff className="h-3.5 w-3.5 stroke-[1.5]" />
+                        <span className="hidden sm:inline">Hide Again</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {isTldrActive && quickRecallPoints && quickRecallPoints.length > 0 ? (
+                  <div className="rounded-[10px] border border-amber-500/25 bg-amber-500/[0.04] p-5">
+                    <div className="flex items-center justify-between gap-2 mb-4 pb-2.5 border-b border-amber-500/15">
+                      <div className="flex items-center gap-2 font-mono text-[11px] font-semibold text-amber-400 uppercase tracking-wider">
+                        <Zap className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
+                        <span>Exam-Hall Quick Recall · 2-Min Revision</span>
+                      </div>
+                      <span className="font-mono text-[10px] text-amber-400/80 bg-amber-500/10 px-2 py-0.5 rounded-[4px] border border-amber-500/20 font-medium">
+                        ⚡ 30s Read
+                      </span>
+                    </div>
+
+                    <div className="space-y-3">
+                      {quickRecallPoints.map((pt, i) => (
+                        <div key={i} className="flex items-start gap-3 text-sm leading-relaxed text-[var(--text-primary)]">
+                          <span className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-amber-500/20 font-mono text-[10px] font-bold text-amber-400">
+                            {i + 1}
+                          </span>
+                          <div className="markdown-answer-body text-sm font-sans">
+                            <ReactMarkdown
+                              remarkPlugins={[remarkGfm, remarkMath]}
+                              rehypePlugins={[rehypeKatex]}
+                            >
+                              {pt}
+                            </ReactMarkdown>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="mt-5 pt-3 border-t border-amber-500/15 flex flex-wrap items-center justify-between gap-2 text-xs font-mono text-[var(--text-muted)]">
+                      <span>Memorize keywords before entering exam hall</span>
+                      <button
+                        onClick={() => setCardTab('full')}
+                        className="text-amber-400 hover:underline flex items-center gap-1 cursor-pointer font-medium"
+                      >
+                        View complete {answer.marks}M solution &rarr;
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="markdown-answer-body">
+                    <ReactMarkdown
+                      remarkPlugins={[remarkGfm, remarkMath]}
+                      rehypePlugins={[rehypeKatex]}
+                      components={{
+                        code({ className, children, ...props }) {
+                          const match = /language-(\w+)/.exec(className || '');
+                          const lang = match ? match[1] : '';
+                          if (lang === 'mermaid') {
+                            return <MermaidDiagram chart={String(children).replace(/\n$/, '')} />;
+                          }
+                          // Standard code block rendering
+                          return <code className={className} {...props}>{children}</code>;
+                        },
+                      }}
+                    >
+                      {formattedContent || '_No answer generated yet._'}
+                    </ReactMarkdown>
+                  </div>
+                )}
+              </>
             )}
 
             {/* Source Citations Section */}

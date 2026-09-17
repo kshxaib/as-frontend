@@ -12,8 +12,13 @@ import {
   Check,
   Zap,
   Workflow,
+  Eye,
+  EyeOff,
+  RotateCcw,
+  Target,
 } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
+import { usePracticeStore } from '../store/usePracticeStore';
 import { AnswerCard } from './AnswerCard';
 import { ConfirmationModal } from './ConfirmationModal';
 import { AiProgressModal } from './AiProgressModal';
@@ -44,6 +49,19 @@ export const SolutionViewer = () => {
   const [selectedMarkFilter, setSelectedMarkFilter] = useState('ALL');
   const [isExamHallMode, setIsExamHallMode] = useState(false);
   const [isRegenerateConfirmOpen, setIsRegenerateConfirmOpen] = useState(false);
+  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
+
+  // Active Recall practice store
+  const {
+    isTestMode,
+    toggleTestMode,
+    practiceFilter,
+    setPracticeFilter,
+    masteryMap,
+    revealAll,
+    hideAll,
+    resetBankMastery,
+  } = usePracticeStore();
 
   // 1. On mount: Fetch question banks if list is empty or ensure current is selected
   useEffect(() => {
@@ -95,13 +113,28 @@ export const SolutionViewer = () => {
     .filter((a) => a.status === 'completed')
     .reduce((sum, a) => sum + (Number(a.marks) || 0), 0);
 
+  const masteredCount = answers.filter((a) => masteryMap[a.id] === 'mastered').length;
+  const needPracticeCount = answers.filter((a) => masteryMap[a.id] === 'need_practice').length;
+  const untestedCount = Math.max(0, answers.length - masteredCount - needPracticeCount);
+  const readinessPercent = answers.length > 0 ? Math.round((masteredCount / answers.length) * 100) : 0;
+
   const filteredAnswers = answers.filter((a) => {
     const matchesSearch =
       a.question_text.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (a.content && a.content.toLowerCase().includes(searchQuery.toLowerCase()));
     const matchesHighYield = showHighYieldOnly ? (a.repeat_count > 1) : true;
     const matchesMarks = selectedMarkFilter === 'ALL' || Number(a.marks) === Number(selectedMarkFilter);
-    return matchesSearch && matchesHighYield && matchesMarks;
+
+    // Filter by mastery status in Self-Test Mode
+    let matchesPractice = true;
+    if (isTestMode && practiceFilter !== 'ALL') {
+      const status = masteryMap[a.id];
+      if (practiceFilter === 'MASTERED') matchesPractice = status === 'mastered';
+      else if (practiceFilter === 'NEED_PRACTICE') matchesPractice = status === 'need_practice';
+      else if (practiceFilter === 'UNTESTED') matchesPractice = !status;
+    }
+
+    return matchesSearch && matchesHighYield && matchesMarks && matchesPractice;
   });
 
   const isShared = currentAnswerSet?.visibility === 'community';
@@ -363,9 +396,111 @@ export const SolutionViewer = () => {
               <span>⚡ Exam-Hall Mode</span>
             </button>
 
+            <button
+              onClick={toggleTestMode}
+              className={`shrink-0 h-8 px-3 rounded-[6px] border font-mono text-[11px] font-medium transition-colors cursor-pointer flex items-center gap-1.5 ${
+                isTestMode
+                  ? 'border-indigo-500/50 bg-indigo-500/15 text-indigo-400 font-semibold shadow-xs'
+                  : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] hover:text-indigo-400'
+              }`}
+              title="Toggle Active Recall Self-Test Mode (conceal solutions until tested)"
+            >
+              <EyeOff className={`h-3.5 w-3.5 ${isTestMode ? 'text-indigo-400' : 'text-[var(--text-muted)]'}`} />
+              <span>🎯 Self-Test Mode</span>
+            </button>
+
             <span className="font-mono text-[11px] text-[var(--text-muted)] ml-auto hidden sm:inline shrink-0">
               Showing {filteredAnswers.length} of {answers.length} Solutions
             </span>
+          </div>
+        )}
+
+        {/* ── Active Recall Scorecard Banner (when Self-Test Mode is active) ── */}
+        {isTestMode && answers.length > 0 && (
+          <div className="mt-6 rounded-[12px] border border-indigo-500/30 bg-gradient-to-r from-indigo-500/[0.08] via-indigo-500/[0.03] to-transparent p-5">
+            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+              
+              {/* Title & Readiness Progress */}
+              <div className="flex items-center gap-3.5">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-500/20 border border-indigo-500/30 text-indigo-400">
+                  <Target className="h-5 w-5 stroke-[1.8]" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-display text-base font-normal text-[var(--text-primary)]">
+                      Active Recall · Blind Rehearsal
+                    </h3>
+                    <span className="font-mono text-[10px] font-semibold text-indigo-400 bg-indigo-500/15 px-2 py-0.5 rounded-[4px] border border-indigo-500/30">
+                      {readinessPercent}% Exam Ready
+                    </span>
+                  </div>
+                  <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
+                    Solutions are concealed. Recall or write steps on paper, then reveal and rate your mastery.
+                  </p>
+                </div>
+              </div>
+
+              {/* Quick Action Buttons (Reveal All, Hide All, Reset) */}
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  onClick={() => revealAll(answers.map((a) => a.id))}
+                  className="inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 font-mono text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all cursor-pointer"
+                  title="Reveal all solutions at once"
+                >
+                  <Eye className="h-3.5 w-3.5 stroke-[1.5]" />
+                  <span>Reveal All</span>
+                </button>
+
+                <button
+                  onClick={() => hideAll(answers.map((a) => a.id))}
+                  className="inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 font-mono text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all cursor-pointer"
+                  title="Hide all solutions"
+                >
+                  <EyeOff className="h-3.5 w-3.5 stroke-[1.5]" />
+                  <span>Hide All</span>
+                </button>
+
+                {(masteredCount > 0 || needPracticeCount > 0) && (
+                  <button
+                    onClick={() => setIsResetConfirmOpen(true)}
+                    className="inline-flex items-center gap-1.5 rounded-[6px] border border-[rgba(239,68,68,0.25)] bg-[rgba(239,68,68,0.06)] px-2.5 py-1.5 font-mono text-xs text-[var(--error)] hover:bg-[rgba(239,68,68,0.12)] transition-all cursor-pointer"
+                    title="Reset practice ratings for this question bank"
+                  >
+                    <RotateCcw className="h-3 w-3 stroke-[1.5]" />
+                    <span>Reset Stats</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Mastery Filter Tabs Strip */}
+            <div className="mt-4 pt-3 border-t border-indigo-500/20 flex flex-wrap items-center gap-2 font-mono text-xs">
+              <span className="text-[11px] text-[var(--text-muted)] mr-1">Filter By Mastery:</span>
+              {[
+                { id: 'ALL', label: 'All Questions', count: answers.length, badge: 'border-[var(--border)] bg-[var(--surface-well)] text-[var(--text-secondary)]' },
+                { id: 'NEED_PRACTICE', label: 'Need Practice', count: needPracticeCount, badge: 'text-amber-400 bg-amber-500/10 border-amber-500/30' },
+                { id: 'UNTESTED', label: 'Untested', count: untestedCount, badge: 'text-[var(--text-muted)] bg-[var(--surface)] border-[var(--border)]' },
+                { id: 'MASTERED', label: 'Mastered', count: masteredCount, badge: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' },
+              ].map((tab) => {
+                const isSelected = practiceFilter === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => setPracticeFilter(tab.id)}
+                    className={`flex items-center gap-1.5 rounded-[6px] px-3 py-1 text-xs transition-all cursor-pointer border ${
+                      isSelected
+                        ? 'border-indigo-500 bg-indigo-500/20 text-indigo-300 font-semibold shadow-xs'
+                        : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
+                    }`}
+                  >
+                    <span>{tab.label}</span>
+                    <span className={`px-1.5 py-0.2 rounded-[4px] text-[10px] font-bold border ${tab.badge}`}>
+                      {tab.count}
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         )}
 
@@ -428,6 +563,24 @@ export const SolutionViewer = () => {
               generateAnswers(currentQuestionBank.id);
             }}
             onCancel={() => setIsRegenerateConfirmOpen(false)}
+          />
+        )}
+
+        {/* Reset Practice Stats Confirmation Modal */}
+        {currentQuestionBank && (
+          <ConfirmationModal
+            isOpen={isResetConfirmOpen}
+            title="Reset Practice Stats?"
+            message={`This will clear all "Mastered" and "Needs Practice" ratings for questions in "${currentQuestionBank.name}". You can start a fresh blind-test rehearsal.`}
+            confirmText="Yes, Reset Practice Stats"
+            cancelText="Cancel"
+            confirmVariant="danger"
+            iconType="danger"
+            onConfirm={() => {
+              resetBankMastery(answers.map((a) => a.id));
+              setIsResetConfirmOpen(false);
+            }}
+            onCancel={() => setIsResetConfirmOpen(false)}
           />
         )}
 
