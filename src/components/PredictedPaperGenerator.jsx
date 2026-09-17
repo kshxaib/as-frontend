@@ -532,7 +532,7 @@ export const PredictedPaperGenerator = () => {
                   className="inline-flex items-center gap-1.5 rounded-[8px] bg-[var(--primary)] px-3.5 py-2 text-xs font-semibold text-[var(--primary-foreground)] hover:opacity-90 transition-all shadow-sm"
                 >
                   <Download className="h-3.5 w-3.5 stroke-[2]" />
-                  <span>Download Official Exam PDF</span>
+                  <span>Download Model Paper PDF</span>
                 </button>
 
                 <button
@@ -627,6 +627,12 @@ export const PredictedPaperGenerator = () => {
                   Course / Subject: <span className="text-[var(--text-primary)]">{predictedPaper.exam_meta?.subject || subject}</span>
                 </p>
 
+                {/* Disclaimer Badge */}
+                <div className="mt-2.5 inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-[11px] font-medium text-amber-600 dark:text-amber-400">
+                  <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
+                  <span>Strictly for Preparation & Practice • Not an Official Examination Paper • Questions Not Guaranteed</span>
+                </div>
+
                 {/* Exam Meta Strip */}
                 <div className="mt-4 flex items-center justify-between border-t border-b border-[var(--border)] py-2 text-xs font-mono text-[var(--text-secondary)]">
                   <span>Time Allowed: <b>{predictedPaper.exam_meta?.time_allowed || '3 Hours'}</b></span>
@@ -655,7 +661,7 @@ export const PredictedPaperGenerator = () => {
                   <div key={secIdx} className="space-y-4">
                     
                     {/* Section Header */}
-                    <div className="flex items-center justify-between border-b border-[var(--border-strong)] pb-1.5">
+                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 border-b border-[var(--border-strong)] pb-1.5">
                       <h3 className="font-display text-sm font-bold text-[var(--text-primary)] uppercase tracking-wider">
                         {sec.section_name}
                       </h3>
@@ -684,7 +690,7 @@ export const PredictedPaperGenerator = () => {
                                 {q.question_number}
                               </span>
                               <div>
-                                <p className="text-xs sm:text-sm text-[var(--text-primary)] leading-relaxed">
+                                <p className="text-xs sm:text-sm text-[var(--text-primary)] leading-relaxed whitespace-pre-line">
                                   {q.question_text}
                                 </p>
                                 {q.prediction_likelihood && (
@@ -714,6 +720,9 @@ export const PredictedPaperGenerator = () => {
               <div className="mt-12 text-center border-t border-[var(--border)] pt-4 font-mono text-xs text-[var(--text-muted)] uppercase tracking-widest">
                 *** End of Examination Paper ***
               </div>
+              <p className="mt-3 text-center text-[10.5px] text-[var(--text-muted)] italic max-w-2xl mx-auto leading-relaxed">
+                Disclaimer: This predicted question paper is synthesized by AcademicStack AI based on past examination pattern analysis strictly for practice, mock simulation, and revision. It is not an official university paper and does not guarantee questions in the actual examination.
+              </p>
             </div>
 
             {/* Bottom Download Bar */}
@@ -730,7 +739,7 @@ export const PredictedPaperGenerator = () => {
                 className="inline-flex items-center gap-1.5 rounded-[8px] bg-[var(--primary)] px-5 py-2.5 text-xs font-semibold text-[var(--primary-foreground)] hover:opacity-90 transition-all shadow-sm"
               >
                 <Download className="h-4 w-4 stroke-[2]" />
-                <span>Download Official Examination PDF</span>
+                <span>Download Model Paper PDF</span>
               </button>
             </div>
           </div>
