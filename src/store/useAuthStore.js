@@ -8,13 +8,12 @@ export const useAuthStore = create((set) => ({
   isLoading: false,
   error: null,
   isAuthModalOpen: false,
-  authModalMode: 'login', // 'login' | 'register'
+  authModalMode: 'login', 
 
   openAuthModal: (mode = 'login') => set({ isAuthModalOpen: true, authModalMode: mode, error: null }),
   closeAuthModal: () => set({ isAuthModalOpen: false, error: null }),
   setAuthModalMode: (mode) => set({ authModalMode: mode, error: null }),
 
-  // Initialize and load current user from token
   initAuth: async () => {
     const token = localStorage.getItem('academicstack_token');
     if (!token) return;
@@ -30,7 +29,6 @@ export const useAuthStore = create((set) => ({
     }
   },
 
-  // Register
   register: async (username, password, name) => {
     set({ isLoading: true, error: null });
     try {
@@ -53,7 +51,6 @@ export const useAuthStore = create((set) => ({
     }
   },
 
-  // Login
   login: async (username, password) => {
     set({ isLoading: true, error: null });
     try {
@@ -76,7 +73,6 @@ export const useAuthStore = create((set) => ({
     }
   },
 
-  // Logout
   logout: () => {
     localStorage.removeItem('academicstack_token');
     set({
@@ -87,7 +83,6 @@ export const useAuthStore = create((set) => ({
     });
   },
 
-  // Update OpenAI Key
   updateOpenAIKey: async (openaiKey) => {
     set({ isLoading: true, error: null });
     try {
@@ -101,7 +96,6 @@ export const useAuthStore = create((set) => ({
     }
   },
 
-  // Delete OpenAI Key
   deleteOpenAIKey: async () => {
     set({ isLoading: true, error: null });
     try {
@@ -115,6 +109,5 @@ export const useAuthStore = create((set) => ({
     }
   },
 
-  // Clear error
   clearError: () => set({ error: null }),
 }));

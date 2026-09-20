@@ -1,89 +1,81 @@
-@import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..900;1,9..144,300..900&family=Geist:wght@100..900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
 @import "katex/dist/katex.min.css";
-
-/* ── Theme Definitions (§3 & §4 of DESIGN_TOKENS.md) ───────────────────────── */
+@import "tailwindcss";
 
 :root,
-:root.dark,
+[data-theme="light"],
 [data-theme="dark"] {
-  /* Midnight Library (Dark Theme — Primary) */
+  
   --font-display: 'Fraunces', Georgia, serif;
   --font-sans: 'Geist', system-ui, -apple-system, sans-serif;
   --font-mono: 'JetBrains Mono', 'Courier New', monospace;
 
-  --background: #0c1015;
-  --foreground: #e8ecf0;
+  --background: #F8F7F4;
+  --foreground: #19243B;
 
-  --surface: #141a22;
-  --surface-elevated: #1a2230;
-  --surface-muted: #111722;
-  --surface-well: #0e131a;
+  --surface: #FFFFFF;
+  --surface-elevated: #FFFFFF;
+  --surface-muted: #F8F7F4;
+  --surface-well: #F8F7F4;
 
-  --text-primary: #e8ecf0;
-  --text-secondary: #bcc4cd;
-  --text-muted: #667180;
-  --text-disabled: #374151;
+  --text-primary: #19243B;
+  --text-secondary: #526078;
+  --text-muted: #687184;
+  --text-disabled: #C6CAD3;
 
-  --border: #1f2937;
-  --border-subtle: #161e28;
-  --border-strong: #374151;
+  --border: #E2E0D9;
+  --border-subtle: #EAE8E3;
+  --border-strong: #C6CAD3;
 
-  --primary: #14b8a6;
-  /* Scholar Teal */
-  --primary-hover: #2dd4bf;
-  --primary-active: #0d9488;
-  --primary-foreground: #042f2e;
+  --primary: #0057FF;
+  
+  --primary-hover: #0046CC;
+  --primary-active: #0037A3;
+  --primary-foreground: #FFFFFF;
 
-  --secondary: #1a2230;
-  --secondary-hover: #1f2937;
-  --secondary-foreground: #bcc4cd;
+  --secondary: #F8F7F4;
+  --secondary-hover: #EAE8E3;
+  --secondary-foreground: #19243B;
 
-  --ai: #f59e0b;
-  /* Manuscript Amber */
-  --ai-hover: #fbbf24;
-  --ai-foreground: #451a03;
+  --ai: #0057FF;
+  --ai-hover: #0046CC;
+  --ai-foreground: #FFFFFF;
 
-  --community: #c8a820;
-  /* Laurel Gold */
-  --community-hover: #dbc230;
-  --community-foreground: #4a3a0b;
+  --community: #0057FF;
+  --community-hover: #0046CC;
+  --community-foreground: #FFFFFF;
 
-  --success: #22c55e;
-  --success-hover: #16a34a;
-  --success-foreground: #052e16;
+  --success: #187347;
+  --success-hover: #125835;
+  --success-foreground: #FFFFFF;
 
-  --warning: #e0a92b;
-  --warning-hover: #c9922a;
-  --warning-foreground: #451a03;
+  --warning: #B54708;
+  --warning-hover: #93370D;
+  --warning-foreground: #FFFFFF;
 
-  --error: #f87171;
-  --error-hover: #ef4444;
-  --error-foreground: #450a0a;
+  --error: #B42318;
+  --error-hover: #912018;
+  --error-foreground: #FFFFFF;
 
-  --info: #2dd4bf;
-  --info-hover: #14b8a6;
-  --info-foreground: #042f2e;
+  --info: #0057FF;
+  --info-hover: #0046CC;
+  --info-foreground: #FFFFFF;
 
-  --focus-ring: rgba(20, 184, 166, 0.50);
-  --overlay: rgba(7, 12, 18, 0.80);
+  --focus-ring: rgba(0, 87, 255, 0.40);
+  --overlay: rgba(25, 36, 59, 0.50);
 
-  --sidebar-background: #0e131a;
-  --sidebar-border: #161e28;
-  --sidebar-text: #667180;
-  --sidebar-text-active: #14b8a6;
-  --sidebar-active-bg: rgba(20, 184, 166, 0.10);
-  --sidebar-hover-bg: rgba(20, 184, 166, 0.05);
+  --sidebar-background: #FFFFFF;
+  --sidebar-border: #E2E0D9;
+  --sidebar-text: #687184;
+  --sidebar-text-active: #0057FF;
+  --sidebar-active-bg: #EAF0FF;
+  --sidebar-hover-bg: #F8F7F4;
 
-  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.12);
-  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.20), 0 1px 2px -1px rgba(0, 0, 0, 0.12);
-  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.25), 0 2px 4px -2px rgba(0, 0, 0, 0.15);
-  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.35), 0 4px 6px -4px rgba(0, 0, 0, 0.20);
+  --shadow-xs: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.08), 0 1px 2px -1px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.08), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
 }
-
-
-
-/* ── Base Setup ─────────────────────────────────────────────────────────────── */
 
 body {
   font-family: var(--font-sans);
@@ -95,8 +87,6 @@ body {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
-
-/* ── Typography Utility Classes ─────────────────────────────────────────────── */
 
 .font-display {
   font-family: var(--font-display);
@@ -110,7 +100,6 @@ body {
   font-family: var(--font-mono);
 }
 
-/* ── Editorial Line Divider ─────────────────────────────────────────────────── */
 .editorial-rule {
   height: 1px;
   background-color: var(--border-subtle);
@@ -123,7 +112,6 @@ body {
   width: 100%;
 }
 
-/* ── Scrollbar Hide ────────────────────────────────────────────────────────── */
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }
@@ -132,8 +120,6 @@ body {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
-
-/* ── KaTeX & Math Styling ──────────────────────────────────────────────────── */
 
 .katex-mathml {
   position: absolute !important;
@@ -170,7 +156,6 @@ body {
   color: var(--primary) !important;
 }
 
-/* ── Solution Manuscript Markdown Body Styling ─────────────────────────────── */
 .markdown-answer-body {
   color: var(--text-primary);
   line-height: 1.65;
@@ -231,7 +216,6 @@ body {
   font-style: italic;
 }
 
-/* ── Preformatted Code Blocks & ASCII / Unicode Diagrams ────────────────────── */
 .markdown-answer-body pre {
   background-color: var(--surface-well);
   border: 1px solid var(--border);
@@ -300,75 +284,72 @@ body {
   background-color: var(--surface-muted);
 }
 
-/* ─── Mermaid Diagram Component ─────────────────────────────────────────── */
 .mermaid-diagram-wrapper {
   margin: 1rem 0;
-  border: 1px solid var(--border-subtle);
-  border-radius: 10px;
+  border: 1px solid #E2E0D9;
+  border-radius: 14px;
   overflow: hidden;
-  background: rgba(15, 17, 23, 0.6);
-  backdrop-filter: blur(6px);
+  background: #FFFFFF;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
 }
 
 .mermaid-diagram-wrapper.mermaid-error {
-  border-color: rgba(239, 68, 68, 0.3);
+  border-color: #F2C7C2;
 }
 
 .mermaid-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 12px;
-  background: rgba(30, 41, 59, 0.5);
-  border-bottom: 1px solid var(--border-subtle);
+  padding: 8px 14px;
+  background: #F8F7F4;
+  border-bottom: 1px solid #E2E0D9;
   gap: 8px;
 }
 
 .mermaid-toolbar-actions {
   display: flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
 }
 
 .mermaid-badge {
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: var(--community);
-  padding: 2px 8px;
-  border-radius: 4px;
-  background: rgba(200, 168, 32, 0.1);
-  border: 1px solid rgba(200, 168, 32, 0.2);
+  color: #0057FF;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: #EAF0FF;
+  border: 1px solid #C8D8FF;
 }
 
 .mermaid-badge--error {
-  color: var(--error);
-  background: rgba(239, 68, 68, 0.08);
-  border-color: rgba(239, 68, 68, 0.2);
+  color: #B42318;
+  background: #FFF0EE;
+  border-color: #F2C7C2;
 }
 
 .mermaid-btn {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
-  padding: 3px 8px;
-  border-radius: 5px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 10px;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 12px;
   font-weight: 500;
-  color: var(--text-secondary);
-  background: transparent;
-  border: 1px solid transparent;
+  color: #526078;
+  background: #FFFFFF;
+  border: 1px solid #E2E0D9;
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .mermaid-btn:hover {
-  background: rgba(148, 163, 184, 0.1);
-  border-color: var(--border-subtle);
-  color: var(--text-primary);
+  background: #F1F0EC;
+  border-color: #C6CAD3;
+  color: #19243B;
 }
 
 .mermaid-svg-container {
@@ -376,6 +357,7 @@ body {
   justify-content: center;
   padding: 20px 16px;
   overflow-x: auto;
+  background: #FFFFFF;
 }
 
 .mermaid-svg-container svg {
@@ -386,11 +368,11 @@ body {
 .mermaid-code-fallback {
   margin: 0;
   padding: 14px 16px;
-  background: rgba(15, 23, 42, 0.5);
+  background: #F8F7F4;
   font-family: 'JetBrains Mono', monospace;
   font-size: 12px;
   line-height: 1.55;
-  color: var(--text-secondary);
+  color: #19243B;
   overflow-x: auto;
   white-space: pre;
   border-radius: 0;
@@ -405,7 +387,6 @@ body {
   padding: 0;
 }
 
-/* Instruction pill in toolbar */
 .mermaid-instruction-pill {
   font-family: 'JetBrains Mono', monospace;
   font-size: 9.5px;
@@ -426,7 +407,6 @@ body {
   filter: brightness(1.2);
 }
 
-/* Edge hover */
 .mermaid-svg-container .edgePath:hover path {
   stroke: #a5b4fc !important;
   stroke-width: 2.5px !important;
@@ -434,7 +414,6 @@ body {
   transition: all 0.2s ease;
 }
 
-/* ─── Code Fallback ─────────────────────────────────────────────────────── */
 .mermaid-code-fallback {
   margin: 0;
   padding: 14px 16px;
@@ -455,4 +434,17 @@ body {
   color: inherit;
   background: transparent;
   padding: 0;
+}
+
+body > #dmermaid,
+body > svg[aria-roledescription="error"],
+#dmermaid,
+.mermaid-error-container {
+  display: none !important;
+  visibility: hidden !important;
+  height: 0 !important;
+  width: 0 !important;
+  overflow: hidden !important;
+  position: absolute !important;
+  pointer-events: none !important;
 }

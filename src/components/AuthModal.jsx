@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { LogIn, UserPlus, Lock, User, X, AlertCircle, Loader2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { BookOpen, CircleAlert, LoaderCircle, X } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 
 export const AuthModal = () => {
@@ -18,163 +18,267 @@ export const AuthModal = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [fieldErrors, setFieldErrors] = useState({});
+
+  useEffect(() => {
+    setUsername('');
+    setPassword('');
+    setName('');
+    setFieldErrors({});
+    clearError();
+  }, [isAuthModalOpen, authModalMode, clearError]);
 
   if (!isAuthModalOpen) return null;
 
+  const validate = () => {
+    const errors = {};
+    if (authModalMode === 'register' && !name.trim()) {
+      errors.name = 'Enter your full name.';
+    }
+    if (!username.trim()) {
+      errors.username = authModalMode === 'register' ? 'Choose a username.' : 'Enter your username.';
+    }
+    if (!password.trim()) {
+      errors.password = authModalMode === 'register' ? 'Enter a password.' : 'Enter your password.';
+    }
+    setFieldErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
+    clearError();
+
+    if (!validate()) {
+      return;
+    }
+
     if (authModalMode === 'login') {
-      await login(username, password);
+      await login(username.trim(), password);
     } else {
-      await register(username, password, name);
+      await register(username.trim(), password, name.trim());
     }
   };
 
   const switchMode = (mode) => {
     clearError();
+    setFieldErrors({});
     setAuthModalMode(mode);
   };
 
+  const handleInputChange = (field, value) => {
+    if (field === 'username') setUsername(value);
+    if (field === 'password') setPassword(value);
+    if (field === 'name') setName(value);
+
+    if (fieldErrors[field]) {
+      setFieldErrors((prev) => ({ ...prev, [field]: undefined }));
+    }
+    if (error) {
+      clearError();
+    }
+  };
+
+  const isLogin = authModalMode === 'login';
+  const hasAuthError = Boolean(error);
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[var(--overlay)] p-4 backdrop-blur-sm animate-in fade-in duration-150">
-      <div className="relative w-full max-w-md rounded-[20px] border border-[var(--border)] bg-[var(--surface-elevated)] p-6 sm:p-7 shadow-[var(--shadow-lg)] my-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#19243B]/30 p-4 backdrop-blur-xs animate-in fade-in duration-150 selection:bg-[#0057FF] selection:text-white">
+      <div
+        className="relative z-10 w-full max-w-[440px] rounded-[18px] bg-white border border-[#E2E0D9] p-7 sm:p-8 shadow-[0px_16px_50px_rgba(25,36,59,0.12)] text-[#19243B] my-auto"
+        role="dialog"
+        aria-modal="true"
+      >
         
-        {/* Close Button */}
         <button
           onClick={closeAuthModal}
-          className="absolute right-4 top-4 rounded-[8px] p-2 text-[var(--text-muted)] hover:bg-[var(--surface-well)] hover:text-[var(--text-primary)] transition-colors"
+          className="absolute right-4 top-4 rounded-lg p-2 text-[#526078] hover:bg-[#F1F0EC] hover:text-[#19243B] transition-colors"
+          aria-label="Close dialog"
         >
-          <X className="h-4 w-4 stroke-[1.5]" />
+          <X className="size-4" />
         </button>
 
-        {/* Brand & Title */}
-        <div className="text-center pt-1">
-          <h3 className="font-display text-xl font-normal tracking-tight text-[var(--text-primary)]">
-            {authModalMode === 'login' ? 'AcademicStack Access' : 'Create Scholar Account'}
-          </h3>
-          <p className="mt-1 text-xs text-[var(--text-muted)]">
-            {authModalMode === 'login'
-              ? 'Enter credentials to open your academic workspace.'
-              : 'Register to manage study materials and generate grounded solutions.'}
-          </p>
+        <div className="rounded-xl bg-[#0057FF] text-white grid place-items-center size-10 mb-5 shadow-xs">
+          <BookOpen className="size-6" />
         </div>
 
-
-        {/* Mode Switcher */}
-        <div className="mt-5 flex rounded-[8px] border border-[var(--border)] bg-[var(--surface-well)] p-1">
-          <button
-            type="button"
-            onClick={() => switchMode('login')}
-            className={`flex-1 rounded-[6px] py-1.5 font-mono text-xs transition-all ${
-              authModalMode === 'login'
-                ? 'bg-[var(--surface)] text-[var(--text-primary)] font-semibold border border-[var(--border)] shadow-xs'
-                : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
-            }`}
-          >
-            Sign In
-          </button>
-          <button
-            type="button"
-            onClick={() => switchMode('register')}
-            className={`flex-1 rounded-[6px] py-1.5 font-mono text-xs transition-all ${
-              authModalMode === 'register'
-                ? 'bg-[var(--surface)] text-[var(--text-primary)] font-semibold border border-[var(--border)] shadow-xs'
-                : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
-            }`}
-          >
-            Register
-          </button>
-        </div>
-
-        {/* Error Alert */}
-        {error && (
-          <div className="mt-4 flex items-center gap-2.5 rounded-[8px] border border-[rgba(239,68,68,0.25)] bg-[rgba(239,68,68,0.08)] p-3 text-xs text-[var(--error)]">
-            <AlertCircle className="h-4 w-4 shrink-0" />
-            <span>{error}</span>
+        {isLogin ? (
+          <div>
+            <h2 className="font-semibold text-[#19243B] text-[27px] sm:text-[29px] leading-tight tracking-tight">
+              Welcome back.
+            </h2>
+            <p className="text-[#526078] text-sm mt-1.5">
+              Your next study session starts here.
+            </p>
+          </div>
+        ) : (
+          <div>
+            <h1 className="font-semibold text-[#19243B] text-[27px] sm:text-[29px] leading-tight tracking-tight">
+              Let's get your study space ready.
+            </h1>
+            <p className="text-[#526078] text-sm mt-1.5">
+              A fresh space for everything you are learning.
+            </p>
           </div>
         )}
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="mt-5 space-y-3.5">
-          {authModalMode === 'register' && (
-            <div>
-              <label className="block font-mono text-[11px] uppercase tracking-wider text-[var(--text-secondary)] mb-1">
-                Full Name
+        <form onSubmit={handleSubmit} className="mt-6" noValidate>
+          
+          {!isLogin && (
+            <div className="mb-4">
+              <label
+                htmlFor="auth-fullname"
+                className="font-semibold text-[#19243B] text-[13px] block mb-2"
+              >
+                Full name
               </label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-muted)]" />
-                <input
-                  type="text"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Alex Johnson"
-                  className="w-full rounded-[8px] border border-[var(--border)] bg-[var(--surface-well)] py-2 pl-9 pr-3 text-xs text-[var(--text-primary)] placeholder-[var(--text-disabled)] focus:border-[var(--primary)] focus:outline-none"
-                />
-              </div>
+              <input
+                id="auth-fullname"
+                type="text"
+                placeholder="e.g. Alex Lee"
+                value={name}
+                onChange={(e) => handleInputChange('name', e.target.value)}
+                className={`w-full rounded-lg text-sm border px-3 h-[46px] transition-colors focus:outline-none ${
+                  fieldErrors.name
+                    ? 'bg-[#FFF0EE] border-[#B42318] focus:border-[#B42318]'
+                    : 'bg-white border-[#C6CAD3] focus:border-[#0057FF]'
+                }`}
+              />
+              {fieldErrors.name && (
+                <small className="text-[#B42318] text-xs block mt-1.5 font-medium">
+                  {fieldErrors.name}
+                </small>
+              )}
             </div>
           )}
 
-          <div>
-            <label className="block font-mono text-[11px] uppercase tracking-wider text-[var(--text-secondary)] mb-1">
+          <div className="mb-4">
+            <label
+              htmlFor="auth-username"
+              className="font-semibold text-[#19243B] text-[13px] block mb-2"
+            >
               Username
             </label>
-            <div className="relative">
-              <User className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-muted)]" />
-              <input
-                type="text"
-                required
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                placeholder="e.g. scholar42"
-                className="w-full rounded-[8px] border border-[var(--border)] bg-[var(--surface-well)] py-2 pl-9 pr-3 font-mono text-xs text-[var(--text-primary)] placeholder-[var(--text-disabled)] focus:border-[var(--primary)] focus:outline-none"
-              />
-            </div>
+            <input
+              id="auth-username"
+              type="text"
+              placeholder="Your username"
+              value={username}
+              onChange={(e) => handleInputChange('username', e.target.value)}
+              className={`w-full rounded-lg text-sm border px-3 h-[46px] transition-colors focus:outline-none ${
+                fieldErrors.username || (isLogin && hasAuthError)
+                  ? 'bg-[#FFF0EE] border-[#B42318] focus:border-[#B42318]'
+                  : 'bg-white border-[#C6CAD3] focus:border-[#0057FF]'
+              }`}
+            />
+            {fieldErrors.username && (
+              <small className="text-[#B42318] text-xs block mt-1.5 font-medium">
+                {fieldErrors.username}
+              </small>
+            )}
           </div>
 
-          <div>
-            <label className="block font-mono text-[11px] uppercase tracking-wider text-[var(--text-secondary)] mb-1">
+          <div className="mb-4">
+            <label
+              htmlFor="auth-password"
+              className="font-semibold text-[#19243B] text-[13px] block mb-2"
+            >
               Password
             </label>
-            <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-muted)]" />
-              <input
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full rounded-[8px] border border-[var(--border)] bg-[var(--surface-well)] py-2 pl-9 pr-3 font-mono text-xs text-[var(--text-primary)] placeholder-[var(--text-disabled)] focus:border-[var(--primary)] focus:outline-none"
-              />
-            </div>
+            <input
+              id="auth-password"
+              type="password"
+              placeholder="Your password"
+              value={password}
+              onChange={(e) => handleInputChange('password', e.target.value)}
+              className={`w-full rounded-lg text-sm border px-3 h-[46px] transition-colors focus:outline-none ${
+                fieldErrors.password || (isLogin && hasAuthError)
+                  ? 'bg-[#FFF0EE] border-[#B42318] focus:border-[#B42318]'
+                  : 'bg-white border-[#C6CAD3] focus:border-[#0057FF]'
+              }`}
+            />
+            {fieldErrors.password && (
+              <small className="text-[#B42318] text-xs block mt-1.5 font-medium">
+                {fieldErrors.password}
+              </small>
+            )}
           </div>
 
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full mt-3 inline-flex items-center justify-center gap-2 rounded-[8px] bg-[var(--primary)] py-2.5 text-xs font-semibold text-[var(--primary-foreground)] hover:opacity-90 transition-all disabled:opacity-50 shadow-sm"
-          >
-            {isLoading && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-            <span>
-              {isLoading
-                ? 'Authenticating...'
-                : authModalMode === 'login'
-                ? 'Sign In to Workspace'
-                : 'Create Account'}
-            </span>
-          </button>
+          {error && (
+            <div className="rounded-lg bg-[#FFF0EE] text-[#B42318] text-xs leading-5 border border-[#F7D0CA] flex mb-4 p-3 items-start gap-2 animate-in fade-in duration-100">
+              <CircleAlert className="mt-0.5 shrink-0 size-4 text-[#B42318]" />
+              <span>
+                {isLogin
+                  ? error.toLowerCase().includes('invalid') || error.toLowerCase().includes('password')
+                    ? "That username or password isn't right. Please try again."
+                    : error
+                  : error}
+              </span>
+            </div>
+          )}
+
+          {isLogin ? (
+            <button
+              type="submit"
+              disabled={isLoading}
+              className={`font-semibold rounded-lg bg-[#0057FF] hover:bg-[#0047D4] text-white text-sm mt-2 w-full h-[46px] flex items-center justify-center gap-2 shadow-sm transition-all ${
+                isLoading ? 'opacity-80 cursor-not-allowed' : ''
+              }`}
+            >
+              {isLoading ? (
+                <>
+                  <LoaderCircle className="animate-spin size-4" />
+                  <span>Signing in…</span>
+                </>
+              ) : (
+                <span>Sign in</span>
+              )}
+            </button>
+          ) : (
+            <button
+              type="submit"
+              disabled={isLoading}
+              className={`font-semibold rounded-lg bg-[#0057FF] hover:bg-[#0047D4] text-white text-sm mt-6 w-full h-[46px] flex items-center justify-center gap-2 shadow-sm transition-all ${
+                isLoading ? 'opacity-80 cursor-not-allowed' : ''
+              }`}
+            >
+              {isLoading ? (
+                <>
+                  <LoaderCircle className="animate-spin size-4" />
+                  <span>Creating account…</span>
+                </>
+              ) : (
+                <span>Create account</span>
+              )}
+            </button>
+          )}
         </form>
 
-        <p className="mt-5 text-center font-mono text-[11px] text-[var(--text-muted)]">
-          {authModalMode === 'login' ? "Don't have an account? " : 'Already registered? '}
-          <button
-            onClick={() => switchMode(authModalMode === 'login' ? 'register' : 'login')}
-            className="text-[var(--primary)] hover:underline font-semibold"
-          >
-            {authModalMode === 'login' ? 'Register now' : 'Sign in here'}
-          </button>
-        </p>
+        {isLogin ? (
+          <p className="text-center text-[#526078] text-[13px] mt-6">
+            Don't have an account?{' '}
+            <button
+              type="button"
+              onClick={() => switchMode('register')}
+              className="font-semibold text-[#0057FF] hover:underline"
+            >
+              Create one
+            </button>
+          </p>
+        ) : (
+          <p className="text-center text-[#526078] text-[13px] mt-5">
+            Already have an account?{' '}
+            <button
+              type="button"
+              onClick={() => switchMode('login')}
+              className="font-semibold text-[#0057FF] hover:underline"
+            >
+              Sign in
+            </button>
+          </p>
+        )}
       </div>
     </div>
   );
 };
+export default AuthModal;

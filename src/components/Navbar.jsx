@@ -24,7 +24,6 @@ export const Navbar = () => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userMenuRef = useRef(null);
 
-  // Close dropdown on outside click
   useEffect(() => {
     const handleOutsideClick = (e) => {
       if (userMenuRef.current && !userMenuRef.current.contains(e.target)) {
@@ -39,7 +38,6 @@ export const Navbar = () => {
     };
   }, [isUserMenuOpen]);
 
-  // Main study navigation items (all require login)
   const navItems = [
     { id: 'resources', label: 'Study Resources', icon: BookOpen, requiresAuth: true },
     { id: 'question_banks', label: 'Question Banks', icon: FileText, requiresAuth: true },
@@ -49,7 +47,6 @@ export const Navbar = () => {
     { id: 'community', label: 'Community Hub', icon: Globe, requiresAuth: true },
   ];
 
-  // Guests see NO internal tabs — strictly login/register on Landing Page
   const visibleTabs = isAuthenticated ? navItems : [];
 
   const handleTabClick = (item) => {
@@ -70,28 +67,26 @@ export const Navbar = () => {
 
   return (
     <>
-      <header className="sticky top-0 z-40 w-full border-b border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-sm">
+      <header className="sticky top-0 z-40 w-full border-b border-[#E2E0D9] bg-white/95 backdrop-blur-xs font-sans">
         <div className="mx-auto flex h-14 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
 
-          {/* ── Brand / Editorial Masthead ── */}
           <div
             onClick={() => setActiveTab(isAuthenticated ? 'resources' : '')}
             className="flex items-center gap-3 cursor-pointer select-none shrink-0 group"
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-[8px] border border-[var(--border)] bg-[var(--surface-well)] text-[var(--primary)] transition-colors group-hover:border-[var(--primary)]">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#E2E0D9] bg-[#F8F7F4] text-[#0057FF] transition-colors group-hover:border-[#0057FF]">
               <Library className="h-4 w-4 stroke-[1.5]" />
             </div>
             <div className="flex flex-col">
-              <span className="font-display text-base font-medium tracking-tight text-[var(--text-primary)]">
+              <span className="text-base font-bold tracking-tight text-[#19243B]">
                 AcademicStack
               </span>
-              <span className="font-mono text-[9px] uppercase tracking-widest text-[var(--text-muted)] -mt-0.5">
+              <span className="text-[9px] font-semibold uppercase tracking-widest text-[#687184] -mt-0.5">
                 Research Workspace
               </span>
             </div>
           </div>
 
-          {/* ── Desktop Nav (The Stacks) ── */}
           <nav className="hidden md:flex items-center gap-1">
             {visibleTabs.map((item) => {
               const Icon = item.icon;
@@ -100,92 +95,88 @@ export const Navbar = () => {
                 <button
                   key={item.id}
                   onClick={() => handleTabClick(item)}
-                  className={`relative flex items-center gap-2 rounded-[6px] px-3 py-1.5 text-xs font-medium transition-colors ${
+                  className={`relative flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium transition-colors cursor-pointer ${
                     isActive
-                      ? 'bg-[var(--sidebar-active-bg)] text-[var(--primary)] font-semibold'
-                      : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-muted)]'
+                      ? 'bg-[#EAF0FF] text-[#0057FF] font-semibold'
+                      : 'text-[#687184] hover:text-[#19243B] hover:bg-[#F8F7F4]'
                   }`}
                 >
                   <Icon className="h-3.5 w-3.5 stroke-[1.5]" />
                   <span>{item.label}</span>
                   {item.badge > 0 && (
-                    <span className="ml-0.5 rounded-[4px] bg-[rgba(34,197,94,0.15)] px-1.5 py-0.2 font-mono text-[10px] font-medium text-[var(--success)]">
+                    <span className="ml-0.5 rounded-full bg-[#EAF5EF] px-1.5 py-0.2 text-[10px] font-bold text-[#187347]">
                       {item.badge}
                     </span>
                   )}
                   {isActive && (
-                    <span className="absolute bottom-0 left-2 right-2 h-[2px] bg-[var(--primary)] rounded-full" />
+                    <span className="absolute bottom-0 left-2 right-2 h-[2px] bg-[#0057FF] rounded-full" />
                   )}
                 </button>
               );
             })}
           </nav>
 
-          {/* ── Right Actions: User Account Dropdown ── */}
           <div className="flex items-center gap-2 sm:gap-3">
 
             {isAuthenticated && user ? (
               <div className="relative" ref={userMenuRef}>
-                {/* Single Consolidated User Profile Button */}
+                
                 <button
                   onClick={() => setIsUserMenuOpen((prev) => !prev)}
-                  className={`flex items-center gap-2 rounded-[8px] border px-2.5 py-1 text-xs transition-all ${
+                  className={`flex items-center gap-2 rounded-lg border px-2.5 py-1 text-xs transition-all cursor-pointer ${
                     isUserMenuOpen || activeTab === 'profile'
-                      ? 'border-[var(--primary)] bg-[var(--surface-well)] text-[var(--text-primary)] shadow-xs'
-                      : 'border-[var(--border)] bg-[var(--surface-well)] text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--text-primary)]'
+                      ? 'border-[#0057FF] bg-[#EAF0FF] text-[#19243B] shadow-xs'
+                      : 'border-[#E2E0D9] bg-[#F8F7F4] text-[#687184] hover:border-[#0057FF] hover:text-[#19243B]'
                   }`}
                   aria-expanded={isUserMenuOpen}
                   aria-haspopup="true"
                 >
-                  <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--primary)] text-[10px] font-bold text-[var(--primary-foreground)] uppercase">
+                  <div className="flex h-5 w-5 items-center justify-center rounded-full bg-[#0057FF] text-[10px] font-bold text-white uppercase">
                     {user.name?.[0] || 'U'}
                   </div>
-                  <span className="hidden sm:inline font-medium text-xs">
+                  <span className="hidden sm:inline font-semibold text-xs text-[#19243B]">
                     {user.name?.split(' ')[0]}
                   </span>
                   <ChevronDown
-                    className={`h-3 w-3 stroke-[1.5] text-[var(--text-muted)] transition-transform duration-200 ${
-                      isUserMenuOpen ? 'rotate-180 text-[var(--primary)]' : ''
+                    className={`h-3 w-3 stroke-[1.5] text-[#687184] transition-transform duration-200 ${
+                      isUserMenuOpen ? 'rotate-180 text-[#0057FF]' : ''
                     }`}
                   />
                 </button>
 
-                {/* Dropdown Menu */}
                 {isUserMenuOpen && (
-                  <div className="absolute right-0 mt-2 w-64 rounded-[12px] border border-[var(--border)] bg-[var(--surface-elevated)] p-1.5 shadow-[var(--shadow-lg)] z-50 animate-in fade-in zoom-in-95 duration-100">
+                  <div className="absolute right-0 mt-2 w-64 rounded-xl border border-[#E2E0D9] bg-white p-1.5 shadow-xl z-50 animate-in fade-in zoom-in-95 duration-100">
                     
-                    {/* User Header */}
-                    <div className="px-3 py-2 border-b border-[var(--border-subtle)]">
-                      <p className="font-display text-xs font-medium text-[var(--text-primary)] truncate">
+                    <div className="px-3 py-2 border-b border-[#E2E0D9]">
+                      <p className="text-xs font-bold text-[#19243B] truncate">
                         {user.name}
                       </p>
-                      <p className="font-mono text-[11px] text-[var(--text-muted)] truncate">
+                      <p className="text-[11px] text-[#687184] truncate">
                         @{user.username}
                       </p>
                     </div>
 
-                    {/* API Keys & Settings Option */}
                     <div className="py-1">
                       <button
                         onClick={() => {
                           setIsUserMenuOpen(false);
                           setActiveTab('profile');
                         }}
-                        className={`w-full flex items-center justify-between gap-2.5 rounded-[6px] px-3 py-2 text-xs transition-colors ${
+                        className={`w-full flex items-center justify-between gap-2.5 rounded-lg px-3 py-2 text-xs transition-colors cursor-pointer ${
                           activeTab === 'profile'
-                            ? 'bg-[var(--sidebar-active-bg)] text-[var(--primary)] font-medium'
-                            : 'text-[var(--text-secondary)] hover:bg-[var(--surface-well)] hover:text-[var(--text-primary)]'
+                            ? 'bg-[#EAF0FF] text-[#0057FF] font-semibold'
+                            : 'text-[#687184] hover:bg-[#F8F7F4] hover:text-[#19243B]'
                         }`}
                       >
                         <div className="flex items-center gap-2">
-                          <KeyRound className="h-3.5 w-3.5 stroke-[1.5] text-[var(--primary)] shrink-0" />
+                          <KeyRound className="h-3.5 w-3.5 stroke-[1.5] text-[#0057FF] shrink-0" />
                           <span>API Keys & Profile</span>
                         </div>
                         <span
-                          className={`font-mono text-[10px] px-1.5 py-0.5 rounded border ${
+                          className={`text-[10px] font-semibold px-2 py-0.5 rounded-md border ${
                             hasOpenAIKey
-                              ? 'bg-[rgba(34,197,94,0.1)] text-[var(--success)] border-[rgba(34,197,94,0.25)]'
-                              : 'bg-[rgba(245,158,11,0.1)] text-[var(--warning)] border-[rgba(245,158,11,0.25)]'
+                              ? 'bg-[#EAF5EF] text-[#187347] border-[#A6F4C5]'
+                              : 'bg-[#FFFAEB] text-[#B54708] border-[#FEDF89]'
                           }`}
                         >
                           {hasOpenAIKey ? 'OpenAI Ready' : 'Key Needed'}
@@ -193,17 +184,15 @@ export const Navbar = () => {
                       </button>
                     </div>
 
-                    {/* Divider */}
-                    <div className="editorial-rule my-1" />
+                    <div className="my-1 border-t border-[#E2E0D9]" />
 
-                    {/* Sign Out Option */}
                     <div className="py-0.5">
                       <button
                         onClick={() => {
                           setIsUserMenuOpen(false);
                           setIsLogoutModalOpen(true);
                         }}
-                        className="w-full flex items-center gap-2.5 rounded-[6px] px-3 py-2 text-xs text-[var(--text-muted)] hover:bg-[rgba(239,68,68,0.1)] hover:text-[var(--error)] transition-colors"
+                        className="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs text-[#B42318] hover:bg-[#FFF0EE] transition-colors cursor-pointer font-medium"
                       >
                         <LogOut className="h-3.5 w-3.5 stroke-[1.5]" />
                         <span>Sign Out</span>
@@ -214,18 +203,18 @@ export const Navbar = () => {
                 )}
               </div>
             ) : (
-              /* Unauthenticated Guests */
+              
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => openAuthModal('login')}
-                  className="flex items-center gap-1.5 rounded-[8px] border border-[var(--border)] bg-[var(--surface-well)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--text-muted)] transition-all"
+                  className="flex items-center gap-1.5 rounded-lg border border-[#E2E0D9] bg-[#F8F7F4] px-3 py-1.5 text-xs font-semibold text-[#19243B] hover:bg-[#EAE8E3] transition-all cursor-pointer"
                 >
                   <LogIn className="h-3.5 w-3.5 stroke-[1.5]" />
                   <span>Sign In</span>
                 </button>
                 <button
                   onClick={() => openAuthModal('register')}
-                  className="flex items-center gap-1.5 rounded-[8px] bg-[var(--primary)] px-3 py-1.5 text-xs font-semibold text-[var(--primary-foreground)] hover:opacity-90 transition-all shadow-sm"
+                  className="flex items-center gap-1.5 rounded-lg bg-[#0057FF] px-3 py-1.5 text-xs font-semibold text-white hover:bg-[#0046CC] transition-all shadow-xs cursor-pointer"
                 >
                   <UserPlus className="h-3.5 w-3.5 stroke-[1.5]" />
                   <span>Get Started</span>
@@ -235,9 +224,8 @@ export const Navbar = () => {
           </div>
         </div>
 
-        {/* ── Mobile Nav (Authenticated Only) ── */}
         {visibleTabs.length > 0 && (
-          <div className="flex md:hidden overflow-x-auto border-t border-[var(--border-subtle)] bg-[var(--surface-muted)] px-3 py-1.5 scrollbar-none gap-1">
+          <div className="flex md:hidden overflow-x-auto border-t border-[#E2E0D9] bg-[#F8F7F4] px-3 py-1.5 scrollbar-none gap-1">
             {visibleTabs.map((item) => {
               const Icon = item.icon;
               const isActive = activeTab === item.id;
@@ -245,10 +233,10 @@ export const Navbar = () => {
                 <button
                   key={item.id}
                   onClick={() => handleTabClick(item)}
-                  className={`flex items-center gap-1.5 rounded-[6px] px-2.5 py-1 text-xs font-medium whitespace-nowrap transition-all ${
+                  className={`flex items-center gap-1.5 rounded-md px-2.5 py-1 text-xs font-medium whitespace-nowrap transition-all cursor-pointer ${
                     isActive
-                      ? 'bg-[var(--primary)] text-[var(--primary-foreground)] font-semibold'
-                      : 'text-[var(--text-muted)] hover:text-[var(--text-primary)]'
+                      ? 'bg-[#0057FF] text-white font-semibold'
+                      : 'text-[#687184] hover:text-[#19243B]'
                   }`}
                 >
                   <Icon className="h-3 w-3 stroke-[1.5]" />
@@ -260,7 +248,6 @@ export const Navbar = () => {
         )}
       </header>
 
-      {/* Logout Confirmation Modal */}
       <ConfirmationModal
         isOpen={isLogoutModalOpen}
         title="Sign Out of AcademicStack?"

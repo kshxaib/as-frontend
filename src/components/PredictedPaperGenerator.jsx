@@ -1,27 +1,73 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Sparkles,
   Plus,
   Trash2,
   Download,
-  BookmarkPlus,
-  Copy,
+  Bookmark,
   Check,
   AlertCircle,
+  CircleAlert,
   RefreshCw,
-  Calendar,
   BookOpen,
   ArrowRight,
   ShieldCheck,
   CheckCircle2,
-  FolderOpen,
-  Globe,
+  FileText,
+  FileUp,
+  Upload,
+  Link,
+  Share2,
+  Info,
+  LoaderCircle,
+  MoreHorizontal,
+  ChevronDown,
+  X,
 } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { ApiKeyBanner } from './ui/ApiKeyBanner';
 
 const MAX_PAPERS = 10;
+
+const formatSectionHeader = (secName, secInst, marksSummary) => {
+  const rawName = (secName || '').trim();
+  const rawInst = (secInst || marksSummary || '').trim();
+
+  const match = rawName.match(/^(Q\s*\.?\s*\d+|Question\s*\d+|Section\s*[A-Z0-9]+)(?:[:\.\-—\s]+(.*))?$/i);
+  let cleanedName = rawName;
+  let nameExtra = '';
+  if (match) {
+    cleanedName = match[1].trim();
+    nameExtra = (match[2] || '').trim();
+  }
+
+  let cleanedInst = rawInst.replace(/\[\d+\s*marks?\]/gi, '').trim();
+
+  if (!cleanedInst && nameExtra) {
+    cleanedInst = nameExtra.replace(/\[\d+\s*marks?\]/gi, '').trim();
+  } else if (cleanedInst && nameExtra) {
+    const lowerExtra = nameExtra.toLowerCase();
+    const lowerInst = cleanedInst.toLowerCase();
+    if (
+      lowerExtra.includes(lowerInst) ||
+      lowerInst.includes(lowerExtra) ||
+      (lowerExtra.includes('any') && lowerInst.includes('any')) ||
+      (lowerExtra.includes('answer') && lowerInst.includes('answer')) ||
+      (lowerExtra.includes('solve') && lowerInst.includes('solve')) ||
+      (lowerExtra.includes('short note') && lowerInst.includes('short note'))
+    ) {
+      cleanedInst = cleanedInst.length >= nameExtra.length ? cleanedInst : nameExtra;
+    }
+  }
+
+  cleanedInst = cleanedInst.replace(/^[:\-—\s]+|[:\-—\s]+$/g, '').trim();
+
+  return {
+    sectionName: cleanedName,
+    sectionInstruction: cleanedInst,
+  };
+};
 
 export const PredictedPaperGenerator = ({ sharedToken, onClearShared }) => {
   const {
@@ -44,24 +90,29 @@ export const PredictedPaperGenerator = ({ sharedToken, onClearShared }) => {
 
   const { user, openAuthModal } = useAuthStore();
 
-  // Form State
   const [subject, setSubject] = useState('');
   const [title, setTitle] = useState('');
   const [paperRows, setPaperRows] = useState([
     { id: 1, type: 'upload', file: null, qbId: null, qbName: '', session: '' },
     { id: 2, type: 'upload', file: null, qbId: null, qbName: '', session: '' },
   ]);
+  const [attemptedSubmit, setAttemptedSubmit] = useState(false);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [copyLinkSuccess, setCopyLinkSuccess] = useState(false);
   const [validationError, setValidationError] = useState('');
   const [savedQbInfo, setSavedQbInfo] = useState(null);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
 
-  // Sharing & Community State
   const [sharedInfo, setSharedInfo] = useState(null);
   const [isSharing, setIsSharing] = useState(false);
   const [communityPaperId, setCommunityPaperId] = useState(null);
   const [isCommunityShared, setIsCommunityShared] = useState(false);
   const [shareMessage, setShareMessage] = useState('');
   const [synthesisError, setSynthesisError] = useState('');
+  const [isActionsMenuOpen, setIsActionsMenuOpen] = useState(false);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  const actionsMenuRef = useRef(null);
 
   useEffect(() => {
     fetchQuestionBanks();
@@ -82,7 +133,20 @@ export const PredictedPaperGenerator = ({ sharedToken, onClearShared }) => {
     }
   }, [sharedToken, fetchSharedPredictedPaper, setPredictedPaper]);
 
-  // Add row (up to MAX_PAPERS)
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (actionsMenuRef.current && !actionsMenuRef.current.contains(e.target)) {
+        setIsActionsMenuOpen(false);
+      }
+    };
+    if (isActionsMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isActionsMenuOpen]);
+
   const handleAddRow = () => {
     if (paperRows.length >= MAX_PAPERS) return;
     setPaperRows((prev) => [
@@ -91,76 +155,55 @@ export const PredictedPaperGenerator = ({ sharedToken, onClearShared }) => {
     ]);
   };
 
-  // Remove row
   const handleRemoveRow = (id) => {
     if (paperRows.length <= 1) return;
     setPaperRows((prev) => prev.filter((r) => r.id !== id));
   };
 
-  // File change
   const handleFileChange = (id, file) => {
     setPaperRows((prev) =>
       prev.map((r) => (r.id === id ? { ...r, file, type: 'upload' } : r))
     );
   };
 
-  // Session label change
   const handleSessionChange = (id, session) => {
     setPaperRows((prev) =>
       prev.map((r) => (r.id === id ? { ...r, session } : r))
     );
   };
 
-  // Toggle existing QB: adds or removes from the main paperRows list above
-  const handleToggleQb = (qb) => {
-    setValidationError('');
-    setPaperRows((prev) => {
-      const existingIndex = prev.findIndex((r) => r.qbId === qb.id);
-      if (existingIndex !== -1) {
-        // Unselecting: remove this row if more than 1 row exists, else reset to blank upload
-        if (prev.length <= 1) {
-          return [{ id: Date.now(), type: 'upload', file: null, qbId: null, qbName: '', session: '' }];
-        }
-        return prev.filter((r) => r.qbId !== qb.id);
-      }
+  const handleSourceTypeToggle = (id, type) => {
+    setPaperRows((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, type, file: type === 'upload' ? r.file : null, qbId: type === 'existing_qb' ? r.qbId : null } : r))
+    );
+  };
 
-      if (prev.length >= MAX_PAPERS) {
-        setValidationError(`Maximum ${MAX_PAPERS} papers limit reached.`);
-        return prev;
-      }
-
-      // Check if there is an empty upload row with no file and no session, and replace it
-      const emptyUploadIdx = prev.findIndex((r) => r.type === 'upload' && !r.file && !r.session);
-      const newRow = {
-        id: Date.now(),
-        type: 'existing_qb',
-        file: null,
-        qbId: qb.id,
-        qbName: qb.name,
-        session: '',
-      };
-
-      if (emptyUploadIdx !== -1) {
-        const copy = [...prev];
-        copy[emptyUploadIdx] = newRow;
-        return copy;
-      }
-
-      return [...prev, newRow];
-    });
-
-    if (!subject.trim() && qb.subject) {
+  const handleSelectExistingQb = (id, qbId) => {
+    const qb = questionBanks.find((q) => q.id === Number(qbId));
+    setPaperRows((prev) =>
+      prev.map((r) =>
+        r.id === id ? { ...r, qbId: qb ? qb.id : null, qbName: qb ? qb.name : '', type: 'existing_qb' } : r
+      )
+    );
+    if (qb?.subject && !subject.trim()) {
       setSubject(qb.subject);
     }
   };
 
-  // Handle Form Submit
+  const isRowValid = (row) => {
+    return (row.type === 'upload' && row.file !== null) || (row.type === 'existing_qb' && row.qbId !== null);
+  };
+
+  const validSourcesCount = paperRows.filter(isRowValid).length;
+  const isFormValid = subject.trim().length > 0 && validSourcesCount >= 1;
+
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
+    setAttemptedSubmit(true);
     setValidationError('');
 
     if (!subject.trim()) {
-      setValidationError('Please enter a subject name (e.g. DBMS, Computer Networks).');
+      setValidationError('Please enter a subject name (e.g. Operating Systems, Computer Networks).');
       return;
     }
 
@@ -168,38 +211,25 @@ export const PredictedPaperGenerator = ({ sharedToken, onClearShared }) => {
     const validQbRows = paperRows.filter((r) => r.type === 'existing_qb' && r.qbId !== null);
 
     if (validUploadRows.length === 0 && validQbRows.length === 0) {
-      setValidationError('Please upload at least one question paper PDF or select an existing Question Bank.');
-      return;
-    }
-
-    // Ensure dates/sessions are provided so AI understands the timeline
-    const rowsWithSource = paperRows.filter(
-      (r) => (r.type === 'upload' && r.file) || (r.type === 'existing_qb' && r.qbId)
-    );
-    const missingDateRow = rowsWithSource.find((r) => !r.session.trim());
-    if (missingDateRow) {
-      setValidationError('Please enter the Exam Session / Year (e.g. May 2023, Dec 2022) for all selected papers so AI knows the exam timeline.');
+      setValidationError('Please select or upload at least one past paper source.');
       return;
     }
 
     const formData = new FormData();
     formData.append('subject', subject.trim());
-    formData.append('title', title.trim() || `Predicted ${subject.trim()} Final Exam Paper`);
+    formData.append('title', title.trim() || `Practice ${subject.trim()} Examination Paper`);
     formData.append('user_id', user?.id || 1);
 
-    // Metadata JSON for uploaded files
     const metaList = validUploadRows.map((r) => ({
       session: r.session.trim() || 'Exam Paper',
       filename: r.file.name,
     }));
     formData.append('papers_meta', JSON.stringify(metaList));
 
-    // Append files
     validUploadRows.forEach((r) => {
       formData.append('files', r.file);
     });
 
-    // Append existing QBs
     if (validQbRows.length > 0) {
       formData.append('existing_qb_ids', validQbRows.map((q) => q.qbId).join(','));
       const qbMetaList = validQbRows.map((q) => ({ id: q.qbId, session: q.session.trim() || q.qbName }));
@@ -216,7 +246,7 @@ export const PredictedPaperGenerator = ({ sharedToken, onClearShared }) => {
 
     if (!user?.has_openai_key) {
       triggerKeyModal('AI Examination Paper Prediction');
-      setSynthesisError('OpenAI API Key is missing. Please add your OpenAI API key in Profile settings to enable AI features.');
+      setSynthesisError('OpenAI API Key is missing. Please add your OpenAI API key in Profile settings.');
       return;
     }
 
@@ -224,7 +254,6 @@ export const PredictedPaperGenerator = ({ sharedToken, onClearShared }) => {
     if (res.success) {
       setSavedQbInfo(null);
       setSynthesisError('');
-      // Reset community share status for new prediction
       setCommunityPaperId(null);
       setIsCommunityShared(false);
       setShareMessage('');
@@ -233,7 +262,6 @@ export const PredictedPaperGenerator = ({ sharedToken, onClearShared }) => {
     }
   };
 
-  // Handle Community Share Toggle (Private vs Community)
   const handleToggleCommunityShare = async () => {
     if (!predictedPaper) return;
     if (!user) {
@@ -245,18 +273,16 @@ export const PredictedPaperGenerator = ({ sharedToken, onClearShared }) => {
     setShareMessage('');
 
     if (!communityPaperId) {
-      // First time sharing: save to database with visibility='community'
       const creator = user.name || 'Student Scholar';
       const res = await sharePredictedPaper(predictedPaper, creator, 'community');
       setIsSharing(false);
       if (res.success && res.data) {
         setCommunityPaperId(res.data.id);
         setIsCommunityShared(true);
-        setShareMessage('Predicted paper published to The Commons! Fellow students can now view it under the Predicted Papers tab.');
+        setShareMessage('Practice paper published to The Commons! Peers can now view it in Community.');
         setTimeout(() => setShareMessage(''), 8000);
       }
     } else {
-      // Already saved: toggle visibility between community and private
       const res = await togglePredictedPaperShare(communityPaperId);
       setIsSharing(false);
       if (res.success) {
@@ -264,15 +290,14 @@ export const PredictedPaperGenerator = ({ sharedToken, onClearShared }) => {
         setIsCommunityShared(isNowShared);
         setShareMessage(
           isNowShared
-            ? 'Predicted paper shared with The Commons! Visible to peers in the Community Hub.'
-            : 'Predicted paper visibility changed to Private.'
+            ? 'Practice paper shared with The Commons!'
+            : 'Practice paper visibility set to Private.'
         );
         setTimeout(() => setShareMessage(''), 8000);
       }
     }
   };
 
-  // Handle Save to Question Banks
   const handleSaveAsQb = async () => {
     if (!predictedPaper) return;
     if (!user) {
@@ -285,680 +310,691 @@ export const PredictedPaperGenerator = ({ sharedToken, onClearShared }) => {
     }
   };
 
-  // Handle Copy Paper Text
-  const handleCopyText = () => {
+  const handleCopyLink = () => {
     if (!predictedPaper) return;
-    const meta = predictedPaper.exam_meta || {};
-    let text = `${meta.paper_title || 'Predicted Examination Paper'}\n`;
-    text += `Course: ${meta.subject || subject}\n`;
-    text += `Time Allowed: ${meta.time_allowed || '3 Hours'} | Max Marks: ${meta.maximum_marks || 70}\n\n`;
-    text += `General Instructions:\n`;
-    (meta.general_instructions || []).forEach((inst, i) => {
-      text += `(${i + 1}) ${inst}\n`;
-    });
-    text += `\n`;
-
-    (predictedPaper.sections || []).forEach((sec) => {
-      text += `\n=== ${sec.section_name} ===\n`;
-      if (sec.section_instruction) text += `${sec.section_instruction}\n\n`;
-      (sec.questions || []).forEach((q) => {
-        if (q.is_or_choice) {
-          text += `  — OR —\n`;
-        } else {
-          text += `${q.question_number} ${q.question_text} [${q.marks} Marks]\n`;
-        }
-      });
-    });
-
-    navigator.clipboard.writeText(text);
-    setCopySuccess(true);
-    setTimeout(() => setCopySuccess(false), 2500);
+    const shareUrl = `${window.location.origin}/?predict=${communityPaperId || 'sample'}`;
+    navigator.clipboard.writeText(shareUrl);
+    setCopyLinkSuccess(true);
+    setTimeout(() => setCopyLinkSuccess(false), 2500);
   };
 
-  const handleDownloadPdf = () => {
-    if (!predictedPaper) return;
-    const meta = predictedPaper.exam_meta || {};
-    const safeTitle = (meta.paper_title || 'Predicted_Paper').replace(/\s+/g, '_');
-    downloadPredictedPaperPdf(predictedPaper, `${safeTitle}.pdf`);
+  const handleDownloadPdf = async () => {
+    if (!predictedPaper || isDownloadingPdf) return;
+    setIsDownloadingPdf(true);
+    try {
+      const meta = predictedPaper.exam_meta || {};
+      const safeTitle = (meta.paper_title || 'Practice_Paper').replace(/\s+/g, '_');
+      await downloadPredictedPaperPdf(predictedPaper, `${safeTitle}.pdf`);
+    } finally {
+      setIsDownloadingPdf(false);
+    }
   };
 
   return (
-    <div className="min-h-screen bg-[var(--background)] pb-32 text-[var(--text-primary)]">
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-
-        {/* ── Editorial Masthead ── */}
-        <div className="pb-6 border-b border-[var(--border)]">
-          <div className="flex items-center gap-2 font-mono text-[11px] uppercase tracking-widest text-[var(--primary)] mb-1">
-            <Sparkles className="h-3.5 w-3.5 stroke-[1.5]" />
-            AI Multi-Paper Trend Analyzer & Synthesis
-          </div>
-          <h1 className="font-display text-2xl sm:text-3xl font-medium tracking-tight text-[var(--text-primary)]">
-            AI Predicted Question Paper Generator
-          </h1>
-          <p className="mt-1 text-xs sm:text-sm text-[var(--text-secondary)] max-w-3xl">
-            Upload up to 10 past examination papers. AcademicStack analyzes recurring university blueprints, 
-            sub-question formatting, and mark weightages to synthesize an authentic, high-probability predicted 
-            model paper in the exact examination format.
-          </p>
-        </div>
-
-        {/* Validation Error Banner */}
-        {validationError && (
-          <div className="mt-4 flex items-center justify-between rounded-[8px] border border-[rgba(239,68,68,0.25)] bg-[rgba(239,68,68,0.08)] p-3 text-xs text-[var(--error)]">
-            <div className="flex items-center gap-2">
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              <span>{validationError}</span>
-            </div>
-            <button onClick={() => setValidationError('')} className="font-mono hover:underline">
-              Dismiss
-            </button>
-          </div>
-        )}
-
-        {/* OpenAI Key Gating Alert */}
-        <div className="mt-4">
-          <ApiKeyBanner feature="Examination Paper Prediction" />
-        </div>
-
-        {/* ── Main Layout: Input Form vs Generated Paper ── */}
-        {!predictedPaper ? (
-          <form onSubmit={handleSubmit} className="mt-8 space-y-8">
-
-            {/* Step 1: Subject & Target Title */}
-            <div className="rounded-[12px] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-sm">
-              <h2 className="text-sm font-semibold uppercase tracking-wider font-mono text-[var(--primary)] flex items-center gap-2">
-                <span>01</span> Target Examination Details
-              </h2>
-
-              <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
-                    Academic Subject / Course <span className="text-[var(--error)]">*</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={subject}
-                    onChange={(e) => setSubject(e.target.value)}
-                    placeholder="e.g. Database Management Systems, Artificial Intelligence"
-                    className="w-full rounded-[8px] border border-[var(--border)] bg-[var(--surface-well)] px-3.5 py-2 text-xs text-[var(--text-primary)] focus:border-[var(--primary)] focus:outline-none placeholder-[var(--text-disabled)]"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
-                    Predicted Paper Title
-                  </label>
-                  <input
-                    type="text"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    placeholder="e.g. Predicted End-Semester Examination 2026"
-                    className="w-full rounded-[8px] border border-[var(--border)] bg-[var(--surface-well)] px-3.5 py-2 text-xs text-[var(--text-primary)] focus:border-[var(--primary)] focus:outline-none placeholder-[var(--text-disabled)]"
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Step 2: Dynamic Past Exam Papers Rows (Max 10) */}
-            <div className="rounded-[12px] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-sm">
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                <div>
-                  <h2 className="text-sm font-semibold uppercase tracking-wider font-mono text-[var(--primary)] flex items-center gap-2">
-                    <span>02</span> Past Examination Papers & Dates
-                  </h2>
-                  <p className="text-xs text-[var(--text-secondary)] mt-0.5">
-                    Add up to {MAX_PAPERS} past exam papers. For each paper, enter the Exam Session / Year (e.g. May 2023, Dec 2022) so AI understands the chronological exam timeline.
-                  </p>
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-[11px] text-[var(--text-muted)] bg-[var(--surface-well)] px-2.5 py-1 rounded-[6px] border border-[var(--border-subtle)]">
-                    {paperRows.length} / {MAX_PAPERS} Papers
-                  </span>
-
-                  <button
-                    type="button"
-                    onClick={handleAddRow}
-                    disabled={paperRows.length >= MAX_PAPERS}
-                    className="inline-flex items-center gap-1.5 rounded-[8px] border border-[var(--border)] bg-[var(--surface-well)] px-3 py-1.5 text-xs font-medium text-[var(--text-primary)] hover:border-[var(--primary)] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    <Plus className="h-3.5 w-3.5" />
-                    <span>Add Another Exam Paper</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Dynamic Rows */}
-              <div className="mt-5 space-y-3">
-                {paperRows.map((row, index) => (
-                  <div
-                    key={row.id}
-                    className="flex flex-col sm:flex-row items-start sm:items-center gap-3 rounded-[8px] border border-[var(--border-subtle)] bg-[var(--surface-well)] p-3.5 transition-all hover:border-[var(--border)]"
-                  >
-                    {/* Index Tag */}
-                    <span className="font-mono text-xs font-semibold text-[var(--primary)] bg-[var(--surface)] px-2 py-1 rounded border border-[var(--border-subtle)] shrink-0">
-                      Paper #{String(index + 1).padStart(2, '0')}
-                    </span>
-
-                    {/* Source: File Upload OR Existing QB */}
-                    <div className="flex-1 w-full sm:w-auto">
-                      {row.type === 'existing_qb' ? (
-                        <div className="flex items-center justify-between gap-2 rounded-[6px] border border-[rgba(15,118,110,0.3)] bg-[rgba(15,118,110,0.08)] px-3 py-2 text-xs text-[var(--text-primary)]">
-                          <div className="flex items-center gap-2 truncate">
-                            <BookOpen className="h-4 w-4 text-[var(--primary)] shrink-0" />
-                            <div className="truncate">
-                              <span className="font-mono text-[10px] uppercase font-bold text-[var(--primary)] mr-1.5">[Account QB]</span>
-                              <span className="font-medium">{row.qbName}</span>
-                            </div>
-                          </div>
-                          <span className="font-mono text-[10px] text-[var(--text-muted)] bg-[var(--surface)] px-1.5 py-0.5 rounded border border-[var(--border-subtle)] shrink-0">
-                            Selected
-                          </span>
-                        </div>
-                      ) : (
-                        <div>
-                          <input
-                            type="file"
-                            accept=".pdf"
-                            onChange={(e) => handleFileChange(row.id, e.target.files?.[0] || null)}
-                            className="w-full text-xs text-[var(--text-secondary)] file:mr-3 file:rounded-[6px] file:border-0 file:bg-[var(--primary)] file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-[var(--primary-foreground)] file:cursor-pointer hover:file:opacity-90 cursor-pointer"
-                          />
-                          {row.file && (
-                            <p className="mt-1 font-mono text-[10px] text-[var(--success)] flex items-center gap-1">
-                              <CheckCircle2 className="h-3 w-3" />
-                              {row.file.name} ({(row.file.size / 1024).toFixed(0)} KB)
-                            </p>
-                          )}
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Session / Year Label Input */}
-                    <div className="w-full sm:w-72 shrink-0">
-                      <div className="relative">
-                        <Calendar className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-muted)]" />
-                        <input
-                          type="text"
-                          value={row.session}
-                          onChange={(e) => handleSessionChange(row.id, e.target.value)}
-                          placeholder="Exam Date / Session (e.g. May 2023) *"
-                          className={`w-full rounded-[6px] border py-1.5 pl-8 pr-2.5 text-xs text-[var(--text-primary)] placeholder-[var(--text-disabled)] focus:border-[var(--primary)] focus:outline-none ${
-                            !row.session && (row.file || row.qbId)
-                              ? 'border-amber-500/40 bg-[var(--surface)]'
-                              : 'border-[var(--border)] bg-[var(--surface)]'
-                          }`}
-                        />
-                      </div>
-                      {!row.session && (row.file || row.qbId) && (
-                        <p className="mt-1 text-[10px] text-amber-500/90 font-mono">
-                          * Session date required
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Remove Row Button */}
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveRow(row.id)}
-                      disabled={paperRows.length <= 1}
-                      title="Remove this paper"
-                      className="p-1.5 rounded-[6px] text-[var(--text-muted)] hover:text-[var(--error)] hover:bg-[rgba(239,68,68,0.1)] transition-colors disabled:opacity-20 disabled:hover:bg-transparent"
-                    >
-                      <Trash2 className="h-4 w-4 stroke-[1.5]" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-
-              {/* Existing Question Banks Linker */}
-              <div className="mt-8 pt-5 border-t border-[var(--border)]">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 mb-3">
-                  <div>
-                    <h3 className="text-xs font-semibold uppercase tracking-wider font-mono text-[var(--primary)] flex items-center gap-1.5">
-                      <BookOpen className="h-3.5 w-3.5" />
-                      <span>Or Pick Question Banks Already in Your Account</span>
-                      <span className="text-[var(--text-muted)] font-normal font-sans">(Optional)</span>
-                    </h3>
-                    <p className="text-[11px] text-[var(--text-secondary)] mt-0.5">
-                      Select any Question Bank below to include it in the papers list above. Specify the exam session date in the corresponding row above.
-                    </p>
-                  </div>
-
-
-                  {paperRows.filter((r) => r.type === 'existing_qb').length > 0 && (
-                    <span className="font-mono text-[11px] bg-[rgba(15,118,110,0.1)] text-[var(--primary)] px-2.5 py-1 rounded-[6px] border border-[rgba(15,118,110,0.2)] font-medium">
-                      {paperRows.filter((r) => r.type === 'existing_qb').length} Question Bank(s) Added
-                    </span>
-                  )}
-                </div>
-
-                {questionBanks.length > 0 ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-56 overflow-y-auto p-1">
-                    {questionBanks.map((qb) => {
-                      const isSelected = paperRows.some((r) => r.qbId === qb.id);
-                      return (
-                        <div
-                          key={qb.id}
-                          onClick={() => handleToggleQb(qb)}
-                          className={`rounded-[8px] border p-3 text-xs cursor-pointer transition-all flex items-center justify-between ${
-                            isSelected
-                              ? 'border-[var(--primary)] bg-[rgba(15,118,110,0.08)] text-[var(--text-primary)] shadow-sm'
-                              : 'border-[var(--border)] bg-[var(--surface-well)] text-[var(--text-secondary)] hover:border-[var(--border-strong)] hover:text-[var(--text-primary)]'
-                          }`}
-                        >
-                          <div className="truncate pr-2">
-                            <p className="font-medium truncate text-xs">{qb.name}</p>
-                            <p className="font-mono text-[10px] text-[var(--text-muted)] mt-0.5">
-                              {qb.question_count ? `${qb.question_count} Questions` : 'Exam Paper PDF'} • {qb.subject}
-                            </p>
-                          </div>
-                          <div className={`h-6 px-2.5 rounded-[5px] text-[10px] font-mono font-medium flex items-center gap-1 shrink-0 ${
-                            isSelected ? 'bg-[var(--primary)] text-[var(--primary-foreground)]' : 'bg-[var(--surface)] border border-[var(--border)] text-[var(--text-muted)]'
-                          }`}>
-                            {isSelected ? (
-                              <>
-                                <Check className="h-3 w-3 stroke-[2.5]" />
-                                <span>Added</span>
-                              </>
-                            ) : (
-                              <span>+ Add</span>
-                            )}
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="rounded-[8px] border border-dashed border-[var(--border)] bg-[var(--surface-well)] p-4 text-center">
-                    <p className="text-xs text-[var(--text-muted)] flex items-center justify-center gap-1.5">
-                      <FolderOpen className="h-4 w-4 text-[var(--text-muted)]" />
-                      <span>No question banks uploaded yet in your account. You can upload PDF papers directly in the boxes above!</span>
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Inline Error & API Key Notice */}
-            {synthesisError && (
-              <div className="rounded-[10px] border border-red-500/30 bg-red-500/10 p-4 text-xs text-red-500 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                <div className="flex items-start gap-2.5 min-w-0">
-                  <AlertCircle className="h-4 w-4 shrink-0 mt-0.5 text-red-500" />
-                  <div>
-                    <p className="font-semibold text-red-600 dark:text-red-400">{synthesisError}</p>
-                    {synthesisError.toLowerCase().includes('openai api key') && (
-                      <p className="text-[11px] text-red-500/80 mt-0.5">
-                        Your OpenAI API key is required to analyze multiple past papers and synthesize authentic questions.
-                      </p>
-                    )}
-                  </div>
-                </div>
-                {synthesisError.toLowerCase().includes('openai api key') && (
-                  <button
-                    type="button"
-                    onClick={() => setActiveTab('profile')}
-                    className="inline-flex items-center gap-1.5 rounded-[6px] bg-red-600 px-3.5 py-1.5 font-medium text-xs text-white hover:bg-red-700 transition-colors shrink-0 shadow-sm"
-                  >
-                    <span>Configure API Key in Profile</span>
-                    <ArrowRight className="h-3 w-3" />
-                  </button>
-                )}
-                {!user && (
-                  <button
-                    type="button"
-                    onClick={() => openAuthModal?.('login')}
-                    className="inline-flex items-center gap-1.5 rounded-[6px] bg-red-600 px-3.5 py-1.5 font-medium text-xs text-white hover:bg-red-700 transition-colors shrink-0 shadow-sm"
-                  >
-                    <span>Log In</span>
-                    <ArrowRight className="h-3 w-3" />
-                  </button>
-                )}
-              </div>
-            )}
-
-            {/* Step 3: Synthesis Action */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 rounded-[12px] border border-[var(--border)] bg-[var(--surface-well)] p-5">
-              <div className="text-xs text-[var(--text-secondary)]">
-                <span className="font-medium text-[var(--text-primary)]">Exam Pattern Engine: </span>
-                AI will cross-correlate question cadence, mark weightages, and section layouts to synthesize the expected paper.
-              </div>
-
+    <div className="min-h-screen bg-[#F8F7F4] text-[#19243B] pb-24 lg:pb-8 animate-in fade-in duration-150">
+      
+      {sharedToken && !user && (
+        <div className="mb-6 rounded-2xl bg-[#EAF0FF] border border-[#C8D8FF] p-6 shadow-xs">
+          <div className="flex items-start gap-3">
+            <Link className="text-[#0057FF] mt-1 size-5 shrink-0" />
+            <div>
+              <h3 className="font-semibold text-[#19243B] text-base">
+                Shared practice paper
+              </h3>
+              <p className="text-[#526078] text-sm leading-relaxed mt-1">
+                Sign in to continue to this shared practice paper and access the full question breakdown, pattern insights, and PDF export.
+              </p>
               <button
-                type="submit"
-                disabled={isPredictingPaper}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 rounded-[8px] bg-[var(--primary)] px-6 py-3 font-medium text-xs text-[var(--primary-foreground)] hover:opacity-90 transition-all shadow-sm disabled:opacity-50"
+                type="button"
+                onClick={() => openAuthModal?.('login')}
+                className="font-medium rounded-[10px] bg-[#0057FF] text-white hover:bg-[#0047D6] text-sm px-5 py-2.5 inline-flex items-center gap-2 mt-4 transition-colors cursor-pointer shadow-xs"
               >
-                {isPredictingPaper ? (
-                  <>
-                    <RefreshCw className="h-4 w-4 animate-spin" />
-                    <span>Analyzing Papers & Predicting Blueprint...</span>
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="h-4 w-4 stroke-[2]" />
-                    <span>Analyze Past Papers & Synthesize Predicted Question Paper</span>
-                  </>
-                )}
+                Sign in to continue
+                <ArrowRight className="size-4" />
               </button>
             </div>
-          </form>
-        ) : (
-          /* ── Output View: Authentic University Predicted Paper Workspace ── */
-          <div className="mt-8 space-y-6">
+          </div>
+        </div>
+      )}
 
-            {/* Top Action Toolbar */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 rounded-[12px] border border-[var(--border)] bg-[var(--surface)] p-4 shadow-sm">
-              <div className="flex items-center gap-2.5">
-                <div className="flex h-9 w-9 items-center justify-center rounded-[8px] bg-[rgba(15,118,110,0.1)] text-[var(--primary)]">
-                  <ShieldCheck className="h-5 w-5 stroke-[1.5]" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-[var(--text-primary)]">
-                    Predicted Examination Paper Ready
-                  </h3>
-                  <p className="text-[11px] text-[var(--text-muted)] font-mono">
-                    Synthesized from multi-year question paper blueprint
-                  </p>
-                </div>
-              </div>
+      <div className="flex flex-col gap-2 mb-6">
+        <p className="font-semibold uppercase text-[#687184] text-xs tracking-[0.16em]">
+          AcademicStack Paper Predictor
+        </p>
+        <h1 className="font-semibold text-2xl sm:text-3xl tracking-tight text-[#19243B]">
+          Build a practice paper
+        </h1>
+        <p className="text-[#526078] text-sm sm:text-base leading-6 max-w-2xl">
+          Use past papers to explore recurring topics and create another paper to practise.
+        </p>
+      </div>
 
-              <div className="flex flex-wrap items-center gap-2">
-                {/* Native Community Sharing Toggle */}
-                <button
-                  onClick={handleToggleCommunityShare}
-                  disabled={isSharing}
-                  className={`inline-flex items-center gap-1.5 rounded-[8px] border px-3.5 py-2 text-xs font-semibold transition-all shadow-sm disabled:opacity-50 ${
-                    isCommunityShared
-                      ? 'border-[rgba(200,168,32,0.4)] bg-[rgba(200,168,32,0.12)] text-[var(--community)]'
-                      : 'border-[var(--border)] bg-[var(--surface-well)] text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--primary)]'
-                  }`}
-                  title={isCommunityShared ? 'Make Private (Remove from The Commons)' : 'Share with The Commons (Public in Community Hub)'}
-                >
-                  {isSharing ? (
-                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Globe className="h-3.5 w-3.5 stroke-[1.5]" />
-                  )}
-                  <span>{isCommunityShared ? 'Shared with The Commons' : 'Share with The Commons'}</span>
-                </button>
+      {validationError && (
+        <div className="mb-6 flex items-center justify-between rounded-xl border border-red-200 bg-red-50 p-4 text-xs text-red-700 shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <CircleAlert className="size-4 shrink-0 text-red-600" />
+            <span>{validationError}</span>
+          </div>
+          <button onClick={() => setValidationError('')} className="font-medium hover:underline cursor-pointer">
+            Dismiss
+          </button>
+        </div>
+      )}
 
-                <button
-                  onClick={handleDownloadPdf}
-                  className="inline-flex items-center gap-1.5 rounded-[8px] bg-[var(--primary)] px-3.5 py-2 text-xs font-semibold text-[var(--primary-foreground)] hover:opacity-90 transition-all shadow-sm"
-                >
-                  <Download className="h-3.5 w-3.5 stroke-[2]" />
-                  <span>Download Model Paper PDF</span>
-                </button>
+      <ApiKeyBanner feature="Examination Paper Prediction & Synthesis" />
 
-                <button
-                  onClick={handleSaveAsQb}
-                  disabled={isSavingPredictedQb || !!savedQbInfo}
-                  className="inline-flex items-center gap-1.5 rounded-[8px] border border-[var(--border)] bg-[var(--surface-well)] px-3.5 py-2 text-xs font-medium text-[var(--text-primary)] hover:border-[var(--primary)] transition-all disabled:opacity-50"
-                >
-                  <BookmarkPlus className="h-3.5 w-3.5 stroke-[1.5]" />
-                  <span>{savedQbInfo ? 'Saved to Question Banks' : isSavingPredictedQb ? 'Saving...' : 'Save as Question Bank'}</span>
-                </button>
+      {!predictedPaper ? (
+        <form onSubmit={handleSubmit} className="space-y-6 max-w-5xl">
 
-                <button
-                  onClick={handleCopyText}
-                  className="inline-flex items-center gap-1.5 rounded-[8px] border border-[var(--border)] bg-[var(--surface-well)] px-3 py-2 text-xs font-medium text-[var(--text-primary)] hover:bg-[var(--surface-muted)] transition-all"
-                  title="Copy Clean Text"
-                >
-                  {copySuccess ? <Check className="h-3.5 w-3.5 text-[var(--success)]" /> : <Copy className="h-3.5 w-3.5 text-[var(--text-muted)]" />}
-                  <span>{copySuccess ? 'Copied' : 'Copy'}</span>
-                </button>
-
-                <button
-                  onClick={() => setPredictedPaper(null)}
-                  className="inline-flex items-center gap-1 rounded-[8px] border border-[var(--border)] bg-[var(--surface-well)] px-3 py-2 text-xs text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
-                >
-                  <RefreshCw className="h-3.5 w-3.5" />
-                  <span>New Prediction</span>
-                </button>
-              </div>
+          <div className="rounded-2xl bg-white border border-[#E2E0D9] p-5 sm:p-6 shadow-[0px_1px_3px_rgba(0,0,0,0.04)] space-y-4">
+            <div className="flex items-center gap-2">
+              <BookOpen className="text-[#0057FF] size-4.5" />
+              <h3 className="font-semibold text-base sm:text-lg text-[#19243B]">Course details</h3>
             </div>
 
-            {/* Saved Notification Banner */}
-            {savedQbInfo && (
-              <div className="flex items-center justify-between rounded-[8px] border border-[rgba(34,197,94,0.3)] bg-[rgba(34,197,94,0.08)] p-3 text-xs text-[var(--success)]">
-                <div className="flex items-center gap-2">
-                  <CheckCircle2 className="h-4 w-4 shrink-0" />
-                  <span>
-                    Successfully saved as Question Bank <b>"{savedQbInfo.name}"</b>. You can now audit questions or generate grounded solutions.
-                  </span>
-                </div>
-                <button
-                  onClick={async () => {
-                    await selectQuestionBank(savedQbInfo.question_bank_id);
-                    setActiveTab('review');
-                  }}
-                  className="font-mono text-xs font-semibold underline hover:opacity-80 flex items-center gap-1 shrink-0 ml-3"
-                >
-                  <span>Go to Question Review</span>
-                  <ArrowRight className="h-3 w-3" />
-                </button>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="subject-input" className="font-medium text-xs text-[#526078]">
+                  Subject
+                </label>
+                <input
+                  id="subject-input"
+                  type="text"
+                  required
+                  value={subject}
+                  onChange={(e) => setSubject(e.target.value)}
+                  placeholder="e.g. Operating Systems"
+                  className="rounded-[10px] bg-white border border-[#C6CAD3] px-3 text-sm text-[#19243B] outline-none focus:border-[#0057FF] h-11"
+                />
               </div>
-            )}
 
-            {/* AI Pattern Insights Card */}
-            {predictedPaper.pattern_insights && (
-              <div className="rounded-[10px] border border-[var(--border)] bg-[var(--surface-well)] p-4">
-                <span className="font-mono text-[10px] uppercase tracking-widest text-[var(--primary)] flex items-center gap-1">
-                  <Sparkles className="h-3 w-3" />
-                  Exam Blueprint Analysis
-                </span>
-                <p className="mt-1 text-xs text-[var(--text-secondary)]">
-                  {predictedPaper.pattern_insights.analysis_summary}
+              <div className="flex flex-col gap-1.5">
+                <label htmlFor="target-exam-input" className="font-medium text-xs text-[#526078]">
+                  Target exam
+                </label>
+                <input
+                  id="target-exam-input"
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  placeholder="e.g. Semester Examination"
+                  className="rounded-[10px] bg-white border border-[#C6CAD3] px-3 text-sm text-[#19243B] outline-none focus:border-[#0057FF] h-11"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex justify-between items-end">
+              <div>
+                <h3 className="font-semibold text-lg text-[#19243B]">
+                  Past paper sources
+                </h3>
+                <p className="text-[#687184] text-xs sm:text-sm mt-1">
+                  Add papers so recurring topics can be reviewed transparently.
                 </p>
-
-                {predictedPaper.pattern_insights.recurring_topics && (
-                  <div className="mt-3 flex flex-wrap items-center gap-1.5">
-                    <span className="text-[11px] font-mono text-[var(--text-muted)] mr-1">Recurring Themes:</span>
-                    {predictedPaper.pattern_insights.recurring_topics.map((topic, i) => (
-                      <span
-                        key={i}
-                        className="rounded-[4px] border border-[var(--border-subtle)] bg-[var(--surface)] px-2 py-0.5 text-[10px] font-mono text-[var(--text-secondary)]"
-                      >
-                        {topic}
-                      </span>
-                    ))}
-                  </div>
-                )}
               </div>
-            )}
+              <span className="text-[#687184] text-xs font-medium">
+                {paperRows.length} {paperRows.length === 1 ? 'paper' : 'papers'}
+              </span>
+            </div>
 
-            {/* ── Creator Highlight Banner (when viewing shared paper) ── */}
-            {sharedInfo && (
-              <div className="rounded-[12px] border border-[var(--primary)]/40 bg-gradient-to-r from-[rgba(15,118,110,0.12)] via-[rgba(15,118,110,0.05)] to-transparent p-5 shadow-sm">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  <div className="flex items-center gap-3.5">
-                    <div className="h-11 w-11 rounded-full bg-[var(--primary)] text-[var(--primary-foreground)] flex items-center justify-center font-bold text-base shadow-sm shrink-0 uppercase">
-                      {(sharedInfo.creator_name || 'S')[0]}
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-mono text-[10px] uppercase font-bold tracking-wider text-[var(--primary)] bg-[var(--surface)] px-2 py-0.5 rounded border border-[var(--primary)]/30">
-                          Shared Predicted Paper
+            <div className="space-y-3">
+              {paperRows.map((row, index) => {
+                const complete = isRowValid(row);
+                const hasError = attemptedSubmit && !complete;
+                const qNum = String(index + 1).padStart(2, '0');
+
+                return (
+                  <div
+                    key={row.id}
+                    className={`rounded-2xl bg-white border p-4 sm:p-5 shadow-[0px_1px_3px_rgba(0,0,0,0.04)] space-y-3.5 transition-all ${
+                      hasError ? 'border-[#B42318] bg-red-50/20' : 'border-[#E2E0D9]'
+                    }`}
+                  >
+                    <div className="flex justify-between items-center">
+                      <div className="flex items-center gap-3">
+                        <span className="font-semibold rounded-full bg-[#EAF0FF] text-[#0057FF] text-xs flex justify-center items-center size-8">
+                          {qNum}
                         </span>
-                        <span className="font-mono text-[11px] text-[var(--text-muted)]">
-                          • {sharedInfo.views || 1} view{sharedInfo.views === 1 ? '' : 's'}
-                        </span>
+                        <div>
+                          <p className="font-semibold text-[#19243B] text-sm">
+                            {row.session || (row.file ? row.file.name : row.qbName ? row.qbName : `Paper ${qNum}`)}
+                          </p>
+                          <p className="text-[#687184] text-xs">
+                            Source type
+                          </p>
+                        </div>
                       </div>
-                      <h3 className="text-sm sm:text-base font-bold text-[var(--text-primary)] mt-1">
-                        Curated & Shared by <span className="text-[var(--primary)] underline decoration-[var(--primary)]/40 underline-offset-2 font-black">{sharedInfo.creator_name}</span>
-                      </h3>
-                      <p className="text-xs text-[var(--text-secondary)] mt-0.5">
-                        AI Predicted Examination Blueprint for <b>{sharedInfo.subject}</b> • AcademicStack
-                      </p>
+
+                      <div className="flex items-center gap-2">
+                        {hasError && (
+                          <AlertCircle className="text-[#B42318] size-4 shrink-0" />
+                        )}
+                        {paperRows.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveRow(row.id)}
+                            className="text-[#687184] hover:text-[#B42318] text-xs font-medium transition-colors px-2 py-1 cursor-pointer"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="flex flex-wrap items-center gap-2 shrink-0">
-                    {onClearShared && (
-                      <button
-                        onClick={onClearShared}
-                        className="inline-flex items-center gap-1.5 rounded-[8px] border border-[var(--border)] bg-[var(--surface)] px-3.5 py-2 text-xs font-semibold text-[var(--text-primary)] hover:border-[var(--primary)] transition-all shadow-sm"
-                      >
-                        <Sparkles className="h-3.5 w-3.5 text-[var(--primary)]" />
-                        <span>Predict Your Own Exam Paper</span>
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            )}
+                    <div className="grid grid-cols-1 md:grid-cols-[180px_1fr] gap-3 pt-1">
+                      
+                      <div className="rounded-[10px] bg-[#F1F0EC] grid grid-cols-2 p-1 h-11 items-center">
+                        <button
+                          type="button"
+                          onClick={() => handleSourceTypeToggle(row.id, 'upload')}
+                          className={`rounded-[8px] text-xs font-medium h-9 transition-all cursor-pointer ${
+                            row.type === 'upload'
+                              ? 'bg-white text-[#0057FF] font-semibold shadow-xs'
+                              : 'text-[#526078] hover:text-[#19243B]'
+                          }`}
+                        >
+                          Upload PDF
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleSourceTypeToggle(row.id, 'existing_qb')}
+                          className={`rounded-[8px] text-xs font-medium h-9 transition-all cursor-pointer ${
+                            row.type === 'existing_qb'
+                              ? 'bg-white text-[#0057FF] font-semibold shadow-xs'
+                              : 'text-[#526078] hover:text-[#19243B]'
+                          }`}
+                        >
+                          Existing bank
+                        </button>
+                      </div>
 
-            {/* ── Realistic University Examination Paper Canvas ── */}
-            <div className="rounded-[12px] border border-[var(--border-strong)] bg-[var(--surface)] p-8 sm:p-12 shadow-md">
-              
-              {/* University Exam Masthead */}
-              <div className="text-center pb-6 border-b-2 border-[var(--text-primary)]">
-                <span className="font-mono text-[10px] uppercase tracking-widest text-[var(--primary)] block mb-1">
-                  {predictedPaper.exam_meta?.university_heading || 'ACADEMICSTACK PREDICTED MODEL EXAMINATION'}
-                </span>
-                <h2 className="font-display text-xl sm:text-2xl font-bold tracking-tight text-[var(--text-primary)] uppercase">
-                  {predictedPaper.exam_meta?.paper_title || 'Predicted Examination Paper'}
-                </h2>
-                <p className="font-mono text-xs font-semibold text-[var(--text-secondary)] mt-1">
-                  Course / Subject: <span className="text-[var(--text-primary)]">{predictedPaper.exam_meta?.subject || subject}</span>
-                </p>
-
-                {/* Disclaimer Badge */}
-                <div className="mt-2.5 inline-flex items-center gap-1.5 rounded-full border border-amber-500/30 bg-amber-500/10 px-3 py-1 text-[11px] font-medium text-amber-600 dark:text-amber-400">
-                  <ShieldCheck className="h-3.5 w-3.5 shrink-0" />
-                  <span>Strictly for Preparation & Practice • Not an Official Examination Paper • Questions Not Guaranteed</span>
-                </div>
-
-                {/* Exam Meta Strip */}
-                <div className="mt-4 flex items-center justify-between border-t border-b border-[var(--border)] py-2 text-xs font-mono text-[var(--text-secondary)]">
-                  <span>Time Allowed: <b>{predictedPaper.exam_meta?.time_allowed || '3 Hours'}</b></span>
-                  <span>Session: <b>Predicted Model {new Date().getFullYear()}</b></span>
-                  <span>Maximum Marks: <b>{predictedPaper.exam_meta?.maximum_marks || 70}</b></span>
-                </div>
-              </div>
-
-              {/* Instructions Box */}
-              {predictedPaper.exam_meta?.general_instructions && (
-                <div className="mt-4 rounded-[6px] border border-[var(--border-subtle)] bg-[var(--surface-well)] p-3 text-[11px] text-[var(--text-muted)] italic">
-                  <p className="font-bold font-sans not-italic text-[var(--text-secondary)] mb-1">
-                    General Instructions to Candidates:
-                  </p>
-                  <ol className="list-decimal pl-4 space-y-0.5">
-                    {predictedPaper.exam_meta.general_instructions.map((inst, i) => (
-                      <li key={i}>{inst}</li>
-                    ))}
-                  </ol>
-                </div>
-              )}
-
-              {/* Sections & Questions */}
-              <div className="mt-8 space-y-8">
-                {(predictedPaper.sections || []).map((sec, secIdx) => (
-                  <div key={secIdx} className="space-y-4">
-                    
-                    {/* Section Header */}
-                    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 border-b border-[var(--border-strong)] pb-1.5">
-                      <h3 className="font-display text-sm font-bold text-[var(--text-primary)] uppercase tracking-wider">
-                        {sec.section_name}
-                      </h3>
-                      {sec.section_instruction && (
-                        <span className="font-mono text-[11px] text-[var(--primary)] font-medium">
-                          {sec.section_instruction}
-                        </span>
+                      {row.type === 'upload' ? (
+                        <div className="relative flex items-center">
+                          <label
+                            className={`flex-1 rounded-[10px] text-sm flex pr-3 pl-9 items-center justify-between h-11 cursor-pointer transition-colors border ${
+                              row.file
+                                ? 'bg-[#F1F0EC] text-[#526078] border-[#E2E0D9]'
+                                : hasError
+                                ? 'bg-white text-[#687184] border-[#B42318]'
+                                : 'bg-white text-[#526078] border-[#C6CAD3]'
+                            }`}
+                          >
+                            <FileUp className="-translate-y-1/2 pointer-events-none text-[#687184] absolute top-1/2 left-3 size-4" />
+                            <span className="truncate">
+                              {row.file ? row.file.name : 'Select a PDF paper'}
+                            </span>
+                            <FileText className="size-4 text-[#526078] shrink-0" />
+                            <input
+                              type="file"
+                              accept=".pdf"
+                              className="hidden"
+                              onChange={(e) => {
+                                if (e.target.files && e.target.files[0]) {
+                                  handleFileChange(row.id, e.target.files[0]);
+                                }
+                              }}
+                            />
+                          </label>
+                        </div>
+                      ) : (
+                        <div className="relative flex items-center">
+                          <select
+                            value={row.qbId || ''}
+                            onChange={(e) => handleSelectExistingQb(row.id, e.target.value)}
+                            className={`w-full rounded-[10px] text-sm border px-3 pr-8 appearance-none outline-none h-11 font-normal cursor-pointer ${
+                              row.qbId
+                                ? 'bg-[#F1F0EC] text-[#19243B] border-[#E2E0D9]'
+                                : hasError
+                                ? 'bg-white text-[#687184] border-[#B42318]'
+                                : 'bg-white text-[#526078] border-[#C6CAD3]'
+                            }`}
+                          >
+                            <option value="">Select an existing question bank...</option>
+                            {questionBanks.map((qb) => (
+                              <option key={qb.id} value={qb.id}>
+                                {qb.name} ({qb.subject})
+                              </option>
+                            ))}
+                          </select>
+                          <ChevronDown className="-translate-y-1/2 pointer-events-none text-[#687184] absolute top-1/2 right-3 size-4" />
+                        </div>
                       )}
                     </div>
 
-                    {/* Questions Table/List */}
-                    <div className="divide-y divide-[var(--border-subtle)]">
-                      {(sec.questions || []).map((q, qIdx) => {
-                        if (q.is_or_choice) {
-                          return (
-                            <div key={qIdx} className="py-2.5 text-center font-bold font-mono text-xs text-[var(--text-muted)] tracking-wider">
-                              — OR —
-                            </div>
-                          );
-                        }
+                    {hasError && (
+                      <p className="font-medium text-[#B42318] text-xs flex items-center gap-1.5 pt-1">
+                        <AlertCircle className="size-3.5 shrink-0" />
+                        <span>Choose a PDF or existing question bank.</span>
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
 
-                        return (
-                          <div key={qIdx} className="py-3 flex items-start justify-between gap-4 group">
-                            <div className="flex items-start gap-3">
-                              <span className="font-mono text-xs font-bold text-[var(--text-primary)] shrink-0 pt-0.5">
-                                {q.question_number}
-                              </span>
-                              <div>
-                                <p className="text-xs sm:text-sm text-[var(--text-primary)] leading-relaxed whitespace-pre-line">
+            <button
+              type="button"
+              onClick={handleAddRow}
+              disabled={paperRows.length >= MAX_PAPERS}
+              className="font-medium rounded-[10px] bg-white text-[#19243B] text-sm border border-[#C6CAD3] hover:bg-[#F8F7F4] w-full min-h-11 flex justify-center items-center gap-2 transition-colors cursor-pointer disabled:opacity-40"
+            >
+              <Plus className="size-4" />
+              <span>Add another paper</span>
+            </button>
+          </div>
+
+          {synthesisError && (
+            <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-xs text-red-700">
+              <p className="font-semibold flex items-center gap-2">
+                <AlertCircle className="size-4" />
+                <span>{synthesisError}</span>
+              </p>
+            </div>
+          )}
+
+          <div className="hidden lg:flex border-t border-[#E2E0D9] pt-6 justify-between items-center gap-4">
+            <p className="text-[#687184] text-xs leading-5 max-w-lg">
+              Based on patterns in the papers you provide — not a guarantee of future exam questions.
+            </p>
+
+            <button
+              type="submit"
+              disabled={!isFormValid || isPredictingPaper}
+              className="font-medium rounded-[10px] bg-[#0057FF] text-white hover:bg-[#0047D6] text-sm px-6 h-11 flex items-center gap-2 transition-colors shadow-xs disabled:opacity-50 cursor-pointer shrink-0"
+            >
+              <Sparkles className="size-4" />
+              <span>{isPredictingPaper ? 'Building practice paper...' : 'Generate practice paper'}</span>
+            </button>
+          </div>
+
+          <div className="lg:hidden fixed bottom-0 left-0 right-0 z-30 bg-[#F8F7F4] border-t border-[#E2E0D9] p-4 shadow-[0px_-4px_10px_rgba(0,0,0,0.04)]">
+            <div className="flex flex-col gap-2.5 max-w-[390px] mx-auto">
+              <p className="text-center text-[#687184] text-xs leading-4">
+                Based on patterns in the papers you provide — not a guarantee.
+              </p>
+              <button
+                type="submit"
+                disabled={!isFormValid || isPredictingPaper}
+                className="font-medium rounded-[10px] bg-[#0057FF] text-white hover:bg-[#0047D6] text-sm w-full min-h-11 flex justify-center items-center gap-2 transition-colors shadow-xs disabled:opacity-50 cursor-pointer"
+              >
+                <span>{isPredictingPaper ? 'Building...' : 'Generate practice paper'}</span>
+                <ArrowRight className="size-4" />
+              </button>
+            </div>
+          </div>
+
+        </form>
+      ) : (
+        
+        <div className="space-y-6 max-w-5xl">
+          
+          <div className="flex flex-wrap justify-center items-center gap-2.5">
+
+            <div className="hidden sm:flex flex-wrap justify-center items-center gap-2.5">
+              <button
+                type="button"
+                onClick={handleDownloadPdf}
+                disabled={isDownloadingPdf}
+                className="font-medium rounded-[10px] border border-[#C6CAD3] bg-white text-[#19243B] hover:bg-[#F1F0EC] px-3.5 h-11 text-sm inline-flex items-center gap-2 transition-colors cursor-pointer shadow-2xs disabled:opacity-60"
+              >
+                {isDownloadingPdf ? (
+                  <LoaderCircle className="size-4 animate-spin text-[#0057FF]" />
+                ) : (
+                  <Download className="size-4 text-[#0057FF]" />
+                )}
+                <span>{isDownloadingPdf ? 'Generating PDF...' : 'Download PDF'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleSaveAsQb}
+                disabled={isSavingPredictedQb || !!savedQbInfo}
+                className="font-medium rounded-[10px] border border-[#C6CAD3] bg-white text-[#19243B] hover:bg-[#F1F0EC] px-3.5 h-11 text-sm inline-flex items-center gap-2 transition-colors cursor-pointer disabled:opacity-50 shadow-2xs"
+                title="Save this practice paper as a personal Question Bank"
+              >
+                <Bookmark className="size-4 text-[#187347]" />
+                <span>{savedQbInfo ? 'Saved' : isSavingPredictedQb ? 'Saving...' : 'Save to past papers'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleToggleCommunityShare}
+                disabled={isSharing}
+                className="font-medium rounded-[10px] border border-[#C6CAD3] bg-white text-[#19243B] hover:bg-[#F1F0EC] px-3.5 h-11 text-sm inline-flex items-center gap-2 transition-colors cursor-pointer shadow-2xs"
+              >
+                <Share2 className="size-4 text-[#C8A820]" />
+                <span>{isCommunityShared ? 'Shared' : 'Share'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleCopyLink}
+                className="font-medium rounded-[10px] border border-[#C6CAD3] bg-white text-[#19243B] hover:bg-[#F1F0EC] px-3.5 h-11 text-sm inline-flex items-center gap-2 transition-colors cursor-pointer shadow-2xs"
+              >
+                <Link className="size-4 text-[#0057FF]" />
+                <span>{copyLinkSuccess ? 'Copied!' : 'Copy link'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setPredictedPaper(null)}
+                className="font-medium rounded-[10px] border border-[#C6CAD3] bg-white text-[#526078] hover:text-[#19243B] hover:bg-[#F1F0EC] px-3.5 h-11 text-xs inline-flex items-center gap-1.5 transition-colors cursor-pointer"
+                title="Create a new prediction"
+              >
+                <RefreshCw className="size-3.5" />
+                <span>New</span>
+              </button>
+            </div>
+          </div>
+
+          {shareMessage && (
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-xs text-emerald-800 flex items-center justify-between">
+              <span>{shareMessage}</span>
+              <button onClick={() => setShareMessage('')} className="underline font-medium cursor-pointer">Dismiss</button>
+            </div>
+          )}
+
+          {savedQbInfo && (
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-xs text-emerald-800 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="size-4 text-emerald-600 shrink-0" />
+                <span>Saved as Question Bank <b>"{savedQbInfo.name}"</b>.</span>
+              </div>
+              <button
+                onClick={async () => {
+                  await selectQuestionBank(savedQbInfo.question_bank_id);
+                  setActiveTab('review');
+                }}
+                className="font-semibold underline flex items-center gap-1 cursor-pointer"
+              >
+                <span>Go to Question Review</span>
+                <ArrowRight className="size-3.5" />
+              </button>
+            </div>
+          )}
+
+          <div className="bg-[#F1F0EC] p-3 sm:p-6 rounded-2xl">
+            <article className="shadow-[0px_1px_3px_rgba(0,0,0,0.1),0px_1px_2px_-1px_rgba(0,0,0,0.1)] bg-white mx-auto p-6 sm:p-10 max-w-2xl text-[#19243B] space-y-6">
+              
+              <div className="border-b-2 border-[#19243B] pb-6 text-center space-y-4">
+                <span className="text-xs font-bold tracking-[0.22em] text-[#0057FF] uppercase block">
+                  ACADEMICSTACK
+                </span>
+
+                <div>
+                  <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-[#19243B] uppercase">
+                    {title || 'Practice Examination Paper'}
+                  </h3>
+                  <p className="text-xs font-semibold text-[#687184] mt-1">
+                    Subject: <span className="text-[#19243B] font-bold">{predictedPaper.exam_meta?.subject || subject}</span>
+                  </p>
+                </div>
+
+                <div className="w-full flex justify-center">
+                  <div className="inline-flex items-center gap-1.5 rounded-full border border-[#FEDF89] bg-[#FFFAEB] px-3 py-1 text-[11px] sm:text-xs font-medium text-[#B54708]">
+                    <ShieldCheck className="size-3.5 shrink-0" />
+                    <span>FOR PRACTICE ONLY • NOT AN OFFICIAL PAPER</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between border-t border-b border-[#E2E0D9] py-2.5 text-xs text-[#687184] px-1 sm:px-4">
+                  <span>Time Allowed: <b className="text-[#19243B]">{predictedPaper.exam_meta?.time_allowed || '03 Hours'}</b></span>
+                  <span>Session: <b className="text-[#19243B]">{predictedPaper.exam_meta?.session || `Model Exam ${new Date().getFullYear()}`}</b></span>
+                  <span>Maximum Marks: <b className="text-[#19243B]">{predictedPaper.exam_meta?.maximum_marks || 80}</b></span>
+                </div>
+
+                {((predictedPaper.exam_meta?.general_instructions && predictedPaper.exam_meta.general_instructions.length > 0) || true) && (
+                  <div className="pt-2 text-xs text-[#526078] text-left">
+                    <p className="font-bold text-[#19243B] mb-2">
+                      General Instructions to Candidates:
+                    </p>
+                    <ol className="list-none space-y-1.5 pl-0">
+                      {(predictedPaper.exam_meta?.general_instructions && predictedPaper.exam_meta.general_instructions.length > 0
+                        ? predictedPaper.exam_meta.general_instructions
+                        : [
+                            'Question No. 1 is compulsory.',
+                            'Attempt any three questions out of remaining five questions.',
+                            'Assume suitable data wherever necessary.',
+                          ]
+                      ).map((inst, i) => (
+                        <li key={i} className="flex gap-2">
+                          <span className="font-semibold text-[#19243B] shrink-0">({i + 1})</span>
+                          <span>{inst}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-6">
+                {(predictedPaper.sections || []).map((section, sIdx) => {
+                  const { sectionName, sectionInstruction } = formatSectionHeader(
+                    section.section_name || `Q.${sIdx + 1}`,
+                    section.section_instruction,
+                    section.marks_summary
+                  );
+                  const rawInst = (section.section_instruction || section.marks_summary || '').trim();
+                  const totalMarksDisplay = section.total_marks
+                    ? `[${section.total_marks} Marks]`
+                    : (rawInst.match(/\[\d+\s*marks?\]/i) ? rawInst.match(/\[\d+\s*marks?\]/i)[0] : '');
+
+                  return (
+                    <div key={sIdx} className={sIdx > 0 ? 'border-t-2 border-[#19243B] pt-5 mt-5' : 'mt-5'}>
+                      <div className="flex justify-between items-baseline gap-3 pb-2 border-b border-[#E2E0D9]">
+                        <div className="flex items-baseline gap-2.5 flex-wrap">
+                          <span className="font-bold text-[#19243B] text-base">
+                            {sectionName}
+                          </span>
+                          {sectionInstruction && (
+                            <span className="text-xs sm:text-sm font-medium text-[#526078] italic">
+                              {sectionInstruction}
+                            </span>
+                          )}
+                        </div>
+
+                        {totalMarksDisplay && (
+                          <span className="text-xs font-bold text-[#19243B] shrink-0 bg-[#F1F0EC] px-2.5 py-0.5 rounded-md">
+                            {totalMarksDisplay}
+                          </span>
+                        )}
+                      </div>
+
+                      <div className="divide-y divide-[#E2E0D9]">
+                        {(section.questions || []).map((q, qIdx) => {
+                          const qLabel = q.question_number || `${String.fromCharCode(97 + qIdx)}.`;
+                          return (
+                            <div key={qIdx} className="py-3.5 space-y-2">
+                              <div className="flex justify-between items-start gap-4">
+                                <p className="font-normal text-[#19243B] text-sm flex-1 leading-relaxed">
+                                  <span className="font-bold text-[#19243B] mr-2">{qLabel}</span>
                                   {q.question_text}
                                 </p>
-                                {q.prediction_likelihood && (
-                                  <div className="mt-1 flex items-center gap-2 font-mono text-[10px] text-[var(--text-muted)]">
-                                    <span className="text-[var(--primary)] font-semibold">
-                                      ★ {q.prediction_likelihood} Likelihood
-                                    </span>
-                                    {q.source_trend && <span>• {q.source_trend}</span>}
-                                  </div>
+                                {q.marks && (
+                                  <span className="font-semibold text-[#526078] text-xs shrink-0 bg-[#F8F7F4] border border-[#E2E0D9] px-2 py-0.5 rounded">
+                                    [{q.marks}]
+                                  </span>
                                 )}
                               </div>
+
+                              {q.is_or_choice && (
+                                <div className="pt-1">
+                                  <div className="font-bold text-[#687184] text-xs tracking-widest flex items-center gap-3 my-2">
+                                    <div className="bg-[#E2E0D9] flex-1 h-px" />
+                                    OR
+                                    <div className="bg-[#E2E0D9] flex-1 h-px" />
+                                  </div>
+                                  <div className="flex justify-between items-start gap-4">
+                                    <p className="font-normal text-[#19243B] text-sm flex-1 leading-relaxed">
+                                      {q.or_question_text || 'Discuss alternate system implementation details.'}
+                                    </p>
+                                    {q.marks && (
+                                      <span className="font-semibold text-[#526078] text-xs shrink-0 bg-[#F8F7F4] border border-[#E2E0D9] px-2 py-0.5 rounded">
+                                        [{q.marks}]
+                                      </span>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
                             </div>
-
-                            {/* Marks Column */}
-                            <span className="font-mono text-xs font-bold text-[var(--primary)] bg-[var(--surface-well)] px-2 py-0.5 rounded border border-[var(--border-subtle)] shrink-0">
-                              [{q.marks} Marks]
-                            </span>
-                          </div>
-                        );
-                      })}
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
-              {/* End of paper marker */}
-              <div className="mt-12 text-center border-t border-[var(--border)] pt-4 font-mono text-xs text-[var(--text-muted)] uppercase tracking-widest">
-                *** End of Examination Paper ***
+              <div className="border-t border-[#E2E0D9] pt-4 text-center">
+                <p className="text-[#687184] text-xs leading-5">
+                  Based on patterns in the papers provided — not a guarantee of future exam questions.
+                </p>
               </div>
-              <p className="mt-3 text-center text-[10.5px] text-[var(--text-muted)] italic max-w-2xl mx-auto leading-relaxed">
-                Disclaimer: This predicted question paper is synthesized by AcademicStack AI based on past examination pattern analysis strictly for practice, mock simulation, and revision. It is not an official university paper and does not guarantee questions in the actual examination.
+
+            </article>
+          </div>
+
+          <div className="sm:hidden fixed bottom-0 left-0 right-0 z-30 bg-white border-t border-[#E2E0D9] p-2 grid grid-cols-4 gap-1 shadow-[0px_-4px_10px_rgba(0,0,0,0.04)]">
+            <button
+              type="button"
+              onClick={handleDownloadPdf}
+              className="rounded-lg text-[#526078] hover:text-[#0057FF] text-[10px] font-medium flex flex-col justify-center items-center gap-1 min-h-14 transition-colors cursor-pointer"
+            >
+              <Download className="size-4" />
+              <span>Download PDF</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleSaveAsQb}
+              disabled={isSavingPredictedQb || !!savedQbInfo}
+              className="rounded-lg text-[#526078] hover:text-[#187347] text-[10px] font-medium flex flex-col justify-center items-center gap-1 min-h-14 transition-colors cursor-pointer disabled:opacity-50"
+            >
+              <Bookmark className="size-4" />
+              <span>{savedQbInfo ? 'Saved' : 'Save'}</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleToggleCommunityShare}
+              className="rounded-lg text-[#526078] hover:text-[#0057FF] text-[10px] font-medium flex flex-col justify-center items-center gap-1 min-h-14 transition-colors cursor-pointer"
+            >
+              <Share2 className="size-4" />
+              <span>Share</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsMobileMenuOpen(true)}
+              className="rounded-lg text-[#526078] hover:text-[#19243B] text-[10px] font-medium flex flex-col justify-center items-center gap-1 min-h-14 transition-colors cursor-pointer"
+            >
+              <MoreHorizontal className="size-4" />
+              <span>More</span>
+            </button>
+          </div>
+
+          {isMobileMenuOpen && (
+            <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-[#19243B]/40 p-4 backdrop-blur-xs animate-in fade-in duration-150">
+              <div className="w-full max-w-sm rounded-2xl bg-white border border-[#E2E0D9] p-4 shadow-xl space-y-2">
+                <div className="flex justify-between items-center pb-2 border-b border-[#E2E0D9]">
+                  <h3 className="font-semibold text-sm text-[#19243B]">Paper actions</h3>
+                  <button onClick={() => setIsMobileMenuOpen(false)} className="text-[#687184] hover:text-[#19243B] cursor-pointer">
+                    <X className="size-4" />
+                  </button>
+                </div>
+                <div className="space-y-1 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleDownloadPdf();
+                      setIsMobileMenuOpen(false);
+                    }}
+                    disabled={isDownloadingPdf}
+                    className="text-left rounded-lg text-[#19243B] hover:bg-[#F8F7F4] text-sm flex px-3 items-center gap-3 w-full h-11 cursor-pointer disabled:opacity-60"
+                  >
+                    {isDownloadingPdf ? (
+                      <LoaderCircle className="text-[#0057FF] size-4 animate-spin" />
+                    ) : (
+                      <Download className="text-[#526078] size-4" />
+                    )}
+                    <span>{isDownloadingPdf ? 'Generating PDF...' : 'Download PDF'}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleSaveAsQb();
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="text-left rounded-lg text-[#19243B] hover:bg-[#F8F7F4] text-sm flex px-3 items-center gap-3 w-full h-11 cursor-pointer"
+                  >
+                    <Bookmark className="text-[#526078] size-4" />
+                    <span>Save to past papers</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleToggleCommunityShare();
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="text-left rounded-lg text-[#19243B] hover:bg-[#F8F7F4] text-sm flex px-3 items-center gap-3 w-full h-11 cursor-pointer"
+                  >
+                    <Share2 className="text-[#526078] size-4" />
+                    <span>Share with community</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleCopyLink();
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="text-left rounded-lg text-[#19243B] hover:bg-[#F8F7F4] text-sm flex px-3 items-center gap-3 w-full h-11 cursor-pointer"
+                  >
+                    <Link className="text-[#526078] size-4" />
+                    <span>Copy link</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPredictedPaper(null);
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="text-left rounded-lg text-[#0057FF] hover:bg-[#EAF0FF] text-sm flex px-3 items-center gap-3 w-full h-11 cursor-pointer"
+                  >
+                    <RefreshCw className="size-4" />
+                    <span>Create new paper</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+        </div>
+      )}
+
+      {isPredictingPaper && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[#19243B]/40 p-4 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="rounded-2xl bg-white border border-[#E2E0D9] w-full max-w-md p-6 sm:p-8 text-[#19243B] shadow-2xl space-y-5 text-center flex flex-col items-center">
+            <div className="rounded-2xl bg-[#EAF0FF] flex justify-center items-center size-14 shadow-2xs">
+              <LoaderCircle className="animate-spin text-[#0057FF] size-7" />
+            </div>
+
+            <div className="space-y-1">
+              <h3 className="font-semibold text-[#19243B] text-lg sm:text-xl">
+                Generating Practice Paper
+              </h3>
+              <p className="text-[#526078] text-xs sm:text-sm max-w-xs mx-auto leading-relaxed">
+                Analyzing patterns across past papers and synthesizing questions for <span className="font-medium text-[#19243B]">{subject || 'your subject'}</span>...
               </p>
             </div>
 
-            {/* Bottom Download Bar */}
-            <div className="flex items-center justify-between pt-4">
-              <button
-                onClick={() => setPredictedPaper(null)}
-                className="text-xs font-medium text-[var(--text-muted)] hover:text-[var(--text-primary)] transition-colors"
-              >
-                ← Back to Multi-Paper Setup
-              </button>
-
-              <button
-                onClick={handleDownloadPdf}
-                className="inline-flex items-center gap-1.5 rounded-[8px] bg-[var(--primary)] px-5 py-2.5 text-xs font-semibold text-[var(--primary-foreground)] hover:opacity-90 transition-all shadow-sm"
-              >
-                <Download className="h-4 w-4 stroke-[2]" />
-                <span>Download Model Paper PDF</span>
-              </button>
-            </div>
-
-            {/* Share Notification Banner */}
-            {shareMessage && (
-              <div className="flex items-center justify-between rounded-[8px] border border-[rgba(200,168,32,0.4)] bg-[rgba(200,168,32,0.08)] p-3 text-xs text-[var(--community)]">
-                <div className="flex items-center gap-2">
-                  <Globe className="h-4 w-4 shrink-0" />
-                  <span>{shareMessage}</span>
-                </div>
-                <button
-                  onClick={() => setActiveTab('community')}
-                  className="font-mono text-xs font-semibold underline hover:opacity-80 flex items-center gap-1 shrink-0 ml-3"
-                >
-                  <span>Go to The Commons</span>
-                  <ArrowRight className="h-3 w-3" />
-                </button>
-              </div>
-            )}
+            <p className="text-[#687184] text-xs pt-1">
+              This usually takes 10–20 seconds.
+            </p>
           </div>
-        )}
-      </div>
+        </div>
+      )}
+
     </div>
   );
 };
+
+export default PredictedPaperGenerator;

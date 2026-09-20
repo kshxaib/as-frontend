@@ -2,88 +2,79 @@ import { create } from 'zustand';
 import api, { getErrorMessage } from '../api/client';
 import { useAuthStore } from './useAuthStore';
 
-
 export const useQuestionBankStore = create((set, get) => ({
-  activeTab: 'resources', // 'resources' | 'question_banks' | 'review' | 'solutions' | 'community' | 'profile'
+  activeTab: 'resources', 
   setActiveTab: (tab) => set({ activeTab: tab, error: null, successMessage: null }),
 
-  // Key Required Modal State
   isKeyModalOpen: false,
   keyModalFeature: '',
   triggerKeyModal: (featureName) => set({ isKeyModalOpen: true, keyModalFeature: featureName }),
   closeKeyModal: () => set({ isKeyModalOpen: false, keyModalFeature: '' }),
 
-  // Global Feedback
   error: null,
   successMessage: null,
   isErrorModalOpen: false,
-  // Functions for modal handling
+  
   showErrorModal: (msg) => set({ error: msg, isErrorModalOpen: true, isUploadingResource: false }),
   closeErrorModal: () => set({ isErrorModalOpen: false, error: null }),
   clearFeedback: () => set({ error: null, successMessage: null, isErrorModalOpen: false }),
 
-  // Resources State (Phase 2 & 3)
   resources: [],
   isLoading: false,
   isUploadingResource: false,
-  isIndexingResource: {}, // map of resourceId -> boolean
+  isIndexingResource: {}, 
 
-  // Question Banks State (Phase 4 & 5)
   questionBanks: [],
   currentQuestionBank: null,
   questions: [],
   isUploadingQuestionBank: false,
-  extractingQBs: {}, // map of questionBankId -> boolean for per-QB extraction state
+  extractingQBs: {}, 
+  extractionFailedQB: null,
+  extractionErrorMessage: null,
+  setExtractionFailedQB: (qb, msg) => set({ extractionFailedQB: qb, extractionErrorMessage: msg }),
+  clearExtractionFailedQB: () => set({ extractionFailedQB: null, extractionErrorMessage: null }),
 
-
-  // Answers State (Phase 6, 7, 8)
   currentAnswerSet: null,
   answerSetsList: [],
   isGeneratingAnswers: false,
-  isRetryingAnswer: {}, // map of answerId -> boolean
+  isRetryingAnswer: {}, 
 
-  // Community State (Phase 10 & 11)
   communityResources: [],
   communityAnswerSets: [],
   communityPredictedPapers: [],
   communityQuestionBanks: [],
   isLoadingCommunity: false,
 
-  // Community Question Bank Viewer State
   communityQBViewerOpen: false,
   communityQBViewerData: null,
   isLoadingCommunityQBViewer: false,
   isCloningCommunityQB: false,
 
-  // Community Answer Viewer State
   communityViewerOpen: false,
-  communityViewerMeta: null,   // { answer_set_id, question_bank_name, subject, author_name, total_questions, created_at }
+  communityViewerMeta: null,
   communityViewerAnswers: [],
   isLoadingCommunityViewer: false,
   isCloningCommunityAnswerSet: false,
 
-  // Community Predicted Paper Viewer State
   communityPredictedViewerOpen: false,
   communityPredictedViewerPaper: null,
   isLoadingCommunityPredictedViewer: false,
   isCloningCommunityPredictedPaper: false,
 
-  // Helper: check if user has configured required OpenAI API key
+  copiedQbIds: new Set(),
+  copiedAnswerSetIds: new Set(),
+  copiedPredictedPaperIds: new Set(),
+
   hasAllRequiredKeys: () => {
     const user = useAuthStore.getState().user;
     return !!user?.has_openai_key;
   },
 
-  // Helper: check if user has embedding key (OpenAI)
   hasEmbeddingKey: () => {
     const user = useAuthStore.getState().user;
     return !!user?.has_openai_key;
   },
 
-
-  // ----------------------------------------------------
-  // Resources Operations
-  // ----------------------------------------------------
   fetchResources: async () => {
     set({ isLoading: true, error: null });
     try {
@@ -112,20 +103,20 @@ export const useQuestionBankStore = create((set, get) => ({
       }));
       return { success: true, resource: res.data };
     } catch (err) {
-      // Determine user-friendly error message
+      
       let msg = err.response?.data?.detail || 'Failed to upload study resource';
-      // If the backend indicates a size limit issue, show a custom message
+      
       if (msg && msg.toLowerCase().includes('file size exceeds')) {
         msg = 'PDF size is larger than 10 MB. Please compress it before uploading.';
       }
-      // Use custom modal for error display (call via get() since this is inside the store)
+      
       get().showErrorModal(msg);
       return { success: false, error: msg };
     }
   },
 
   indexResource: async (resourceId) => {
-    // Check if user has configured required OpenAI API key
+    
     if (!get().hasAllRequiredKeys()) {
       get().triggerKeyModal('PDF Vector Indexing (OpenAI Embeddings)');
       return;
@@ -146,9 +137,9 @@ export const useQuestionBankStore = create((set, get) => ({
         isIndexingResource: { ...state.isIndexingResource, [resourceId]: false },
         successMessage: `Resource indexed! ${res.data.chunks_indexed || 0} searchable vectors embedded into Qdrant.`,
       }));
+      return { success: true, data: res.data };
     } catch (err) {
-      const msg = getErrorMessage(err, 'Indexing failed. Check your Gemini API key in Profile.');
-      // Provider quota / rate-limit failures -> dedicated modal, not a raw banner
+      const msg = getErrorMessage(err, 'Indexing failed. Please check your OpenAI API key.');
       const isQuotaError =
         err?.response?.status === 429 ||
         /resource_exhausted|exceeded your current quota|rate limit/i.test(msg);
@@ -163,6 +154,7 @@ export const useQuestionBankStore = create((set, get) => ({
       } else {
         set({ error: msg });
       }
+      return { success: false, error: msg };
     }
   },
 
@@ -178,9 +170,6 @@ export const useQuestionBankStore = create((set, get) => ({
     }
   },
 
-  // ----------------------------------------------------
-  // Question Bank Operations
-  // ----------------------------------------------------
   fetchQuestionBanks: async () => {
     set({ isLoading: true, error: null });
     try {
@@ -253,13 +242,19 @@ export const useQuestionBankStore = create((set, get) => ({
   },
 
   extractQuestions: async (id) => {
-    // Check if user has configured all 4 required AI keys
+    
     if (!get().hasAllRequiredKeys()) {
       get().triggerKeyModal('AI Question Bank Extraction');
       return;
     }
 
-    set((state) => ({ extractingQBs: { ...state.extractingQBs, [id]: true }, error: null, successMessage: null }));
+    set((state) => ({
+      extractingQBs: { ...state.extractingQBs, [id]: true },
+      error: null,
+      successMessage: null,
+      extractionFailedQB: null,
+      extractionErrorMessage: null,
+    }));
     try {
       const res = await api.post(`/question-banks/${id}/extract`);
       await get().selectQuestionBank(id);
@@ -267,12 +262,20 @@ export const useQuestionBankStore = create((set, get) => ({
         extractingQBs: { ...state.extractingQBs, [id]: false },
         successMessage: `Successfully extracted ${res.data.questions_extracted || 0} questions!`,
       }));
+      return { success: true, data: res.data };
     } catch (err) {
-      const msg = getErrorMessage(err, 'Extraction failed. Check your Google Gemini API key in Profile.');
+      const msg = getErrorMessage(
+        err,
+        "We couldn't read the question text from this paper. Try uploading a clearer PDF or remove password protection."
+      );
+      const qbObj = get().questionBanks.find((q) => q.id === id) || get().currentQuestionBank;
       set((state) => ({
         error: msg,
         extractingQBs: { ...state.extractingQBs, [id]: false },
+        extractionFailedQB: qbObj || { id, name: 'Exam Question Bank' },
+        extractionErrorMessage: msg,
       }));
+      return { success: false, error: msg };
     }
   },
 
@@ -303,7 +306,6 @@ export const useQuestionBankStore = create((set, get) => ({
     }
   },
 
-
   deleteQuestion: async (questionId) => {
     try {
       await api.delete(`/questions/${questionId}`);
@@ -316,11 +318,8 @@ export const useQuestionBankStore = create((set, get) => ({
     }
   },
 
-  // ----------------------------------------------------
-  // Answer Generation & Solutions
-  // ----------------------------------------------------
   generateAnswers: async (questionBankId) => {
-    // Check if user has configured all 4 required AI keys
+    
     if (!get().hasAllRequiredKeys()) {
       get().triggerKeyModal('RAG Answer Generation & AI Review');
       return;
@@ -365,12 +364,6 @@ export const useQuestionBankStore = create((set, get) => ({
       const returned = res.data;
       const { currentAnswerSet, currentQuestionBank } = get();
 
-      // A changed answer_set_id means the set was shared to The Commons and the
-      // backend regenerated into a NEW private working copy (fresh answer ids).
-      // Fetch ONLY that one set — no global isLoading, no bank refetch — and swap
-      // it in surgically, so the current tab, scroll position and expand/collapse
-      // state are all preserved. The frozen community sibling stays in
-      // answerSetsList, so "Share Updated Answer Set" still appears.
       const forked =
         currentAnswerSet && returned.answer_set_id !== currentAnswerSet.id;
 
@@ -379,8 +372,7 @@ export const useQuestionBankStore = create((set, get) => ({
           const setRes = await api.get(`/answer-sets/${returned.answer_set_id}`);
           const workingSet = { ...setRes.data, visibility: 'private' };
           set((state) => {
-            // Keep answerSetsList rows lean (no embedded answers), matching the
-            // shape the list endpoint returns.
+            
             const workingRow = { ...workingSet };
             delete workingRow.answers;
             const others = (state.answerSetsList || []).filter(
@@ -395,8 +387,7 @@ export const useQuestionBankStore = create((set, get) => ({
             };
           });
         } catch {
-          // Rare network fallback only: a full reload keeps state correct even if
-          // the lightweight swap fails.
+          
           set((state) => ({
             isRetryingAnswer: { ...state.isRetryingAnswer, [answerId]: false },
           }));
@@ -506,7 +497,6 @@ export const useQuestionBankStore = create((set, get) => ({
     }
   },
 
-
   downloadCheatsheetPdf: async (answerSetId, filename = 'Cheatsheet.pdf') => {
     try {
       const res = await api.get(`/answer-sets/${answerSetId}/cheatsheet-pdf`, {
@@ -540,14 +530,11 @@ export const useQuestionBankStore = create((set, get) => ({
       link.remove();
       setTimeout(() => window.URL.revokeObjectURL(blobUrl), 2000);
     } catch {
-      // Fallback: open in new tab
+      
       window.open(url, '_blank');
     }
   },
 
-  // ----------------------------------------------------
-  // Community Hub Operations
-  // ----------------------------------------------------
   fetchCommunityFeed: async () => {
     set({ isLoadingCommunity: true, error: null });
     try {
@@ -609,9 +596,6 @@ export const useQuestionBankStore = create((set, get) => ({
     }
   },
 
-  // Push an updated/regenerated answer set to The Commons as the single copy for
-  // its question bank; the backend retires any previously-shared version so no
-  // duplicate appears in the Hub.
   shareUpdatedAnswerSet: async (answerSetId) => {
     try {
       const res = await api.post(`/community/answer-sets/${answerSetId}/share-update`);
@@ -633,9 +617,6 @@ export const useQuestionBankStore = create((set, get) => ({
     }
   },
 
-  // ----------------------------------------------------
-  // Community Answer Viewer Actions
-  // ----------------------------------------------------
   openCommunityViewer: async (answerSetId) => {
     set({ communityViewerOpen: true, isLoadingCommunityViewer: true, communityViewerAnswers: [], communityViewerMeta: null });
     try {
@@ -671,7 +652,6 @@ export const useQuestionBankStore = create((set, get) => ({
     });
   },
 
-  // Community Predicted Paper Viewer Operations
   openCommunityPredictedViewer: async (paperId) => {
     set({ isLoadingCommunityPredictedViewer: true, communityPredictedViewerOpen: true, error: null });
     try {
@@ -715,7 +695,6 @@ export const useQuestionBankStore = create((set, get) => ({
     }
   },
 
-  // Community Question Bank Operations
   toggleQuestionBankShare: async (bankId) => {
     try {
       const res = await api.post(`/community/question-banks/${bankId}/share`);
@@ -763,16 +742,20 @@ export const useQuestionBankStore = create((set, get) => ({
   },
 
   cloneQuestionBankToWorkspace: async (bankId) => {
+    if (get().copiedQbIds.has(bankId)) {
+      return { success: true, alreadyCopied: true };
+    }
     set({ isCloningCommunityQB: true });
     try {
       const res = await api.post(`/community/question-banks/${bankId}/clone`);
       const clonedQB = res.data.question_bank;
-      // Refresh personal question banks list
+      
       await get().fetchQuestionBanks();
-      set({
+      set((state) => ({
         isCloningCommunityQB: false,
+        copiedQbIds: new Set(state.copiedQbIds).add(bankId),
         successMessage: res.data.message || 'Question bank cloned to your workspace!',
-      });
+      }));
       return { success: true, question_bank: clonedQB };
     } catch (err) {
       set({
@@ -784,14 +767,18 @@ export const useQuestionBankStore = create((set, get) => ({
   },
 
   cloneCommunityAnswerSetToWorkspace: async (answerSetId) => {
+    if (get().copiedAnswerSetIds.has(answerSetId)) {
+      return { success: true, alreadyCopied: true };
+    }
     set({ isCloningCommunityAnswerSet: true });
     try {
       const res = await api.post(`/community/answer-sets/${answerSetId}/clone`);
-      await Promise.all([get().fetchQuestionBanks(), get().fetchAnswerSetsList()]);
-      set({
+      await get().fetchQuestionBanks();
+      set((state) => ({
         isCloningCommunityAnswerSet: false,
+        copiedAnswerSetIds: new Set(state.copiedAnswerSetIds).add(answerSetId),
         successMessage: res.data.message || 'Solved Question Bank cloned to your workspace!',
-      });
+      }));
       return { success: true, data: res.data };
     } catch (err) {
       set({
@@ -803,14 +790,18 @@ export const useQuestionBankStore = create((set, get) => ({
   },
 
   cloneCommunityPredictedPaperToWorkspace: async (paperId) => {
+    if (get().copiedPredictedPaperIds.has(paperId)) {
+      return { success: true, alreadyCopied: true };
+    }
     set({ isCloningCommunityPredictedPaper: true });
     try {
       const res = await api.post(`/community/predicted-papers/${paperId}/clone`);
       await get().fetchQuestionBanks();
-      set({
+      set((state) => ({
         isCloningCommunityPredictedPaper: false,
+        copiedPredictedPaperIds: new Set(state.copiedPredictedPaperIds).add(paperId),
         successMessage: res.data.message || 'Predicted Paper cloned to your Question Banks!',
-      });
+      }));
       return { success: true, data: res.data };
     } catch (err) {
       set({
@@ -821,7 +812,6 @@ export const useQuestionBankStore = create((set, get) => ({
     }
   },
 
-  // ─── Paper Predictor State & Actions ─────────────────────────────────────
   predictedPaper: null,
   isPredictingPaper: false,
   isSavingPredictedQb: false,
@@ -838,7 +828,7 @@ export const useQuestionBankStore = create((set, get) => ({
     try {
       const res = await api.post('/predictor/generate', formData, {
         headers: { 'Content-Type': 'multipart/form-data' },
-        timeout: 120000, // 2 minutes for deep multi-paper analysis
+        timeout: 120000, 
       });
       set({
         predictedPaper: res.data,
@@ -863,7 +853,7 @@ export const useQuestionBankStore = create((set, get) => ({
         user_id: user.id,
         paper_data: paperData,
       });
-      // Refresh Question Banks list so the newly saved QB appears immediately
+      
       await get().fetchQuestionBanks();
       set({
         isSavingPredictedQb: false,
@@ -905,7 +895,7 @@ export const useQuestionBankStore = create((set, get) => ({
         user_id: user?.id || null,
         visibility,
       });
-      // Refresh community feed so the newly shared paper appears immediately in The Commons
+      
       get().fetchCommunityFeed();
       return { success: true, data: res.data };
     } catch (err) {

@@ -1,147 +1,153 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useState } from 'react';
 import mermaid from 'mermaid';
-import { Copy, Check, Code2, Image } from 'lucide-react';
 
-// Initialize mermaid once with our dark academic theme
 let mermaidInitialized = false;
+let idCounter = 0;
+const svgCache = new Map();
+
 function ensureMermaidInit() {
   if (mermaidInitialized) return;
-  mermaid.initialize({
-    startOnLoad: false,
-    theme: 'dark',
-    themeVariables: {
-      darkMode: true,
-      background: '#0f1117',
-      primaryColor: '#1e293b',
-      primaryBorderColor: '#334155',
-      primaryTextColor: '#e2e8f0',
-      secondaryColor: '#1a1f2e',
-      secondaryBorderColor: '#475569',
-      secondaryTextColor: '#cbd5e1',
-      tertiaryColor: '#0d1117',
-      tertiaryBorderColor: '#334155',
-      tertiaryTextColor: '#94a3b8',
-      lineColor: '#64748b',
-      textColor: '#e2e8f0',
-      mainBkg: '#1e293b',
-      nodeBorder: '#475569',
-      clusterBkg: '#1a1f2e',
-      clusterBorder: '#334155',
-      titleColor: '#e2e8f0',
-      edgeLabelBackground: '#1e293b',
-      nodeTextColor: '#e2e8f0',
-      actorTextColor: '#e2e8f0',
-      actorLineColor: '#475569',
-      signalColor: '#e2e8f0',
-      signalTextColor: '#e2e8f0',
-      labelBoxBkgColor: '#1e293b',
-      labelBoxBorderColor: '#475569',
-      labelTextColor: '#e2e8f0',
-      noteBkgColor: '#1a1f2e',
-      noteTextColor: '#cbd5e1',
-      noteBorderColor: '#334155',
-      fontFamily: "'JetBrains Mono', 'Geist', monospace",
-      fontSize: '13px',
-    },
-    flowchart: { curve: 'basis', padding: 12 },
-    sequence: { mirrorActors: false },
-    er: { useMaxWidth: true },
-  });
-  mermaidInitialized = true;
+  try {
+    mermaid.initialize({
+      startOnLoad: false,
+      suppressErrorRendering: true,
+      securityLevel: 'loose',
+      theme: 'base',
+      themeVariables: {
+        darkMode: false,
+        background: '#FFFFFF',
+        primaryColor: '#EAF0FF',
+        primaryBorderColor: '#0057FF',
+        primaryTextColor: '#19243B',
+        secondaryColor: '#F1F0EC',
+        secondaryBorderColor: '#C6CAD3',
+        secondaryTextColor: '#526078',
+        tertiaryColor: '#FFFFFF',
+        tertiaryBorderColor: '#E2E0D9',
+        tertiaryTextColor: '#687184',
+        lineColor: '#526078',
+        textColor: '#19243B',
+        mainBkg: '#EAF0FF',
+        nodeBorder: '#0057FF',
+        clusterBkg: '#F8F7F4',
+        clusterBorder: '#E2E0D9',
+        titleColor: '#19243B',
+        edgeLabelBackground: '#FFFFFF',
+        nodeTextColor: '#19243B',
+        actorTextColor: '#19243B',
+        actorLineColor: '#526078',
+        actorBkg: '#EAF0FF',
+        actorBorder: '#0057FF',
+        signalColor: '#19243B',
+        signalTextColor: '#19243B',
+        labelBoxBkgColor: '#FFFFFF',
+        labelBoxBorderColor: '#E2E0D9',
+        labelTextColor: '#19243B',
+        noteBkgColor: '#FFF7E8',
+        noteTextColor: '#8A5700',
+        noteBorderColor: '#F5D08A',
+        fontFamily: "'Geist', system-ui, -apple-system, sans-serif",
+        fontSize: '13px',
+      },
+      flowchart: { curve: 'basis', padding: 16 },
+      sequence: { mirrorActors: false },
+      er: { useMaxWidth: true },
+    });
+    mermaidInitialized = true;
+  } catch {
+  }
 }
 
-// Running counter to ensure unique IDs across renders
-let diagramCounter = 0;
+function sanitizeMermaidCode(raw) {
+  if (!raw) return '';
+  let text = String(raw).trim();
+  text = text.replace(/^```(?:mermaid)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+  text = text.replace(/&gt;/g, '>').replace(/&lt;/g, '<').replace(/&amp;/g, '&');
+  return text;
+}
+
+function cleanupStrayMermaidErrors() {
+  try {
+    const stray = document.querySelectorAll('body > #dmermaid, body > svg[aria-roledescription="error"], #dmermaid');
+    stray.forEach((el) => el.remove());
+  } catch {
+  }
+}
+
+function getSafeDiagramId() {
+  idCounter += 1;
+  return `acad_mermaid_chart_${idCounter}_${Date.now()}`;
+}
 
 export function MermaidDiagram({ chart }) {
-  const containerRef = useRef(null);
-  const [svgContent, setSvgContent] = useState('');
-  const [renderError, setRenderError] = useState(null);
-  const [showRaw, setShowRaw] = useState(false);
-  const [copied, setCopied] = useState(false);
-  const idRef = useRef(`mermaid-diagram-${++diagramCounter}`);
+  const rawCode = typeof chart === 'string' ? chart.trim() : String(chart || '').trim();
+  const code = sanitizeMermaidCode(rawCode);
 
-  const code = typeof chart === 'string' ? chart.trim() : String(chart).trim();
+  const [svgContent, setSvgContent] = useState(() => svgCache.get(code) || '');
+  const [hasError, setHasError] = useState(false);
 
   useEffect(() => {
     if (!code) return;
-    let cancelled = false;
 
+    if (svgCache.has(code)) {
+      setSvgContent(svgCache.get(code));
+      setHasError(false);
+      return;
+    }
+
+    let isMounted = true;
     ensureMermaidInit();
 
     (async () => {
       try {
-        const { svg } = await mermaid.render(idRef.current, code);
-        if (!cancelled) {
-          setSvgContent(svg);
-          setRenderError(null);
+        const diagramId = getSafeDiagramId();
+        const res = await mermaid.render(diagramId, code);
+        cleanupStrayMermaidErrors();
+
+        const renderedSvg = typeof res === 'string' ? res : res?.svg || '';
+        if (renderedSvg) {
+          svgCache.set(code, renderedSvg);
+          if (isMounted) {
+            setSvgContent(renderedSvg);
+            setHasError(false);
+          }
+        } else if (isMounted) {
+          setHasError(true);
         }
-      } catch (err) {
-        if (!cancelled) {
-          setRenderError(err?.message || 'Failed to render Mermaid diagram.');
-          setSvgContent('');
+      } catch {
+        cleanupStrayMermaidErrors();
+        if (isMounted) {
+          setHasError(true);
         }
       }
     })();
 
-    return () => { cancelled = true; };
+    return () => {
+      isMounted = false;
+      cleanupStrayMermaidErrors();
+    };
   }, [code]);
 
-  const handleCopy = useCallback(async () => {
-    try {
-      await navigator.clipboard.writeText(code);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch { /* noop */ }
-  }, [code]);
-
-  // If rendering failed, show the code block with a subtle warning badge
-  if (renderError) {
+  if (hasError) {
     return (
-      <div className="mermaid-diagram-wrapper mermaid-error">
-        <div className="mermaid-toolbar">
-          <span className="mermaid-badge mermaid-badge--error">⚠ Diagram syntax issue</span>
-          <button onClick={handleCopy} className="mermaid-btn" title="Copy code">
-            {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-            <span>{copied ? 'Copied' : 'Copy'}</span>
-          </button>
-        </div>
-        <pre className="mermaid-code-fallback"><code>{code}</code></pre>
+      <div className="my-4 rounded-xl border border-[#E2E0D9] bg-[#F8F7F4] p-4 font-mono text-xs text-[#19243B] overflow-x-auto whitespace-pre">
+        {rawCode}
       </div>
     );
   }
 
-  return (
-    <div className="mermaid-diagram-wrapper">
-      {/* Toolbar */}
-      <div className="mermaid-toolbar">
-        <span className="mermaid-badge">📐 Diagram</span>
-        <div className="mermaid-toolbar-actions">
-          <button
-            onClick={() => setShowRaw(prev => !prev)}
-            className="mermaid-btn"
-            title={showRaw ? 'View rendered diagram' : 'View raw code'}
-          >
-            {showRaw ? <Image className="h-3.5 w-3.5" /> : <Code2 className="h-3.5 w-3.5" />}
-            <span>{showRaw ? 'Diagram' : 'Code'}</span>
-          </button>
-          <button onClick={handleCopy} className="mermaid-btn" title="Copy Mermaid code">
-            {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-            <span>{copied ? 'Copied' : 'Copy'}</span>
-          </button>
-        </div>
-      </div>
+  if (!svgContent) {
+    return null;
+  }
 
-      {/* Content */}
-      {showRaw ? (
-        <pre className="mermaid-code-fallback"><code>{code}</code></pre>
-      ) : (
-        <div
-          ref={containerRef}
-          className="mermaid-svg-container"
-          dangerouslySetInnerHTML={{ __html: svgContent }}
-        />
-      )}
+  return (
+    <div className="my-5 rounded-2xl border border-[#E2E0D9] bg-white p-5 sm:p-6 shadow-[0px_1px_3px_rgba(0,0,0,0.04)] overflow-x-auto flex justify-center items-center">
+      <div
+        className="w-full flex justify-center items-center [&_svg]:max-w-full [&_svg]:h-auto"
+        dangerouslySetInnerHTML={{ __html: svgContent }}
+      />
     </div>
   );
 }
+
+export default MermaidDiagram;

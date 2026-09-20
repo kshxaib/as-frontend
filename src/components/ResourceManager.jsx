@@ -1,25 +1,35 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   BookOpen,
-  Plus,
-  Database,
-  Download,
+  Upload,
+  Search,
+  FileText,
   Trash2,
   Share2,
-  CheckCircle2,
+  Download,
   AlertCircle,
+  CircleAlert,
+  CheckCircle2,
+  Users,
+  Lock,
+  Workflow,
   RefreshCw,
-  Search,
   X,
   Loader2,
-  Workflow,
+  Sparkles,
+  ArrowRight,
+  Filter,
+  Check,
+  Globe,
+  SlidersHorizontal,
+  ChevronRight,
+  ChevronDown,
+  FileWarning,
 } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { ConfirmationModal } from './ConfirmationModal';
 import { AiProgressModal } from './AiProgressModal';
-import { StatusBadge } from './ui/StatusBadge';
-import { EmptyState } from './ui/EmptyState';
 import { ApiKeyBanner } from './ui/ApiKeyBanner';
 
 export const ResourceManager = () => {
@@ -44,20 +54,65 @@ export const ResourceManager = () => {
 
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [deleteCandidate, setDeleteCandidate] = useState(null);
+  const [preparationFailedResource, setPreparationFailedResource] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedSubject, setSelectedSubject] = useState('ALL');
+  const [selectedSubject, setSelectedSubject] = useState('all');
+  const [sortBy, setSortBy] = useState('recent');
+  const [downloadingId, setDownloadingId] = useState(null);
 
-  // Form state
   const [name, setName] = useState('');
   const [subject, setSubject] = useState('');
   const [chapters, setChapters] = useState('');
   const [description, setDescription] = useState('');
   const [visibility, setVisibility] = useState('private');
   const [file, setFile] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     fetchResources();
   }, [fetchResources, user]);
+
+  const handleFileChange = (selectedFile) => {
+    if (!selectedFile) return;
+    setFile(selectedFile);
+    
+    if (!name.trim()) {
+      const cleanName = selectedFile.name
+        .replace(/\.[^/.]+$/, '')
+        .replace(/[-_]+/g, ' ')
+        .replace(/\b\w/g, (l) => l.toUpperCase());
+      setName(cleanName);
+    }
+  };
+
+  const handleDownload = async (resourceId, filename) => {
+    try {
+      setDownloadingId(resourceId);
+      await downloadResourceFile(resourceId, filename);
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const droppedFile = e.dataTransfer.files?.[0];
+    if (droppedFile && droppedFile.type === 'application/pdf') {
+      handleFileChange(droppedFile);
+    }
+  };
 
   const handleUploadSubmit = async (e) => {
     e.preventDefault();
@@ -65,10 +120,10 @@ export const ResourceManager = () => {
 
     const formData = new FormData();
     formData.append('user_id', user?.id || 1);
-    formData.append('name', name);
-    formData.append('subject', subject);
-    if (chapters) formData.append('chapters', chapters);
-    if (description) formData.append('description', description);
+    formData.append('name', name.trim() || file.name);
+    formData.append('subject', subject.trim() || 'General Studies');
+    if (chapters) formData.append('chapters', chapters.trim());
+    if (description) formData.append('description', description.trim());
     formData.append('visibility', visibility);
     formData.append('file', file);
 
@@ -83,390 +138,724 @@ export const ResourceManager = () => {
     }
   };
 
-  const filteredResources = resources.filter((r) => {
-    const matchesSearch =
-      r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (r.chapters && r.chapters.toLowerCase().includes(searchQuery.toLowerCase()));
-    const matchesSubject = selectedSubject === 'ALL' || r.subject === selectedSubject;
-    return matchesSearch && matchesSubject;
-  });
+  const handleIndexResource = async (res) => {
+    if (!user?.has_openai_key) {
+      triggerKeyModal('AI Study Material Preparation');
+      return;
+    }
+    const result = await indexResource(res.id);
+    if (result && result.success === false) {
+      setPreparationFailedResource(res);
+    }
+  };
 
-  const subjects = Array.from(new Set(resources.map((r) => r.subject).filter(Boolean)));
+  const formatFileSize = (bytes) => {
+    if (!bytes) return '0 B';
+    const mb = bytes / (1024 * 1024);
+    if (mb >= 1) return `${mb.toFixed(1)} MB`;
+    const kb = bytes / 1024;
+    return `${kb.toFixed(0)} KB`;
+  };
+
+  const existingSubjects = Array.from(
+    new Set(resources.map((r) => r.subject).filter(Boolean))
+  );
+
+  const defaultSubjects = [
+    'Database Systems',
+    'Operating Systems',
+    'Computer Networks',
+    'Software Engineering',
+    'Data Structures',
+  ];
+  const allSubjectOptions = Array.from(
+    new Set([...defaultSubjects, ...existingSubjects])
+  );
+
+  const filteredResources = resources
+    .filter((r) => {
+      const query = searchQuery.toLowerCase();
+      const matchesSearch =
+        r.name?.toLowerCase().includes(query) ||
+        r.subject?.toLowerCase().includes(query) ||
+        r.chapters?.toLowerCase().includes(query) ||
+        r.description?.toLowerCase().includes(query);
+      const matchesSubject =
+        selectedSubject === 'all' ||
+        r.subject?.toLowerCase() === selectedSubject.toLowerCase();
+      return matchesSearch && matchesSubject;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'oldest') {
+        return (a.id || 0) - (b.id || 0);
+      }
+      if (sortBy === 'name') {
+        return (a.name || '').localeCompare(b.name || '');
+      }
+      return (b.id || 0) - (a.id || 0);
+    });
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return 'Recently';
+    try {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    } catch {
+      return 'Recently';
+    }
+  };
 
   return (
-    <div className="min-h-screen bg-[var(--background)] pb-24 text-[var(--text-primary)]">
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        
-        {/* Feedback Banners */}
-        {error && (
-          <div className="mb-6 flex items-center justify-between rounded-[8px] border border-[rgba(239,68,68,0.25)] bg-[rgba(239,68,68,0.08)] p-3.5 text-xs text-[var(--error)]">
-            <div className="flex items-center gap-2.5">
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              <span>{error}</span>
-            </div>
-            <button onClick={clearFeedback} className="text-xs hover:underline font-mono">Dismiss</button>
+    <div className="w-full max-w-7xl mx-auto space-y-6">
+      {error && (
+        <div className="flex items-center justify-between rounded-xl border border-[#F7D0CA] bg-[#FFF0EE] p-4 text-xs text-[#B42318] shadow-2xs">
+          <div className="flex items-center gap-2.5">
+            <AlertCircle className="h-4 w-4 shrink-0 text-[#B42318]" />
+            <span>{error}</span>
           </div>
-        )}
-
-        {successMessage && (
-          <div className="mb-6 flex items-center justify-between rounded-[8px] border border-[rgba(34,197,94,0.25)] bg-[rgba(34,197,94,0.08)] p-3.5 text-xs text-[var(--success)]">
-            <div className="flex items-center gap-2.5">
-              <CheckCircle2 className="h-4 w-4 shrink-0" />
-              <span>{successMessage}</span>
-            </div>
-            <button onClick={clearFeedback} className="text-xs hover:underline font-mono">Dismiss</button>
-          </div>
-        )}
-
-        {/* OpenAI Key Gating Alert */}
-        <ApiKeyBanner feature="Vector Indexing & RAG Retrieval" />
-
-        {/* Top Masthead */}
-        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between pb-6 border-b border-[var(--border)]">
-          <div>
-            <span className="font-mono text-[11px] uppercase tracking-widest text-[var(--text-muted)] flex items-center gap-1.5 mb-1">
-              <BookOpen className="h-3.5 w-3.5 stroke-[1.5]" />
-              Digital Reading Room
-            </span>
-            <h1 className="font-display text-2xl sm:text-3xl font-normal text-[var(--text-primary)] tracking-tight">
-              Study Resources & Vector Store
-            </h1>
-            <p className="mt-1 text-xs sm:text-sm text-[var(--text-secondary)]">
-              Course notes and textbooks indexed into Qdrant to power syllabus-grounded RAG solution sets.
-            </p>
-          </div>
-
-          <div className="flex items-center gap-3">
-            <button
-              onClick={() => {
-                if (!isAuthenticated) {
-                  openAuthModal('login');
-                } else {
-                  setIsUploadModalOpen(true);
-                }
-              }}
-              className="inline-flex items-center gap-2 rounded-[8px] bg-[var(--primary)] px-4 py-2 text-xs font-semibold text-[var(--primary-foreground)] hover:opacity-90 transition-all shadow-sm"
-            >
-              <Plus className="h-3.5 w-3.5 stroke-[2]" />
-              <span>Upload PDF Document</span>
-            </button>
-          </div>
+          <button
+            onClick={clearFeedback}
+            className="text-xs font-semibold hover:underline cursor-pointer"
+          >
+            Dismiss
+          </button>
         </div>
+      )}
 
-        {/* Filter Toolbar */}
-        <div className="mt-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-[10px] border border-[var(--border)] bg-[var(--surface-well)] p-3">
-          <div className="relative flex-1 max-w-md">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-muted)]" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search documents by title, subject, or chapter..."
-              className="w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] py-1.5 pl-9 pr-3 text-xs text-[var(--text-primary)] placeholder-[var(--text-disabled)] focus:border-[var(--primary)] focus:outline-none"
-            />
+      {successMessage && (
+        <div className="flex items-center justify-between rounded-xl border border-[#C8D8FF] bg-[#EAF0FF] p-4 text-xs text-[#0057FF] shadow-2xs">
+          <div className="flex items-center gap-2.5">
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-[#0057FF]" />
+            <span>{successMessage}</span>
           </div>
+          <button
+            onClick={clearFeedback}
+            className="text-xs font-semibold hover:underline cursor-pointer"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
 
-          {subjects.length > 0 && (
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-[11px] text-[var(--text-muted)] uppercase">Subject:</span>
-              <select
-                value={selectedSubject}
-                onChange={(e) => setSelectedSubject(e.target.value)}
-                className="rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1 text-xs text-[var(--text-primary)] focus:border-[var(--primary)] focus:outline-none"
-              >
-                <option value="ALL">All Subjects</option>
-                {subjects.map((sub) => (
-                  <option key={sub} value={sub}>{sub}</option>
-                ))}
-              </select>
-            </div>
+      <ApiKeyBanner feature="AI Question Extraction & Solutions" />
+
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-1">
+        <div>
+          <h1 className="font-bold text-2xl sm:text-3xl tracking-tight text-[#19243B]">
+            Study materials
+          </h1>
+          <p className="text-[#526078] text-sm sm:text-base mt-1">
+            Keep your notes, textbooks, and syllabus organized in one place.
+          </p>
+        </div>
+        <button
+          onClick={() => {
+            if (!isAuthenticated) {
+              openAuthModal('login');
+            } else {
+              setIsUploadModalOpen(true);
+            }
+          }}
+          className="w-full sm:w-auto rounded-xl bg-[#0057FF] hover:bg-[#0047D4] text-white px-5 h-11 text-sm font-semibold flex items-center justify-center gap-2 shrink-0 shadow-xs transition-all cursor-pointer"
+        >
+          <Upload className="size-4" />
+          <span>Upload material</span>
+        </button>
+      </div>
+
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+        <div className="relative flex-1 min-w-0">
+          <Search className="text-[#687184] absolute top-3.5 left-3.5 size-4" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search by title, subject, or chapter..."
+            className="w-full rounded-xl bg-white border border-[#E2E0D9] pl-10 pr-10 h-11 text-sm text-[#19243B] placeholder-[#687184] focus:border-[#0057FF] focus:outline-none transition-colors shadow-2xs"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              className="absolute top-3 right-3 text-[#687184] hover:text-[#19243B] p-0.5 rounded-md hover:bg-[#F1F0EC] transition-colors cursor-pointer"
+              title="Clear search"
+            >
+              <X className="size-4" />
+            </button>
           )}
         </div>
 
-        {/* Documents Collection */}
-        <div className="mt-6">
-          {isLoading ? (
-            <div className="py-24 text-center text-[var(--text-muted)]">
-              <RefreshCw className="mx-auto h-6 w-6 animate-spin text-[var(--primary)] mb-2 stroke-[1.5]" />
-              <p className="font-mono text-xs">Retrieving digital catalogue...</p>
+        {existingSubjects.length > 0 && (
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="relative">
+              <select
+                value={selectedSubject}
+                onChange={(e) => setSelectedSubject(e.target.value)}
+                className="rounded-xl bg-white border border-[#E2E0D9] px-4 pr-9 h-11 text-sm text-[#19243B] font-medium focus:border-[#0057FF] focus:outline-none transition-colors shadow-2xs appearance-none cursor-pointer"
+              >
+                <option value="all">All Subjects ({resources.length})</option>
+                {existingSubjects.map((sub) => {
+                  const count = resources.filter((r) => r.subject?.toLowerCase() === sub.toLowerCase()).length;
+                  return (
+                    <option key={sub} value={sub.toLowerCase()}>
+                      {sub} ({count})
+                    </option>
+                  );
+                })}
+              </select>
+              <ChevronDown className="size-4 text-[#687184] absolute right-3.5 top-3.5 pointer-events-none" />
             </div>
-          ) : filteredResources.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          </div>
+        )}
+      </div>
+
+      <div>
+        {isLoading ? (
+          <div className="py-24 text-center rounded-2xl bg-white border border-[#E2E0D9] shadow-xs">
+            <RefreshCw className="mx-auto h-7 w-7 animate-spin text-[#0057FF] mb-3" />
+            <p className="text-sm font-semibold text-[#19243B]">Loading study materials...</p>
+          </div>
+        ) : filteredResources.length > 0 ? (
+          <div className="rounded-2xl bg-white border border-[#E2E0D9] shadow-2xs overflow-hidden">
+            <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-3.5 bg-[#FAF9F5] border-b border-[#E2E0D9] text-[11px] font-bold text-[#526078] uppercase tracking-wider select-none">
+              <div className="col-span-5">Document & Subject</div>
+              <div className="col-span-2">Chapters</div>
+              <div className="col-span-2">Status</div>
+              <div className="col-span-1">Added</div>
+              <div className="col-span-2 text-right">Actions</div>
+            </div>
+
+            <div className="divide-y divide-[#EAE8E1]">
               {filteredResources.map((res) => {
                 const isIndexing = isIndexingResource[res.id];
+                const isIndexed = res.status === 'indexed';
+                const isFailed = res.status === 'indexing_failed' || res.status === 'failed';
+
                 return (
                   <div
                     key={res.id}
-                    className="flex flex-col justify-between rounded-[12px] border border-[var(--border)] bg-[var(--surface)] p-5 hover:border-[var(--border-strong)] transition-all"
+                    className="p-4 sm:px-6 sm:py-4 flex flex-col md:grid md:grid-cols-12 gap-3 md:gap-4 md:items-center hover:bg-[#FAF9F5]/70 transition-colors group"
                   >
-                    <div>
-                      {/* Meta header */}
-                      <div className="flex items-center justify-between gap-2 mb-3">
-                        <span className="font-mono text-[11px] font-medium text-[var(--text-muted)] bg-[var(--surface-well)] px-2 py-0.5 rounded-[4px] border border-[var(--border-subtle)] truncate">
-                          {res.subject}
-                        </span>
-                        {res.visibility === 'community' ? (
-                          <StatusBadge variant="gold">Public</StatusBadge>
-                        ) : (
-                          <StatusBadge variant="neutral">Private</StatusBadge>
-                        )}
-                      </div>
-
-                      <h3 className="font-display text-base font-normal text-[var(--text-primary)] line-clamp-1">
+                    <div className="md:col-span-5 min-w-0">
+                      <h2 className="font-semibold text-sm text-[#19243B] truncate group-hover:text-[#0057FF] transition-colors">
                         {res.name}
-                      </h3>
-
-                      {res.chapters && (
-                        <p className="mt-1 font-mono text-[11px] text-[var(--text-secondary)]">
-                          Chapters: {res.chapters}
-                        </p>
-                      )}
-
-                      {res.description && (
-                        <p className="mt-2 text-xs text-[var(--text-muted)] line-clamp-2 leading-relaxed">
-                          {res.description}
-                        </p>
-                      )}
-
-                      {/* Status indicator */}
-                      <div className="mt-4 pt-3 border-t border-[var(--border-subtle)] flex items-center justify-between gap-2">
-                        {res.status === 'indexed' ? (
-                          <StatusBadge variant="success" icon={Database}>Indexed</StatusBadge>
-                        ) : res.status === 'indexing' || isIndexing ? (
-                          <StatusBadge variant="amber" pulse icon={RefreshCw}>Vectorizing...</StatusBadge>
-                        ) : res.status === 'indexing_failed' ? (
-                          <StatusBadge variant="error" icon={AlertCircle}>Indexing Failed</StatusBadge>
-                        ) : (
-                          <StatusBadge variant="neutral">Unindexed</StatusBadge>
-                        )}
-
-                        {/* Direct Index Action for unindexed resources */}
-                        {res.status !== 'indexed' && (
-                          <button
-                            onClick={() => {
-                              if (!user?.has_openai_key) {
-                                triggerKeyModal('PDF Vector Indexing');
-                                return;
-                              }
-                              indexResource(res.id);
-                            }}
-                            disabled={isIndexing || Object.values(isIndexingResource).some(Boolean) || isUploadingResource}
-                            className="inline-flex items-center gap-1.5 rounded-[6px] border border-[rgba(245,158,11,0.3)] bg-[rgba(245,158,11,0.08)] px-2.5 py-1 font-mono text-[11px] font-medium text-[var(--ai)] hover:bg-[rgba(245,158,11,0.15)] transition-all disabled:opacity-40"
-                          >
-                            <Workflow className="h-3 w-3 stroke-[1.5]" />
-                            <span>{isIndexing ? 'Indexing...' : 'Index with AI'}</span>
-                          </button>
-                        )}
-                      </div>
+                      </h2>
+                      <p className="font-medium text-xs text-[#526078] truncate mt-0.5">
+                        {res.subject || 'General'}
+                      </p>
                     </div>
 
-                    {/* Actions Toolbar */}
-                    <div className="mt-5 flex items-center justify-between border-t border-[var(--border-subtle)] pt-3">
-                      <span className="font-mono text-[10px] text-[var(--text-muted)]">
-                        PDF Document
-                      </span>
+                    <div className="md:col-span-2 flex items-center">
+                      {res.chapters ? (
+                        <span className="inline-block bg-[#F1F0EC] text-[#19243B] text-xs font-medium px-2 py-0.5 rounded-md truncate max-w-[160px]">
+                          {res.chapters}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-[#9AA2B1]">—</span>
+                      )}
+                    </div>
 
-                      <div className="flex items-center gap-1">
+                    <div className="md:col-span-2 flex items-center">
+                      {isIndexed ? (
+                        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#187347]">
+                          <Check className="size-3.5 stroke-[2.5]" />
+                          <span>Ready</span>
+                        </span>
+                      ) : isIndexing ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#EFF4FF] text-[#0057FF] text-xs font-medium">
+                          <Loader2 className="size-3 animate-spin text-[#0057FF]" />
+                          <span>Preparing...</span>
+                        </span>
+                      ) : isFailed ? (
                         <button
-                          onClick={() => toggleResourceShare(res.id)}
-                          disabled={isIndexing || isUploadingResource}
-                          title={res.visibility === 'community' ? 'Make Private' : 'Share with The Commons'}
-                          className={`rounded-[6px] p-1.5 transition-colors disabled:opacity-40 ${
-                            res.visibility === 'community'
-                              ? 'text-[var(--community)] hover:bg-[rgba(200,168,32,0.1)]'
-                              : 'text-[var(--text-muted)] hover:bg-[var(--surface-well)] hover:text-[var(--text-primary)]'
-                          }`}
+                          type="button"
+                          onClick={() => setPreparationFailedResource(res)}
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#FFF0EE] text-[#B42318] border border-[#FEDCD7] text-xs font-medium hover:bg-[#FFE5E2] transition-colors cursor-pointer"
                         >
-                          <Share2 className="h-3.5 w-3.5 stroke-[1.5]" />
+                          <CircleAlert className="size-3 text-[#B42318]" />
+                          <span>Failed · Retry</span>
                         </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={() => handleIndexResource(res)}
+                          disabled={
+                            isIndexing ||
+                            Object.values(isIndexingResource).some(Boolean) ||
+                            isUploadingResource
+                          }
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[#D5D8DF] bg-white hover:bg-[#F8F7F4] hover:border-[#19243B] text-[#19243B] text-xs font-medium transition-all shadow-2xs cursor-pointer disabled:opacity-50"
+                        >
+                          <Sparkles className="size-3 text-[#0057FF]" />
+                          <span>Prepare</span>
+                        </button>
+                      )}
+                    </div>
 
-                        <button
-                          onClick={() => downloadResourceFile(res.id, `${res.name.replace(/\s+/g, '_')}.pdf`)}
-                          title="Download Original PDF"
-                          className="rounded-[6px] p-1.5 text-[var(--text-muted)] hover:bg-[var(--surface-well)] hover:text-[var(--text-primary)] transition-colors"
-                        >
-                          <Download className="h-3.5 w-3.5 stroke-[1.5]" />
-                        </button>
+                    <div className="md:col-span-1 text-xs text-[#526078] flex items-center">
+                      {formatDate(res.created_at)}
+                    </div>
 
-                        <button
-                          onClick={() => setDeleteCandidate(res)}
-                          title="Delete"
-                          className="rounded-[6px] p-1.5 text-[var(--text-muted)] hover:bg-[rgba(239,68,68,0.1)] hover:text-[var(--error)] transition-colors"
-                        >
-                          <Trash2 className="h-3.5 w-3.5 stroke-[1.5]" />
-                        </button>
-                      </div>
+                    <div className="md:col-span-2 flex items-center justify-start md:justify-end gap-1.5 pt-2 md:pt-0 border-t md:border-t-0 border-[#EAE8E1]">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleDownload(
+                            res.id,
+                            `${(res.name || 'study_material').replace(/\s+/g, '_')}.pdf`
+                          )
+                        }
+                        disabled={downloadingId === res.id}
+                        className="p-2 rounded-lg text-[#526078] hover:text-[#19243B] hover:bg-[#F1F0EC] transition-colors cursor-pointer disabled:opacity-80 disabled:cursor-wait"
+                        title={downloadingId === res.id ? "Downloading PDF..." : "Download PDF"}
+                      >
+                        {downloadingId === res.id ? (
+                          <Loader2 className="size-4 animate-spin text-[#0057FF]" />
+                        ) : (
+                          <Download className="size-4" />
+                        )}
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => toggleResourceShare(res.id)}
+                        disabled={isIndexing || isUploadingResource}
+                        className={`p-2 rounded-lg transition-colors cursor-pointer ${
+                          res.visibility === 'community'
+                            ? 'text-[#0057FF] bg-[#0057FF]/10 hover:bg-[#0057FF]/20'
+                            : 'text-[#526078] hover:text-[#19243B] hover:bg-[#F1F0EC]'
+                        }`}
+                        title={
+                          res.visibility === 'community'
+                            ? 'Shared with community (Click to make private)'
+                            : 'Share to Community'
+                        }
+                      >
+                        <Share2 className="size-4" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => setDeleteCandidate(res)}
+                        className="p-2 rounded-lg text-[#526078] hover:text-[#B42318] hover:bg-[#FFF0EE] transition-colors cursor-pointer"
+                        title="Delete material"
+                      >
+                        <Trash2 className="size-4" />
+                      </button>
                     </div>
                   </div>
                 );
               })}
             </div>
-          ) : (
-            <EmptyState
-              icon={BookOpen}
-              title="No Study Resources Found"
-              description="Upload course textbooks, lecture notes, or syllabus PDFs to populate the vector library for grounded examination answers."
-              actionText="Upload First Resource"
-              onAction={() => setIsUploadModalOpen(true)}
-            />
-          )}
-        </div>
+          </div>
+        ) : resources.length === 0 ? (
+          <div className="text-center rounded-2xl bg-white border border-[#E2E0D9] p-12 sm:p-16 flex flex-col justify-center items-center shadow-xs">
+            <div className="rounded-2xl bg-[#0057FF]/10 text-[#0057FF] grid mb-5 place-items-center size-16 shadow-xs">
+              <BookOpen className="size-8" />
+            </div>
+            <h2 className="font-bold text-2xl sm:text-3xl tracking-tight text-[#19243B]">
+              Your Study Library is Empty
+            </h2>
+            <p className="text-[#526078] text-sm sm:text-base mt-2.5 max-w-md leading-relaxed">
+              Upload lecture notes, chapter PDFs, or reference textbooks to get started.
+            </p>
+            <button
+              type="button"
+              onClick={() => setIsUploadModalOpen(true)}
+              className="rounded-xl bg-[#0057FF] hover:bg-[#0047D4] text-white text-sm font-semibold px-6 h-11 mt-6 shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer hover:shadow-md"
+            >
+              <Upload className="size-4" />
+              <span>Upload Your First Material</span>
+            </button>
+          </div>
+        ) : (
+          <div className="text-center rounded-2xl bg-white border border-dashed border-[#C6CAD3] p-12 sm:p-16 flex flex-col justify-center items-center">
+            <div className="rounded-2xl bg-[#0057FF]/10 text-[#0057FF] grid mb-4 place-items-center size-14">
+              <Search className="size-7" />
+            </div>
+            <h2 className="font-bold text-xl sm:text-2xl tracking-tight text-[#19243B]">
+              No materials match your search
+            </h2>
+            <p className="text-[#526078] text-sm mt-2 max-w-md">
+              We couldn't find anything matching "{searchQuery}".
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setSearchQuery('');
+                setSelectedSubject('all');
+              }}
+              className="rounded-xl bg-white hover:bg-[#F1F0EC] text-[#19243B] border border-[#E2E0D9] text-sm font-semibold px-5 h-10 mt-5 shadow-2xs transition-colors cursor-pointer"
+            >
+              Clear filters
+            </button>
+          </div>
+        )}
+      </div>
 
-        {/* Delete Confirmation Modal */}
-        <ConfirmationModal
-          isOpen={!!deleteCandidate}
-          title="Delete Study Resource?"
-          message={`Are you sure you want to delete "${deleteCandidate?.name}"? Its vector embeddings stored in Qdrant will also be deleted.`}
-          confirmText="Yes, Delete Resource"
-          cancelText="Cancel"
-          confirmVariant="danger"
-          iconType="trash"
-          onConfirm={() => {
-            if (deleteCandidate) {
-              deleteResource(deleteCandidate.id);
-              setDeleteCandidate(null);
-            }
-          }}
-          onCancel={() => setDeleteCandidate(null)}
-        />
+      {deleteCandidate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#19243B]/40 p-4 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="relative w-full max-w-[520px] rounded-2xl border border-[#E2E0D9] bg-white text-[#19243B] shadow-[0px_16px_45px_rgba(25,36,59,0.12)] my-auto overflow-hidden">
+            <div className="border-b border-[#E2E0D9] p-6">
+              <h3 className="font-bold text-xl tracking-tight text-[#19243B]">
+                Delete Study Material?
+              </h3>
+            </div>
 
-        {/* Live Vector Indexing Progress Modal */}
-        <AiProgressModal
-          isOpen={Object.values(isIndexingResource).some(Boolean)}
-          type="indexing"
-          title="Vector Indexing in Progress"
-          subtitle="AcademicStack is extracting text chunks and computing 3072-dim embeddings for Qdrant vector search."
-        />
+            <div className="p-6 flex flex-col gap-4">
+              <div className="rounded-xl bg-[#F8F7F4] border border-[#E2E0D9] flex p-3.5 items-center gap-3">
+                <span className="rounded-lg bg-[#EAF0FF] text-[#0057FF] border border-[#C8D8FF] flex justify-center items-center shrink-0 size-10 shadow-xs">
+                  <FileText className="size-5" />
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-sm text-[#19243B] truncate">
+                    {deleteCandidate.name || 'Study Material'}
+                  </p>
+                  <p className="text-xs text-[#526078]">
+                    {deleteCandidate.subject || 'General'}
+                  </p>
+                </div>
+              </div>
+              <p className="text-[#526078] text-sm leading-relaxed">
+                This will permanently delete this document from your study library.
+              </p>
+            </div>
 
-        {/* Upload Modal */}
-        {isUploadModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[var(--overlay)] p-4 backdrop-blur-sm animate-in fade-in duration-150">
-            <div className="relative w-full max-w-lg rounded-[16px] border border-[var(--border)] bg-[var(--surface-elevated)] p-6 sm:p-7 shadow-[var(--shadow-lg)] my-auto">
-
-              
+            <div className="bg-[#FAF9F5] border-t border-[#E2E0D9] p-4 flex justify-end gap-2.5">
               <button
-                onClick={() => setIsUploadModalOpen(false)}
-                className="absolute right-4 top-4 rounded-[6px] p-1.5 text-[var(--text-muted)] hover:bg-[var(--surface-well)] hover:text-[var(--text-primary)] transition-colors"
+                type="button"
+                onClick={() => setDeleteCandidate(null)}
+                className="rounded-xl border border-[#E2E0D9] bg-white px-4 h-10 text-sm font-semibold text-[#526078] hover:bg-[#F1F0EC] transition-colors cursor-pointer"
               >
-                <X className="h-4 w-4 stroke-[1.5]" />
+                Cancel
               </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (deleteCandidate) {
+                    await deleteResource(deleteCandidate.id);
+                    setDeleteCandidate(null);
+                  }
+                }}
+                className="rounded-xl bg-[#B42318] hover:bg-[#91180D] text-white px-5 h-10 text-sm font-semibold shadow-sm transition-all cursor-pointer"
+              >
+                Delete Material
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-              <div className="pb-4 border-b border-[var(--border-subtle)] pr-6 mb-5">
-                <h3 className="font-display text-lg font-normal text-[var(--text-primary)] tracking-tight">
-                  Upload Study Resource
+      {(() => {
+        const activeIndexingResource = (resources || []).find((r) => isIndexingResource[r.id]);
+        return (
+          <AiProgressModal
+            isOpen={Object.values(isIndexingResource).some(Boolean)}
+            type="indexing"
+            title="Preparing study material"
+            itemName={activeIndexingResource?.name || 'Study Material Document'}
+            noticeText="Please wait while your document is being processed."
+          />
+        );
+      })()}
+
+      {isUploadModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center overflow-y-auto overflow-x-hidden bg-[#19243B]/40 p-0 sm:p-4 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="relative w-full max-w-xl rounded-t-2xl sm:rounded-2xl border border-[#E2E0D9] bg-white shadow-[0px_16px_45px_rgba(25,36,59,0.12)] my-0 sm:my-auto text-[#19243B] overflow-hidden max-h-[96vh] sm:max-h-[90vh] flex flex-col">
+            <div className="border-b border-[#E2E0D9] p-4 sm:p-5 flex items-start justify-between shrink-0">
+              <div>
+                <h3 className="text-lg sm:text-xl font-bold tracking-tight text-[#19243B]">
+                  Upload Study Material
                 </h3>
-                <p className="mt-1 text-xs text-[var(--text-muted)]">
-                  PDF documents are securely stored and prepared for Qdrant vector indexing.
+                <p className="text-[#526078] text-xs mt-0.5">
+                  Upload textbook chapters, syllabi, or lecture notes in PDF format.
                 </p>
               </div>
+              <button
+                onClick={() => setIsUploadModalOpen(false)}
+                className="rounded-lg p-1.5 text-[#526078] hover:bg-[#F1F0EC] hover:text-[#19243B] transition-colors cursor-pointer"
+                aria-label="Close dialog"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
 
-              <form onSubmit={handleUploadSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
-                    Resource Title *
+            <form onSubmit={handleUploadSubmit} className="flex flex-col flex-1 min-h-0 overflow-x-hidden">
+              <div className="p-4 sm:p-5 flex flex-col gap-3 overflow-y-auto overflow-x-hidden flex-1 scrollbar-none [&::-webkit-scrollbar]:hidden [scrollbar-width:none] [-ms-overflow-style:none]">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  accept="application/pdf"
+                  className="hidden"
+                  onChange={(e) => handleFileChange(e.target.files?.[0])}
+                />
+
+                {!file ? (
+                  <div
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`text-center rounded-xl border-2 border-dashed p-4 sm:p-5 flex flex-col items-center gap-2 cursor-pointer transition-colors ${
+                      isDragging
+                        ? 'bg-[#EAF0FF] border-[#0057FF]'
+                        : 'bg-[#FAF9F5] border-[#D0CECB] hover:bg-[#F0F4FF] hover:border-[#0057FF]'
+                    }`}
+                  >
+                    <div className="rounded-lg bg-[#0057FF]/10 text-[#0057FF] grid place-items-center size-10 shadow-xs">
+                      <FileText className="size-5" />
+                    </div>
+                    <div>
+                      <p className="text-[#19243B] text-xs sm:text-sm font-semibold">
+                        Drag and drop your PDF here, or <span className="text-[#0057FF] underline">browse</span>
+                      </p>
+                      <p className="text-[#687184] text-[11px] mt-0.5">
+                        PDF format • Maximum 10MB
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="rounded-xl bg-[#EAF0FF] border border-[#C8D8FF] flex p-3 items-center gap-2.5">
+                      <div className="rounded-lg bg-white text-[#0057FF] border border-[#C8D8FF] grid place-items-center size-9 shrink-0 shadow-xs">
+                        <FileText className="size-4" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold text-xs sm:text-sm truncate text-[#19243B]">
+                          {file.name}
+                        </p>
+                        <p className="text-[#526078] text-[11px]">
+                          {formatFileSize(file.size)} · PDF
+                        </p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="rounded-lg text-xs px-2.5 h-7 bg-white border border-[#E2E0D9] text-[#19243B] font-semibold hover:bg-[#F1F0EC] transition-colors shadow-2xs shrink-0 cursor-pointer"
+                      >
+                        Replace
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFile(null)}
+                        className="p-1 text-[#526078] hover:bg-white/80 rounded-md transition-colors cursor-pointer"
+                        aria-label="Remove file"
+                      >
+                        <X className="size-4" />
+                      </button>
+                    </div>
+
+                    {file.size > 10 * 1024 * 1024 && (
+                      <div className="rounded-xl bg-[#FFF0EE] text-[#B42318] text-xs border border-[#F2C7C2] p-2.5 flex items-start gap-2">
+                        <FileWarning className="size-4 shrink-0 mt-0.5 text-[#B42318]" />
+                        <div>
+                          <p className="font-semibold">File too large</p>
+                          <p className="text-[11px] text-[#526078] mt-0.5">
+                            PDF files must be 10 MB or smaller.
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                <div className="flex flex-col gap-1">
+                  <label htmlFor="doc-title" className="font-semibold text-xs text-[#19243B]">
+                    Document Title *
                   </label>
                   <input
+                    id="doc-title"
                     type="text"
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. Operating Systems Modern Concepts"
-                    className="w-full rounded-[8px] border border-[var(--border)] bg-[var(--surface-well)] py-2 px-3 text-xs text-[var(--text-primary)] placeholder-[var(--text-disabled)] focus:border-[var(--primary)] focus:outline-none"
+                    placeholder="e.g. Database Management Systems Notes"
+                    className="w-full rounded-xl border border-[#E2E0D9] bg-white px-3.5 h-10 text-sm text-[#19243B] placeholder-[#687184] focus:border-[#0057FF] focus:outline-none transition-colors shadow-2xs"
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div>
-                    <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+                <div className="grid gap-3 grid-cols-1 sm:grid-cols-2">
+                  <div className="flex flex-col gap-1">
+                    <label htmlFor="doc-subject" className="font-semibold text-xs text-[#19243B]">
                       Subject *
                     </label>
-                    <input
-                      type="text"
-                      required
-                      value={subject}
-                      onChange={(e) => setSubject(e.target.value)}
-                      placeholder="e.g. Operating Systems"
-                      className="w-full rounded-[8px] border border-[var(--border)] bg-[var(--surface-well)] py-2 px-3 text-xs text-[var(--text-primary)] placeholder-[var(--text-disabled)] focus:border-[var(--primary)] focus:outline-none"
-                    />
+                    <div className="relative">
+                      <input
+                        id="doc-subject"
+                        type="text"
+                        required
+                        value={subject}
+                        onChange={(e) => setSubject(e.target.value)}
+                        placeholder="e.g. Database Systems"
+                        list="subject-suggestions"
+                        className="w-full rounded-xl border border-[#E2E0D9] bg-white px-3.5 h-10 text-sm text-[#19243B] placeholder-[#687184] focus:border-[#0057FF] focus:outline-none transition-colors shadow-2xs"
+                      />
+                      <datalist id="subject-suggestions">
+                        {allSubjectOptions.map((sub) => (
+                          <option key={sub} value={sub} />
+                        ))}
+                      </datalist>
+                    </div>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
-                      Chapters / Modules
+                  <div className="flex flex-col gap-1">
+                    <label htmlFor="doc-chapters" className="font-semibold text-xs text-[#19243B]">
+                      Covered Chapters
                     </label>
                     <input
+                      id="doc-chapters"
                       type="text"
                       value={chapters}
                       onChange={(e) => setChapters(e.target.value)}
-                      placeholder="e.g. Ch 1-4, Memory Mgmt"
-                      className="w-full rounded-[8px] border border-[var(--border)] bg-[var(--surface-well)] py-2 px-3 text-xs text-[var(--text-primary)] placeholder-[var(--text-disabled)] focus:border-[var(--primary)] focus:outline-none"
+                      placeholder="e.g. Chapters 1–3"
+                      className="w-full rounded-xl border border-[#E2E0D9] bg-white px-3.5 h-10 text-sm text-[#19243B] placeholder-[#687184] focus:border-[#0057FF] focus:outline-none transition-colors shadow-2xs"
                     />
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
-                    Description / Syllabus Notes
+                <div className="flex flex-col gap-1">
+                  <label htmlFor="doc-desc" className="font-semibold text-xs text-[#19243B]">
+                    Description
                   </label>
                   <textarea
+                    id="doc-desc"
                     rows={2}
                     value={description}
                     onChange={(e) => setDescription(e.target.value)}
-                    placeholder="Brief summary of included units..."
-                    className="w-full rounded-[8px] border border-[var(--border)] bg-[var(--surface-well)] py-2 px-3 text-xs text-[var(--text-primary)] placeholder-[var(--text-disabled)] focus:border-[var(--primary)] focus:outline-none"
+                    placeholder="Short description or syllabus outline..."
+                    className="w-full rounded-xl border border-[#E2E0D9] bg-white p-2.5 text-sm text-[#19243B] placeholder-[#687184] focus:border-[#0057FF] focus:outline-none transition-colors resize-none min-h-[60px] shadow-2xs"
                   />
                 </div>
 
-                <div>
-                  <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
-                    Visibility
-                  </label>
-                  <select
-                    value={visibility}
-                    onChange={(e) => setVisibility(e.target.value)}
-                    className="w-full rounded-[8px] border border-[var(--border)] bg-[var(--surface-well)] py-2 px-3 text-xs text-[var(--text-primary)] focus:border-[var(--primary)] focus:outline-none"
-                  >
-                    <option value="private">Private (Only accessible in your workspace)</option>
-                    <option value="community">The Commons (Share with community)</option>
-                  </select>
-                </div>
+                <fieldset className="flex flex-col gap-1.5">
+                  <legend className="font-semibold text-xs text-[#19243B]">
+                    Visibility & Sharing
+                  </legend>
+                  <div className="grid gap-2.5 grid-cols-2">
+                    <label
+                      onClick={() => setVisibility('private')}
+                      className={`rounded-xl text-sm flex p-2.5 items-center gap-2 cursor-pointer transition-colors border select-none ${
+                        visibility === 'private'
+                          ? 'bg-[#EAF0FF] text-[#0057FF] font-semibold border-[#0057FF]'
+                          : 'text-[#526078] bg-white border-[#E2E0D9] hover:bg-[#F8F7F4]'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="visibility"
+                        value="private"
+                        checked={visibility === 'private'}
+                        onChange={() => setVisibility('private')}
+                        className="sr-only"
+                      />
+                      <Lock className="size-4 shrink-0" />
+                      <div>
+                        <p className="font-semibold text-xs">Private</p>
+                        <p className="text-[10px] text-[#526078]">Only you</p>
+                      </div>
+                    </label>
 
-                <div>
-                  <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
-                    PDF Document File *
-                  </label>
-                  <input
-                    type="file"
-                    required
-                    accept="application/pdf"
-                    onChange={(e) => setFile(e.target.files?.[0] || null)}
-                    className="w-full text-xs text-[var(--text-muted)] file:mr-4 file:py-1.5 file:px-3 file:rounded-[6px] file:border-0 file:text-xs file:font-semibold file:bg-[var(--surface-well)] file:text-[var(--text-primary)] hover:file:bg-[var(--surface-muted)] cursor-pointer"
-                  />
-                </div>
+                    <label
+                      onClick={() => setVisibility('community')}
+                      className={`rounded-xl text-sm flex p-2.5 items-center gap-2 cursor-pointer transition-colors border select-none ${
+                        visibility === 'community'
+                          ? 'bg-[#EAF0FF] text-[#0057FF] font-semibold border-[#0057FF]'
+                          : 'text-[#526078] bg-white border-[#E2E0D9] hover:bg-[#F8F7F4]'
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="visibility"
+                        value="community"
+                        checked={visibility === 'community'}
+                        onChange={() => setVisibility('community')}
+                        className="sr-only"
+                      />
+                      <Users className="size-4 shrink-0" />
+                      <div>
+                        <p className="font-semibold text-xs">Community</p>
+                        <p className="text-[10px] text-[#526078]">Public Commons</p>
+                      </div>
+                    </label>
+                  </div>
+                </fieldset>
+              </div>
 
-                <div className="mt-6 flex items-center justify-end gap-3 pt-3 border-t border-[var(--border-subtle)]">
-                  <button
-                    type="button"
-                    onClick={() => setIsUploadModalOpen(false)}
-                    className="rounded-[8px] border border-[var(--border)] bg-[var(--surface-well)] px-4 py-2 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)] transition-all"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isUploadingResource}
-                    className="inline-flex items-center gap-2 rounded-[8px] bg-[var(--primary)] px-5 py-2 text-xs font-semibold text-[var(--primary-foreground)] hover:opacity-90 transition-all disabled:opacity-50 shadow-sm"
-                  >
-                    {isUploadingResource && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                    <span>{isUploadingResource ? 'Uploading Document...' : 'Upload & Catalogue'}</span>
-                  </button>
+              <div className="bg-[#FAF9F5] border-t border-[#E2E0D9] p-3.5 sm:p-4 flex justify-end items-center gap-2 sm:gap-3 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setIsUploadModalOpen(false)}
+                  className="flex-1 sm:flex-initial rounded-xl border border-[#E2E0D9] bg-white px-4 h-10 text-sm font-semibold text-[#526078] hover:bg-[#F1F0EC] transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUploadingResource || !file || file.size > 10 * 1024 * 1024}
+                  className="flex-1 sm:flex-initial rounded-xl bg-[#0057FF] hover:bg-[#0047D4] text-white px-5 h-10 text-sm font-semibold shadow-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
+                >
+                  {isUploadingResource && <Loader2 className="size-4 animate-spin" />}
+                  <span>{isUploadingResource ? 'Uploading...' : 'Upload & Save'}</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {preparationFailedResource && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#19243B]/40 p-4 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="relative w-full max-w-[520px] rounded-2xl border border-[#E2E0D9] bg-white shadow-xl my-auto text-[#19243B] overflow-hidden">
+            <div className="border-b border-[#E2E0D9] p-6">
+              <h3 className="text-xl font-bold tracking-tight text-[#19243B]">
+                Couldn't Process Material
+              </h3>
+            </div>
+
+            <div className="p-6 flex flex-col gap-4">
+              <div className="rounded-xl bg-[#F8F7F4] border border-[#E2E0D9] flex p-3.5 items-center gap-3">
+                <div className="rounded-lg bg-[#0057FF]/10 text-[#0057FF] grid place-items-center shrink-0 size-10">
+                  <FileText className="size-5" />
                 </div>
-              </form>
+                <span className="font-semibold text-sm text-[#19243B] truncate">
+                  {preparationFailedResource.name || 'Study Material'}
+                </span>
+              </div>
+
+              <div
+                className="rounded-xl bg-red-50 text-red-700 text-xs border border-red-200 flex p-3 items-start gap-2.5"
+                role="alert"
+              >
+                <CircleAlert className="mt-0.5 shrink-0 size-4 text-red-600" />
+                <span>Processing did not complete. Please try again.</span>
+              </div>
+            </div>
+
+            <div className="bg-[#FAF9F5] border-t border-[#E2E0D9] p-4 flex justify-end items-center gap-2.5">
+              <button
+                type="button"
+                onClick={() => setPreparationFailedResource(null)}
+                className="rounded-xl border border-[#E2E0D9] bg-white px-4 h-10 text-sm font-semibold text-[#526078] hover:bg-[#F1F0EC] transition-colors cursor-pointer"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  const target = preparationFailedResource;
+                  setPreparationFailedResource(null);
+                  await handleIndexResource(target);
+                }}
+                className="rounded-xl bg-[#0057FF] hover:bg-[#0047D4] text-white px-5 h-10 text-sm font-semibold shadow-sm transition-all cursor-pointer"
+              >
+                Try Again
+              </button>
             </div>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };
+
+export default ResourceManager;

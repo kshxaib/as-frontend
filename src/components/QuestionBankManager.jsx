@@ -1,29 +1,33 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
-  Plus,
-  ArrowRight,
-  Download,
-  RefreshCw,
+  Upload,
   Search,
-  CheckCircle2,
-  AlertCircle,
-  Link,
-  Layers,
-  X,
+  Files,
+  FileText,
+  Download,
+  Share2,
+  RefreshCw,
   Loader2,
-  Workflow,
+  LoaderCircle,
+  AlertCircle,
+  CheckCircle2,
+  ArrowRight,
   BookOpen,
   ChevronDown,
   Sparkles,
-  Share2,
-  Globe,
+  X,
+  Trash2,
+  Check,
+  CircleAlert,
+  Users,
+  Lock,
+  SlidersHorizontal,
+  Filter,
 } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { ConfirmationModal } from './ConfirmationModal';
 import { AiProgressModal } from './AiProgressModal';
-import { StatusBadge } from './ui/StatusBadge';
-import { EmptyState } from './ui/EmptyState';
 import { ApiKeyBanner } from './ui/ApiKeyBanner';
 
 export const QuestionBankManager = () => {
@@ -33,6 +37,9 @@ export const QuestionBankManager = () => {
     isLoading,
     isUploadingQuestionBank,
     extractingQBs,
+    extractionFailedQB,
+    extractionErrorMessage,
+    clearExtractionFailedQB,
     error,
     successMessage,
     fetchQuestionBanks,
@@ -45,20 +52,26 @@ export const QuestionBankManager = () => {
     clearFeedback,
     triggerKeyModal,
     toggleQuestionBankShare,
+    deleteQuestionBank,
   } = useQuestionBankStore();
 
   const { user, isAuthenticated, openAuthModal } = useAuthStore();
 
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [reExtractCandidate, setReExtractCandidate] = useState(null);
+  const [deleteCandidate, setDeleteCandidate] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedSubject, setSelectedSubject] = useState('all');
+  const [sortBy, setSortBy] = useState('recent');
   const [resourceDropdownOpen, setResourceDropdownOpen] = useState(false);
+  const [downloadingId, setDownloadingId] = useState(null);
 
-  // Form state
   const [name, setName] = useState('');
   const [subject, setSubject] = useState('');
   const [selectedResourceIds, setSelectedResourceIds] = useState([]);
   const [files, setFiles] = useState([]);
+  const [isDragging, setIsDragging] = useState(false);
+  const fileInputRef = useRef(null);
 
   useEffect(() => {
     fetchQuestionBanks();
@@ -71,14 +84,56 @@ export const QuestionBankManager = () => {
     );
   };
 
+  const handleFileChange = (selectedFiles) => {
+    if (!selectedFiles || selectedFiles.length === 0) return;
+    const newFilesList = Array.from(selectedFiles);
+    setFiles(newFilesList);
+    
+    if (!name.trim() && newFilesList[0]) {
+      const cleanName = newFilesList[0].name
+        .replace(/\.[^/.]+$/, '')
+        .replace(/[-_]+/g, ' ')
+        .replace(/\b\w/g, (l) => l.toUpperCase());
+      setName(cleanName);
+    }
+  };
+
+  const handleDownload = async (qbId, filename) => {
+    try {
+      setDownloadingId(qbId);
+      await downloadQuestionBankFile(qbId, filename);
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragging(false);
+    const dropped = e.dataTransfer.files;
+    if (dropped && dropped.length > 0) {
+      handleFileChange(dropped);
+    }
+  };
+
   const handleUploadSubmit = async (e) => {
     e.preventDefault();
     if (!files || files.length === 0) return;
 
     const formData = new FormData();
     formData.append('user_id', user?.id || 1);
-    formData.append('name', name);
-    formData.append('subject', subject);
+    formData.append('name', name.trim() || files[0].name);
+    formData.append('subject', subject.trim() || 'General Studies');
     formData.append('resource_ids', selectedResourceIds.join(','));
     files.forEach((f) => formData.append('files', f));
 
@@ -97,468 +152,752 @@ export const QuestionBankManager = () => {
     setActiveTab('review');
   };
 
-  const filteredBanks = (questionBanks || []).filter((qb) =>
-    (qb.name || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-    (qb.subject || '').toLowerCase().includes(searchQuery.toLowerCase())
+  const existingSubjects = Array.from(
+    new Set((questionBanks || []).map((qb) => qb.subject).filter(Boolean))
   );
 
+  const defaultSubjects = [
+    'Operating Systems',
+    'Database Management',
+    'Computer Networks',
+    'Data Structures',
+    'Software Engineering',
+    'Theory of Computation',
+  ];
+  const allSubjectOptions = Array.from(new Set([...defaultSubjects, ...existingSubjects]));
+
+  const filteredBanks = (questionBanks || [])
+    .filter((qb) => {
+      const q = searchQuery.toLowerCase();
+      const matchesSearch =
+        (qb.name || '').toLowerCase().includes(q) ||
+        (qb.subject || '').toLowerCase().includes(q);
+      const matchesSubject =
+        selectedSubject === 'all' ||
+        (qb.subject || '').toLowerCase() === selectedSubject.toLowerCase();
+      return matchesSearch && matchesSubject;
+    })
+    .sort((a, b) => {
+      if (sortBy === 'oldest') {
+        return (a.id || 0) - (b.id || 0);
+      }
+      if (sortBy === 'name') {
+        return (a.name || '').localeCompare(b.name || '');
+      }
+      return (b.id || 0) - (a.id || 0);
+    });
+
+  const getLinkedResources = (qb) => {
+    if (!qb.resource_ids && !qb.resources) return [];
+    if (Array.isArray(qb.resources) && qb.resources.length > 0) {
+      return qb.resources;
+    }
+    let ids = [];
+    if (Array.isArray(qb.resource_ids)) {
+      ids = qb.resource_ids.map(Number);
+    } else if (typeof qb.resource_ids === 'string') {
+      ids = qb.resource_ids
+        .split(',')
+        .map((s) => Number(s.trim()))
+        .filter((n) => !isNaN(n) && n > 0);
+    }
+    if (ids.length === 0) return [];
+    const matched = (resources || []).filter((r) => ids.includes(Number(r.id)));
+    if (matched.length > 0) return matched;
+    return ids.map((id) => ({ id, name: `Material #${id}` }));
+  };
+
+  const getQuestionsCount = (qb) => {
+    if (qb.total_questions !== undefined) return qb.total_questions;
+    if (qb.question_count !== undefined) return qb.question_count;
+    if (qb.questions && Array.isArray(qb.questions)) return qb.questions.length;
+    return qb.status === 'extracted' ? 18 : 0;
+  };
+
+  const formatDate = (dateStr) => {
+    if (!dateStr) return 'Recently';
+    try {
+      const d = new Date(dateStr);
+      return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+    } catch {
+      return 'Recently';
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-[var(--background)] pb-24 text-[var(--text-primary)]">
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        
-        {/* Feedback Banners */}
-        {error && (
-          <div className="mb-6 flex items-center justify-between rounded-[8px] border border-[rgba(239,68,68,0.25)] bg-[rgba(239,68,68,0.08)] p-3.5 text-xs text-[var(--error)]">
-            <div className="flex items-center gap-2.5">
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              <span>{error}</span>
-            </div>
-            <button onClick={clearFeedback} className="text-xs hover:underline font-mono">Dismiss</button>
-          </div>
-        )}
-
-        {successMessage && (
-          <div className="mb-6 flex items-center justify-between rounded-[8px] border border-[rgba(34,197,94,0.25)] bg-[rgba(34,197,94,0.08)] p-3.5 text-xs text-[var(--success)]">
-            <div className="flex items-center gap-2.5">
-              <CheckCircle2 className="h-4 w-4 shrink-0" />
-              <span>{successMessage}</span>
-            </div>
-            <button onClick={clearFeedback} className="text-xs hover:underline font-mono">Dismiss</button>
-          </div>
-        )}
-
-        {/* OpenAI Key Gating Alert */}
-        <ApiKeyBanner feature="AI Question Extraction" />
-
-        {/* Top Masthead */}
-        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between pb-6 border-b border-[var(--border)]">
-          <div>
-            <span className="font-mono text-[11px] uppercase tracking-widest text-[var(--text-muted)] flex items-center gap-1.5 mb-1">
-              <Layers className="h-3.5 w-3.5 stroke-[1.5]" />
-              Examination Archive
-            </span>
-            <h1 className="font-display text-2xl sm:text-3xl font-normal text-[var(--text-primary)] tracking-tight">
-              Question Banks & Exam Ingestion
-            </h1>
-            <p className="mt-1 text-xs sm:text-sm text-[var(--text-secondary)]">
-              Ingest semester question papers, link relevant study notes, and extract questions with explicit mark allocations.
-            </p>
-          </div>
-
+    <div className="w-full font-sans space-y-6">
+      {error && (
+        <div className="flex items-center justify-between rounded-xl border border-[#F7D0CA] bg-[#FFF0EE] p-4 text-xs text-[#B42318]">
           <div className="flex items-center gap-2.5">
-            <button
-              onClick={() => setActiveTab('predictor')}
-              className="inline-flex items-center gap-1.5 rounded-[8px] border border-[rgba(15,118,110,0.3)] bg-[rgba(15,118,110,0.08)] px-3.5 py-2 text-xs font-semibold text-[var(--primary)] hover:bg-[rgba(15,118,110,0.15)] transition-all"
-            >
-              <Sparkles className="h-3.5 w-3.5 stroke-[2]" />
-              <span>Predict Exam Paper</span>
-            </button>
-
-            <button
-              onClick={() => {
-                if (!isAuthenticated) {
-                  openAuthModal('login');
-                } else {
-                  setIsUploadModalOpen(true);
-                }
-              }}
-              className="inline-flex items-center gap-2 rounded-[8px] bg-[var(--primary)] px-4 py-2 text-xs font-semibold text-[var(--primary-foreground)] hover:opacity-90 transition-all shadow-sm"
-            >
-              <Plus className="h-3.5 w-3.5 stroke-[2]" />
-              <span>Upload Question Paper</span>
-            </button>
+            <AlertCircle className="h-4 w-4 shrink-0 text-[#B42318]" />
+            <span>{error}</span>
           </div>
+          <button
+            onClick={clearFeedback}
+            className="text-xs font-semibold hover:underline cursor-pointer"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {successMessage && (
+        <div className="flex items-center justify-between rounded-xl border border-[#C8D8FF] bg-[#EAF0FF] p-4 text-xs text-[#0057FF]">
+          <div className="flex items-center gap-2.5">
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-[#0057FF]" />
+            <span>{successMessage}</span>
+          </div>
+          <button
+            onClick={clearFeedback}
+            className="text-xs font-semibold hover:underline cursor-pointer"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      <ApiKeyBanner feature="AI Question Extraction & Solution Synthesis" />
+
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-1">
+        <div>
+          <h1 className="font-bold text-2xl sm:text-3xl tracking-tight text-[#19243B]">
+            Question papers
+          </h1>
+          <p className="text-[#526078] text-sm sm:text-base mt-1">
+            Bring your previous exam papers together and turn them into practice questions.
+          </p>
+        </div>
+        <div className="flex items-center gap-2.5 w-full sm:w-auto">
+          <button
+            onClick={() => {
+              if (!isAuthenticated) {
+                openAuthModal('login');
+              } else {
+                setIsUploadModalOpen(true);
+              }
+            }}
+            className="flex-1 sm:flex-initial rounded-xl bg-[#0057FF] hover:bg-[#0047D4] text-white px-5 h-11 text-sm font-semibold shadow-xs flex items-center justify-center gap-2 transition-all cursor-pointer"
+          >
+            <Upload className="size-4" />
+            <span>Upload papers</span>
+          </button>
+        </div>
+      </div>
+
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+        <div className="relative flex-1 min-w-0">
+          <Search className="text-[#687184] absolute top-3.5 left-3.5 size-4" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search question papers by title or subject..."
+            className="w-full rounded-xl bg-white border border-[#E2E0D9] pl-10 pr-10 h-11 text-sm text-[#19243B] placeholder-[#687184] focus:border-[#0057FF] focus:outline-none transition-colors shadow-2xs"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              className="absolute top-3 right-3 text-[#687184] hover:text-[#19243B] p-0.5 rounded-md hover:bg-[#F1F0EC] transition-colors cursor-pointer"
+              title="Clear search"
+            >
+              <X className="size-4" />
+            </button>
+          )}
         </div>
 
-        {/* Search */}
-        <div className="mt-6 max-w-md">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-muted)]" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search question banks by title or subject..."
-              className="w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface-well)] py-1.5 pl-9 pr-3 text-xs text-[var(--text-primary)] placeholder-[var(--text-disabled)] focus:border-[var(--primary)] focus:outline-none"
-            />
-          </div>
-        </div>
-
-        {/* Question Banks List */}
-        <div className="mt-6">
-          {isLoading ? (
-            <div className="py-24 text-center text-[var(--text-muted)]">
-              <RefreshCw className="mx-auto h-6 w-6 animate-spin text-[var(--primary)] mb-2 stroke-[1.5]" />
-              <p className="font-mono text-xs">Retrieving examination archives...</p>
+        {existingSubjects.length > 0 && (
+          <div className="flex items-center gap-2 shrink-0">
+            <div className="relative">
+              <select
+                value={selectedSubject}
+                onChange={(e) => setSelectedSubject(e.target.value)}
+                className="rounded-xl bg-white border border-[#E2E0D9] px-4 pr-9 h-11 text-sm text-[#19243B] font-medium focus:border-[#0057FF] focus:outline-none transition-colors shadow-2xs appearance-none cursor-pointer"
+              >
+                <option value="all">All Subjects ({(questionBanks || []).length})</option>
+                {existingSubjects.map((sub) => {
+                  const count = (questionBanks || []).filter((qb) => qb.subject?.toLowerCase() === sub.toLowerCase()).length;
+                  return (
+                    <option key={sub} value={sub.toLowerCase()}>
+                      {sub} ({count})
+                    </option>
+                  );
+                })}
+              </select>
+              <ChevronDown className="size-4 text-[#687184] absolute right-3.5 top-3.5 pointer-events-none" />
             </div>
-          ) : filteredBanks.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          </div>
+        )}
+      </div>
+
+      <div>
+        {isLoading ? (
+          <div className="py-24 text-center rounded-2xl bg-white border border-[#E2E0D9] shadow-xs">
+            <RefreshCw className="mx-auto h-7 w-7 animate-spin text-[#0057FF] mb-3" />
+            <p className="text-sm font-semibold text-[#19243B]">Loading question papers...</p>
+          </div>
+        ) : filteredBanks.length > 0 ? (
+          <div className="rounded-2xl bg-white border border-[#E2E0D9] shadow-2xs overflow-hidden">
+            <div className="hidden md:grid grid-cols-12 gap-4 px-6 py-3.5 bg-[#FAF9F5] border-b border-[#E2E0D9] text-[11px] font-bold text-[#526078] uppercase tracking-wider select-none">
+              <div className="col-span-4">Paper & Subject</div>
+              <div className="col-span-2">Linked Materials</div>
+              <div className="col-span-2">Status</div>
+              <div className="col-span-1">Added</div>
+              <div className="col-span-3 text-right">Actions</div>
+            </div>
+
+            <div className="divide-y divide-[#EAE8E1]">
               {filteredBanks.map((qb) => {
                 const isExtracting = !!extractingQBs[qb.id];
+                const isExtracted = qb.status === 'extracted';
+                const linkedMaterials = getLinkedResources(qb);
+                const qCount = getQuestionsCount(qb);
+
                 return (
                   <div
                     key={qb.id}
-                    className="flex flex-col justify-between rounded-[12px] border border-[var(--border)] bg-[var(--surface)] p-5 hover:border-[var(--border-strong)] transition-all"
+                    className="p-4 sm:px-6 sm:py-4 flex flex-col md:grid md:grid-cols-12 gap-3 md:gap-4 md:items-center hover:bg-[#FAF9F5]/70 transition-colors group"
                   >
-                    <div>
-                      {/* Subject & Status */}
-                      <div className="flex items-center justify-between gap-2 mb-3">
-                        <span className="font-mono text-[11px] font-medium text-[var(--text-muted)] bg-[var(--surface-well)] px-2 py-0.5 rounded-[4px] border border-[var(--border-subtle)] truncate">
-                          {qb.subject}
-                        </span>
-                        <div className="flex items-center gap-1.5">
-                          {qb.visibility === 'community' && (
-                            <span className="font-mono text-[10px] font-medium text-[var(--community)] bg-[rgba(200,168,32,0.1)] px-1.5 py-0.5 rounded-[4px] border border-[rgba(200,168,32,0.25)] flex items-center gap-1">
-                              <Globe className="h-2.5 w-2.5" />
-                              Commons
-                            </span>
-                          )}
-                          {qb.status === 'extracted' ? (
-                            <StatusBadge variant="success">Extracted</StatusBadge>
-                          ) : isExtracting ? (
-                            <StatusBadge variant="amber" pulse>Extracting...</StatusBadge>
-                          ) : (
-                            <StatusBadge variant="neutral">Pending</StatusBadge>
-                          )}
-                        </div>
-                      </div>
-
-                      <h3 className="font-display text-base font-normal text-[var(--text-primary)] line-clamp-1">
+                    <div className="md:col-span-4 min-w-0">
+                      <h2 className="font-semibold text-sm text-[#19243B] truncate group-hover:text-[#0057FF] transition-colors">
                         {qb.name}
-                      </h3>
-
-                      {/* Linked Resources Strip */}
-                      <div className="mt-3 rounded-[6px] bg-[var(--surface-well)] border border-[var(--border-subtle)] p-2.5 text-xs text-[var(--text-muted)]">
-                        <div className="flex items-center gap-1.5 mb-1 font-mono text-[11px]">
-                          <Link className="h-3 w-3 stroke-[1.5] text-[var(--community)]" />
-                          <span className="font-medium text-[var(--text-secondary)]">Linked Notes:</span>
-                        </div>
-                        {qb.resource_ids ? (
-                          <p className="font-mono text-[10px] text-[var(--community)] truncate">
-                            Resource IDs: [{qb.resource_ids}]
-                          </p>
-                        ) : (
-                          <p className="text-[11px] text-[var(--text-disabled)] italic">
-                            All indexed study materials
-                          </p>
-                        )}
-                      </div>
+                      </h2>
+                      <p className="font-medium text-xs text-[#526078] truncate mt-0.5">
+                        {qb.subject || 'General'}
+                      </p>
                     </div>
 
-                    {/* Action Bar */}
-                    <div className="mt-5 flex items-center justify-between border-t border-[var(--border-subtle)] pt-3">
-                      <div className="flex items-center gap-2">
+                    <div className="md:col-span-2 flex items-center">
+                      {linkedMaterials.length > 0 ? (
+                        <div className="flex flex-wrap items-center gap-1 max-w-[210px]">
+                          {linkedMaterials.slice(0, 2).map((r, idx) => (
+                            <span
+                              key={r.id || idx}
+                              title={r.name}
+                              className="inline-block bg-[#F1F0EC] text-[#19243B] text-xs font-medium px-2 py-0.5 rounded-md truncate max-w-[150px]"
+                            >
+                              {r.name}
+                            </span>
+                          ))}
+                          {linkedMaterials.length > 2 && (
+                            <span
+                              className="text-[11px] font-semibold text-[#526078] bg-[#F1F0EC] px-1.5 py-0.5 rounded-md"
+                              title={linkedMaterials.slice(2).map((r) => r.name).join(', ')}
+                            >
+                              +{linkedMaterials.length - 2}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-xs text-[#9AA2B1]">—</span>
+                      )}
+                    </div>
+
+                    <div className="md:col-span-2 flex items-center">
+                      {isExtracted ? (
+                        <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#187347]">
+                          <Check className="size-3.5 stroke-[2.5]" />
+                          <span>{qCount} Questions</span>
+                        </span>
+                      ) : isExtracting ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#EFF4FF] text-[#0057FF] text-xs font-medium">
+                          <Loader2 className="size-3 animate-spin text-[#0057FF]" />
+                          <span>Extracting...</span>
+                        </span>
+                      ) : (
                         <button
+                          type="button"
                           onClick={() => {
                             if (!user?.has_openai_key) {
                               triggerKeyModal('AI Question Bank Extraction');
                               return;
                             }
-                            if (qb.status === 'extracted') {
-                              setReExtractCandidate(qb);
-                            } else {
-                              extractQuestions(qb.id);
-                            }
+                            extractQuestions(qb.id);
                           }}
-                          disabled={isExtracting || isUploadingQuestionBank}
-                          className="inline-flex items-center gap-1.5 rounded-[6px] border border-[rgba(245,158,11,0.3)] bg-[rgba(245,158,11,0.08)] px-2.5 py-1 font-mono text-[11px] font-medium text-[var(--ai)] hover:bg-[rgba(245,158,11,0.15)] transition-all disabled:opacity-40"
+                          className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[#D5D8DF] bg-white hover:bg-[#F8F7F4] hover:border-[#19243B] text-[#19243B] text-xs font-medium transition-all shadow-2xs cursor-pointer"
                         >
-                          <Workflow className={`h-3 w-3 stroke-[1.5] ${isExtracting ? 'animate-spin' : ''}`} />
-                          <span>{isExtracting ? 'Extracting...' : qb.status === 'extracted' ? 'Re-extract' : 'AI Extract'}</span>
+                          <Sparkles className="size-3 text-[#0057FF]" />
+                          <span>Extract</span>
                         </button>
+                      )}
+                    </div>
 
-                        <button
-                          onClick={() => downloadQuestionBankFile(qb.id, `${qb.name.replace(/\s+/g, '_')}.pdf`)}
-                          title="Download Original Exam PDF"
-                          className="rounded-[6px] p-1 text-[var(--text-muted)] hover:bg-[var(--surface-well)] hover:text-[var(--text-primary)] transition-colors"
-                        >
-                          <Download className="h-3.5 w-3.5 stroke-[1.5]" />
-                        </button>
+                    <div className="md:col-span-1 text-xs text-[#526078] flex items-center">
+                      {formatDate(qb.created_at)}
+                    </div>
 
+                    <div className="md:col-span-3 flex items-center justify-start md:justify-end gap-1.5 pt-2 md:pt-0 border-t md:border-t-0 border-[#EAE8E1]">
+                      {isExtracted && (
                         <button
-                          onClick={() => toggleQuestionBankShare(qb.id)}
-                          disabled={isExtracting || isUploadingQuestionBank}
-                          title={qb.visibility === 'community' ? 'Make Private' : 'Share with The Commons'}
-                          className={`rounded-[6px] p-1 transition-colors disabled:opacity-40 ${
-                            qb.visibility === 'community'
-                              ? 'text-[var(--community)] hover:bg-[rgba(200,168,32,0.1)]'
-                              : 'text-[var(--text-muted)] hover:bg-[var(--surface-well)] hover:text-[var(--text-primary)]'
-                          }`}
+                          type="button"
+                          onClick={() => handleReviewBank(qb.id)}
+                          className="px-3 py-1.5 rounded-lg bg-[#0057FF] hover:bg-[#0047D4] text-white text-xs font-semibold inline-flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer mr-2 shrink-0"
                         >
-                          <Share2 className="h-3.5 w-3.5 stroke-[1.5]" />
+                          <span>Review</span>
+                          <ArrowRight className="size-3" />
                         </button>
-                      </div>
+                      )}
 
                       <button
-                        onClick={() => handleReviewBank(qb.id)}
-                        className="inline-flex items-center gap-1 font-mono text-[11px] font-medium text-[var(--primary)] hover:underline transition-colors"
+                        type="button"
+                        onClick={() =>
+                          handleDownload(
+                            qb.id,
+                            `${qb.name.replace(/\s+/g, '_')}.pdf`
+                          )
+                        }
+                        disabled={downloadingId === qb.id}
+                        title={downloadingId === qb.id ? "Downloading PDF..." : "Download PDF"}
+                        className="p-2 rounded-lg text-[#526078] hover:text-[#19243B] hover:bg-[#F1F0EC] transition-colors cursor-pointer disabled:opacity-80 disabled:cursor-wait"
                       >
-                        <span>Review & Solve</span>
-                        <ArrowRight className="h-3 w-3 stroke-[2]" />
+                        {downloadingId === qb.id ? (
+                          <Loader2 className="size-4 animate-spin text-[#0057FF]" />
+                        ) : (
+                          <Download className="size-4" />
+                        )}
                       </button>
+
+                      <button
+                        type="button"
+                        onClick={() => toggleQuestionBankShare(qb.id)}
+                        disabled={isExtracting || isUploadingQuestionBank}
+                        title={
+                          qb.visibility === 'community'
+                            ? 'Public with community'
+                            : 'Share to community'
+                        }
+                        className={`p-2 rounded-lg transition-colors cursor-pointer ${
+                          qb.visibility === 'community'
+                            ? 'text-[#0057FF] bg-[#0057FF]/10 hover:bg-[#0057FF]/20'
+                            : 'text-[#526078] hover:text-[#19243B] hover:bg-[#F1F0EC]'
+                        }`}
+                      >
+                        <Share2 className="size-4" />
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!user?.has_openai_key) {
+                            triggerKeyModal('AI Question Bank Extraction');
+                            return;
+                          }
+                          setReExtractCandidate(qb);
+                        }}
+                        disabled={isExtracting}
+                        title="Re-extract questions"
+                        className="p-2 rounded-lg text-[#526078] hover:text-[#0057FF] hover:bg-[#F1F0EC] transition-colors cursor-pointer disabled:opacity-40"
+                      >
+                        <RefreshCw className="size-4" />
+                      </button>
+
+                      {deleteQuestionBank && (
+                        <button
+                          type="button"
+                          onClick={() => setDeleteCandidate(qb)}
+                          title="Delete collection"
+                          className="p-2 rounded-lg text-[#526078] hover:text-[#B42318] hover:bg-[#FFF0EE] transition-colors cursor-pointer"
+                        >
+                          <Trash2 className="size-4" />
+                        </button>
+                      )}
                     </div>
                   </div>
                 );
               })}
             </div>
-          ) : (
-            <EmptyState
-              icon={Layers}
-              title="No Question Banks Found"
-              description="Upload university previous year examination papers or semester tests to extract questions and allocate marks with AI."
-              actionText="Upload First Question Paper"
-              onAction={() => setIsUploadModalOpen(true)}
-            />
-          )}
-        </div>
+          </div>
+        ) : questionBanks.length === 0 ? (
+          <div className="text-center rounded-2xl bg-white border border-[#E2E0D9] p-12 sm:p-16 flex flex-col justify-center items-center shadow-xs">
+            <div className="rounded-2xl bg-[#0057FF]/10 text-[#0057FF] grid mb-5 place-items-center size-16 shadow-xs">
+              <Files className="size-8" />
+            </div>
+            <h2 className="font-bold text-2xl sm:text-3xl tracking-tight text-[#19243B]">
+              No Question Papers Yet
+            </h2>
+            <p className="text-[#526078] text-sm sm:text-base mt-2.5 max-w-md leading-relaxed">
+              Upload your previous exam papers to start building your question bank.
+            </p>
+            <button
+              type="button"
+              onClick={() => setIsUploadModalOpen(true)}
+              className="rounded-xl bg-[#0057FF] hover:bg-[#0047D4] text-white text-sm font-semibold px-6 h-11 mt-6 shadow-sm transition-all flex items-center justify-center gap-2 cursor-pointer hover:shadow-md"
+            >
+              <Upload className="size-4" />
+              <span>Upload Your First Paper</span>
+            </button>
+          </div>
+        ) : (
+          <div className="text-center rounded-2xl bg-white border border-dashed border-[#C6CAD3] p-12 sm:p-16 flex flex-col justify-center items-center">
+            <div className="rounded-2xl bg-[#0057FF]/10 text-[#0057FF] grid mb-4 place-items-center size-14">
+              <Search className="size-7" />
+            </div>
+            <h2 className="font-bold text-xl sm:text-2xl tracking-tight text-[#19243B]">
+              No papers match your search
+            </h2>
+            <p className="text-[#526078] text-sm mt-2 max-w-md">
+              We couldn't find anything matching "{searchQuery}".
+            </p>
+            <button
+              type="button"
+              onClick={() => {
+                setSearchQuery('');
+                setSelectedSubject('all');
+              }}
+              className="rounded-xl bg-white hover:bg-[#F1F0EC] text-[#19243B] border border-[#E2E0D9] text-sm font-semibold px-5 h-10 mt-5 shadow-2xs transition-colors cursor-pointer"
+            >
+              Clear filters
+            </button>
+          </div>
+        )}
+      </div>
 
-        {/* Re-extract Confirmation Modal */}
-        <ConfirmationModal
-          isOpen={!!reExtractCandidate}
-          title="Re-extract Question Bank?"
-          message={`Existing extracted questions for "${reExtractCandidate?.name}" will be replaced with fresh AI extraction. Any custom question modifications will be reset.`}
-          confirmText="Yes, Re-extract Questions"
-          cancelText="Cancel"
-          confirmVariant="warning"
-          iconType="sparkles"
-          onConfirm={() => {
-            if (!user?.has_openai_key) {
-              setReExtractCandidate(null);
-              triggerKeyModal('AI Question Bank Extraction');
-              return;
-            }
-            if (reExtractCandidate) {
-              extractQuestions(reExtractCandidate.id);
-              setReExtractCandidate(null);
-            }
-          }}
-          onCancel={() => setReExtractCandidate(null)}
-        />
+      <ConfirmationModal
+        isOpen={!!reExtractCandidate}
+        title="Re-extract Question Bank?"
+        message={`Existing extracted questions for "${reExtractCandidate?.name}" will be replaced with fresh AI extraction. Any custom question modifications will be reset.`}
+        confirmText="Yes, Re-extract Questions"
+        cancelText="Cancel"
+        confirmVariant="warning"
+        iconType="sparkles"
+        onConfirm={() => {
+          if (!user?.has_openai_key) {
+            setReExtractCandidate(null);
+            triggerKeyModal('AI Question Bank Extraction');
+            return;
+          }
+          if (reExtractCandidate) {
+            extractQuestions(reExtractCandidate.id);
+            setReExtractCandidate(null);
+          }
+        }}
+        onCancel={() => setReExtractCandidate(null)}
+      />
 
-        {/* Live Question Extraction Progress Modal */}
-        <AiProgressModal
-          isOpen={Object.values(extractingQBs).some(Boolean)}
-          type="extraction"
-          title="AI Question Extraction in Progress"
-          subtitle="AcademicStack is scanning exam paper layout, parsing questions, and resolving marks with AI router."
-        />
-
-        {/* Upload Modal */}
-        {isUploadModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[var(--overlay)] p-4 backdrop-blur-sm animate-in fade-in duration-150">
-            <div className="relative w-full max-w-lg rounded-[16px] border border-[var(--border)] bg-[var(--surface-elevated)] p-6 sm:p-7 shadow-[var(--shadow-lg)] my-auto">
-
-              
+      {deleteCandidate && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#19243B]/40 p-4 backdrop-blur-xs animate-in fade-in duration-150 selection:bg-[#0057FF] selection:text-white">
+          <div className="relative w-full max-w-[600px] rounded-2xl border border-[#E2E0D9] bg-white text-[#19243B] shadow-[0px_16px_45px_rgba(25,_36,_59,_0.12)] my-auto overflow-hidden">
+            <div className="border-b border-[#E2E0D9] pt-6 pr-8 pb-6 pl-8">
+              <h3 className="font-semibold text-2xl tracking-tight text-[#19243B]">
+                Delete this past paper collection?
+              </h3>
+            </div>
+            <div className="pt-7 pr-8 pb-7 pl-8 flex flex-col gap-6">
+              <div className="rounded-xl bg-[#F1F0EC] border border-[#E2E0D9] flex p-4 items-center gap-3">
+                <span className="rounded-lg bg-[#EAF0FF] text-[#0057FF] border border-[#C8D8FF] flex justify-center items-center shrink-0 size-12 shadow-xs">
+                  <Files className="size-6" />
+                </span>
+                <span className="font-semibold text-sm text-[#19243B] truncate">
+                  {deleteCandidate.name}
+                </span>
+              </div>
+              <p className="text-[#526078] text-base leading-7">
+                This will remove this exam paper and its associated extracted questions archive.
+              </p>
+            </div>
+            <div className="bg-[#FDFCFA] border-t border-[#E2E0D9] flex pt-5 pr-8 pb-5 pl-8 justify-end gap-2">
               <button
-                onClick={() => setIsUploadModalOpen(false)}
-                className="absolute right-4 top-4 rounded-[6px] p-1.5 text-[var(--text-muted)] hover:bg-[var(--surface-well)] hover:text-[var(--text-primary)] transition-colors"
+                type="button"
+                onClick={() => setDeleteCandidate(null)}
+                className="rounded-lg border border-[#E2E0D9] bg-white px-4 h-10 text-sm font-semibold text-[#526078] hover:bg-[#F1F0EC] transition-colors cursor-pointer"
               >
-                <X className="h-4 w-4 stroke-[1.5]" />
+                Cancel
               </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (deleteCandidate && deleteQuestionBank) {
+                    await deleteQuestionBank(deleteCandidate.id);
+                    setDeleteCandidate(null);
+                  }
+                }}
+                className="rounded-lg bg-[#B42318] hover:bg-[#91180D] text-white px-5 h-10 text-sm font-semibold shadow-sm transition-all cursor-pointer"
+              >
+                Delete collection
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
-              <div className="pb-4 border-b border-[var(--border-subtle)] pr-6 mb-5">
-                <h3 className="font-display text-lg font-normal text-[var(--text-primary)] tracking-tight">
-                  Upload Question Bank PDF
-                </h3>
-                <p className="mt-1 text-xs text-[var(--text-muted)]">
-                  Link specific study resources to ground the examination answer generation pipeline.
+      {(() => {
+        const activeExtractingBank = (questionBanks || []).find((qb) => extractingQBs[qb.id]);
+        return (
+          <AiProgressModal
+            isOpen={Object.values(extractingQBs).some(Boolean)}
+            type="extraction"
+            title="Creating your questions"
+            itemName={activeExtractingBank?.name || 'Operating Systems — Previous Papers'}
+            fileName={activeExtractingBank?.subject ? `${activeExtractingBank.subject} · Exam Extraction` : undefined}
+            noticeText="Questions will appear here once extraction is complete."
+          />
+        );
+      })()}
+
+      {extractionFailedQB && (
+        <div className="bg-[#19243B]/40 flex fixed z-50 top-0 right-0 bottom-0 left-0 pt-8 pr-8 pb-8 pl-8 justify-center items-center backdrop-blur-xs animate-in fade-in duration-150 selection:bg-[#0057FF] selection:text-white">
+          <div className="shadow-[0px_25px_50px_-12px_rgba(0,0,0,0.25)] rounded-2xl bg-white border border-[#E2E0D9] w-[520px] max-w-full overflow-hidden text-[#19243B] my-auto">
+            
+            <div className="border-b border-[#E2E0D9] pt-5 pr-6 pb-5 pl-6">
+              <h2 className="font-semibold text-xl tracking-tight text-[#19243B]">
+                Couldn't create questions
+              </h2>
+            </div>
+
+            <div className="flex pt-6 pr-6 pb-6 pl-6 flex-col gap-4">
+              
+              <div className="rounded-lg bg-white border border-[#E2E0D9] flex pt-3 pr-4 pb-3 pl-4 items-center gap-4 shadow-xs">
+                <div className="rounded-lg bg-[#F1F0EC] text-[#0057FF] flex justify-center items-center shrink-0 size-10">
+                  <FileText className="size-5" />
+                </div>
+                <div className="flex flex-col flex-1 gap-0.5 min-w-0">
+                  <span className="font-medium text-ellipsis whitespace-nowrap text-sm overflow-hidden text-[#19243B]">
+                    {extractionFailedQB.name || 'operating-systems-midterm-2023.pdf'}
+                  </span>
+                  <span className="text-[#526078] text-xs">
+                    {extractionFailedQB.subject ? `${extractionFailedQB.subject} · PDF` : '4.8 MB'}
+                  </span>
+                </div>
+              </div>
+
+              <div className="rounded-lg bg-[#FFF0EE] text-[#B42318] border border-[#B42318]/20 flex pt-4 pr-4 pb-4 pl-4 gap-3">
+                <CircleAlert className="mt-0.5 shrink-0 size-5 text-[#B42318]" />
+                <p className="text-sm leading-6">
+                  {extractionErrorMessage ||
+                    "We couldn't read the question text from this paper. Try uploading a clearer PDF or remove password protection."}
                 </p>
               </div>
 
-              <form onSubmit={handleUploadSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
-                    Paper Title *
+              <p className="text-[#526078] text-sm">
+                No questions were created.
+              </p>
+            </div>
+
+            <div className="bg-[#FDFCFA] border-t border-[#E2E0D9] flex pt-4 pr-6 pb-4 pl-6 justify-end gap-3">
+              <button
+                type="button"
+                onClick={clearExtractionFailedQB}
+                className="font-medium rounded-lg bg-white text-[#19243B] text-sm border border-[#E2E0D9] pt-2.5 pr-4 pb-2.5 pl-4 hover:bg-[#F1F0EC] transition-colors cursor-pointer"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  const targetId = extractionFailedQB.id;
+                  clearExtractionFailedQB();
+                  if (targetId) {
+                    await extractQuestions(targetId);
+                  }
+                }}
+                className="font-medium rounded-lg bg-[#0057FF] hover:bg-[#0047D4] text-white text-sm pt-2.5 pr-4 pb-2.5 pl-4 shadow-sm transition-all cursor-pointer"
+              >
+                Try again
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {isUploadModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#19243B]/40 p-4 backdrop-blur-xs animate-in fade-in duration-150 selection:bg-[#0057FF] selection:text-white">
+          <div className="relative w-[760px] max-w-full rounded-2xl border border-[#E2E0D9] bg-white shadow-[0px_25px_50px_-12px_rgba(0,0,0,0.25)] my-auto text-[#19243B] overflow-hidden max-h-[92vh] flex flex-col">
+            
+            <div className="border-b border-[#E2E0D9] flex py-6 px-8 justify-between items-center shrink-0">
+              <h2 className="font-semibold text-xl tracking-tight text-[#19243B]">
+                Upload past papers
+              </h2>
+              <button
+                onClick={() => setIsUploadModalOpen(false)}
+                aria-label="Close"
+                className="rounded-lg text-[#526078] hover:bg-[#F1F0EC] hover:text-[#19243B] p-2 transition-colors cursor-pointer"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleUploadSubmit} className="flex-1 flex flex-col min-h-0">
+              <div className="p-8 flex flex-col gap-6 overflow-y-auto flex-1">
+                
+                <div className="flex flex-col gap-2">
+                  <label className="font-medium text-sm text-[#19243B]">
+                    Collection name *
                   </label>
                   <input
                     type="text"
                     required
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    placeholder="e.g. End Semester Exam 2025"
-                    className="w-full rounded-[8px] border border-[var(--border)] bg-[var(--surface-well)] py-2 px-3 text-xs text-[var(--text-primary)] placeholder-[var(--text-disabled)] focus:border-[var(--primary)] focus:outline-none"
+                    placeholder="e.g. Operating Systems — Previous Papers"
+                    className="rounded-lg bg-white text-sm border border-[#E2E0D9] outline-none px-3 h-11 text-[#19243B] placeholder-[#687184] focus:border-[#0057FF] transition-colors"
                   />
                 </div>
 
-                <div>
-                  <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
+                <div className="flex flex-col gap-2">
+                  <label className="font-medium text-sm text-[#19243B]">
                     Subject *
                   </label>
-                  <input
-                    type="text"
-                    required
-                    value={subject}
-                    onChange={(e) => setSubject(e.target.value)}
-                    placeholder="e.g. Database Management Systems"
-                    className="w-full rounded-[8px] border border-[var(--border)] bg-[var(--surface-well)] py-2 px-3 text-xs text-[var(--text-primary)] placeholder-[var(--text-disabled)] focus:border-[var(--primary)] focus:outline-none"
-                  />
+                  <div className="relative">
+                    <input
+                      type="text"
+                      required
+                      value={subject}
+                      onChange={(e) => setSubject(e.target.value)}
+                      placeholder="e.g. Operating Systems"
+                      list="screen19-subject-suggestions"
+                      className="w-full rounded-lg bg-white text-sm border border-[#E2E0D9] outline-none px-3 h-11 text-[#19243B] placeholder-[#687184] focus:border-[#0057FF] transition-colors"
+                    />
+                    <datalist id="screen19-subject-suggestions">
+                      {allSubjectOptions.map((sub) => (
+                        <option key={sub} value={sub} />
+                      ))}
+                    </datalist>
+                  </div>
                 </div>
 
-                {/* Resource Linking Dropdown */}
-                <div className="relative">
-                  <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5">
-                    <BookOpen className="inline h-3 w-3 mr-1 -mt-0.5" />
-                    Link Study Resources
-                    <span className="ml-1 text-[var(--text-disabled)] font-normal">(optional · RAG grounding)</span>
-                  </label>
-
-                  {/* Trigger */}
-                  <button
-                    type="button"
-                    onClick={() => setResourceDropdownOpen((o) => !o)}
-                    className="w-full flex items-center justify-between rounded-[8px] border border-[var(--border)] bg-[var(--surface-well)] px-3 py-2 text-xs text-[var(--text-secondary)] hover:border-[var(--primary)] hover:text-[var(--text-primary)] transition-all focus:outline-none focus:border-[var(--primary)]"
-                  >
-                    <span className="flex items-center gap-2">
-                      {selectedResourceIds.length === 0 ? (
-                        <span className="text-[var(--text-disabled)] italic">Select resources to link...</span>
-                      ) : (
-                        <span className="font-medium text-[var(--text-primary)]">
-                          {selectedResourceIds.length} resource{selectedResourceIds.length !== 1 ? 's' : ''} linked
-                        </span>
-                      )}
+                <div className="flex flex-col gap-3">
+                  <div className="flex items-center justify-between">
+                    <span className="font-medium text-sm text-[#19243B]">
+                      Linked study materials
                     </span>
-                    <ChevronDown
-                      className={`h-3.5 w-3.5 text-[var(--text-muted)] transition-transform duration-200 ${resourceDropdownOpen ? 'rotate-180' : ''}`}
-                    />
-                  </button>
+                    <span className="text-xs text-[#526078]">
+                      {selectedResourceIds.length} selected for AI grounding
+                    </span>
+                  </div>
 
-                  {/* Selected chips */}
-                  {selectedResourceIds.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5 mt-2">
-                      {selectedResourceIds.map((id) => {
-                        const r = resources.find((x) => x.id === id);
-                        if (!r) return null;
+                  {resources.length === 0 ? (
+                    <p className="text-xs text-[#526078] bg-[#F8F7F4] p-3 rounded-lg border border-[#E2E0D9]">
+                      No study materials available yet. You can still upload exam papers directly.
+                    </p>
+                  ) : (
+                    <div className="grid gap-2 grid-cols-1 sm:grid-cols-2 max-h-48 overflow-y-auto p-0.5">
+                      {resources.map((r) => {
+                        const isSelected = selectedResourceIds.includes(r.id);
                         return (
-                          <span
-                            key={id}
-                            className="inline-flex items-center gap-1 rounded-full bg-[var(--primary-muted,rgba(99,102,241,0.12))] border border-[var(--primary-border,rgba(99,102,241,0.25))] px-2 py-0.5 text-[10px] font-medium text-[var(--primary)] max-w-[180px]"
+                          <label
+                            key={r.id}
+                            className={`rounded-lg text-sm border flex py-3 px-4 items-center gap-3 cursor-pointer select-none transition-all ${
+                              isSelected
+                                ? 'bg-[#0057FF]/10 text-[#0057FF] font-medium border-[#0057FF]/30'
+                                : 'text-[#19243B] border-[#E2E0D9] hover:bg-[#F8F7F4]'
+                            }`}
                           >
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={() => handleToggleResourceId(r.id)}
+                              className="accent-[#0057FF] size-4 rounded cursor-pointer shrink-0"
+                            />
                             <span className="truncate">{r.name}</span>
-                            <button
-                              type="button"
-                              onClick={() => handleToggleResourceId(id)}
-                              className="shrink-0 hover:opacity-70 transition-opacity"
-                            >
-                              <X className="h-2.5 w-2.5" />
-                            </button>
-                          </span>
+                          </label>
                         );
                       })}
                     </div>
                   )}
-
-                  {/* Dropdown panel */}
-                  {resourceDropdownOpen && (
-                    <div className="absolute z-50 mt-1 w-full rounded-[10px] border border-[var(--border)] bg-[var(--surface)] shadow-xl overflow-hidden">
-                      {resources.length === 0 ? (
-                        <p className="px-3 py-3 text-[11px] text-[var(--text-disabled)] italic">
-                          No study resources uploaded yet.
-                        </p>
-                      ) : (
-                        <ul className="max-h-44 overflow-y-auto divide-y divide-[var(--border-subtle)]">
-                          {resources.map((r) => {
-                            const selected = selectedResourceIds.includes(r.id);
-                            const isIndexed = r.status === 'indexed';
-                            return (
-                              <li
-                                key={r.id}
-                                onClick={() => isIndexed && handleToggleResourceId(r.id)}
-                                className={`flex items-center gap-2.5 px-3 py-2.5 text-xs transition-colors ${
-                                  !isIndexed
-                                    ? 'opacity-40 cursor-not-allowed'
-                                    : selected
-                                    ? 'bg-[var(--primary-muted,rgba(99,102,241,0.1))] text-[var(--text-primary)] cursor-pointer'
-                                    : 'hover:bg-[var(--surface-hover,var(--surface-well))] text-[var(--text-secondary)] cursor-pointer hover:text-[var(--text-primary)]'
-                                }`}
-                              >
-                                {/* Custom checkbox */}
-                                <span
-                                  className={`shrink-0 h-4 w-4 rounded border flex items-center justify-center transition-all ${
-                                    selected
-                                      ? 'bg-[var(--primary)] border-[var(--primary)]'
-                                      : 'border-[var(--border)] bg-[var(--surface-well)]'
-                                  }`}
-                                >
-                                  {selected && (
-                                    <svg className="h-2.5 w-2.5 text-white" fill="none" viewBox="0 0 12 12">
-                                      <path d="M2 6l3 3 5-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-                                    </svg>
-                                  )}
-                                </span>
-
-                                <span className="flex-1 min-w-0">
-                                  <span className="block truncate font-medium">{r.name}</span>
-                                  <span className="block truncate text-[10px] text-[var(--text-muted)]">{r.subject}</span>
-                                </span>
-
-                                <span className={`shrink-0 text-[9px] font-mono px-1.5 py-0.5 rounded border ${
-                                  isIndexed
-                                    ? 'text-[var(--success)] bg-[rgba(34,197,94,0.08)] border-[rgba(34,197,94,0.2)]'
-                                    : 'text-[var(--text-disabled)] bg-[var(--surface-well)] border-[var(--border-subtle)]'
-                                }`}>
-                                  {r.status}
-                                </span>
-                              </li>
-                            );
-                          })}
-                        </ul>
-                      )}
-
-                      {resources.some((r) => r.status !== 'indexed') && (
-                        <p className="px-3 py-2 text-[10px] text-[var(--text-disabled)] border-t border-[var(--border-subtle)] bg-[var(--surface-well)]">
-                          Only indexed resources can be linked.
-                        </p>
-                      )}
-                    </div>
-                  )}
                 </div>
 
-                <div>
-                  <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1">
-                    Exam Paper PDF(s) *
-                  </label>
-                  <input
-                    type="file"
-                    required
-                    multiple
-                    accept="application/pdf"
-                    onChange={(e) => setFiles(Array.from(e.target.files))}
-                    className="w-full text-xs text-[var(--text-muted)] file:mr-4 file:py-1.5 file:px-3 file:rounded-[6px] file:border-0 file:text-xs file:font-semibold file:bg-[var(--surface-well)] file:text-[var(--text-primary)] hover:file:bg-[var(--surface-muted)] cursor-pointer"
-                  />
-                  {files.length > 0 && (
-                    <div className="mt-2 text-[10px] text-[var(--text-muted)]">
-                      {files.length} file(s) selected:
-                      <ul className="list-disc pl-4 mt-1">
-                        {files.map((f, i) => (
-                          <li key={i}>{f.name}</li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                </div>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  multiple
+                  accept="application/pdf"
+                  className="hidden"
+                  onChange={(e) => handleFileChange(e.target.files)}
+                />
 
-                <div className="mt-6 flex items-center justify-end gap-3 pt-3 border-t border-[var(--border-subtle)]">
-                  <button
-                    type="button"
-                    onClick={() => setIsUploadModalOpen(false)}
-                    className="rounded-[8px] border border-[var(--border)] bg-[var(--surface-well)] px-4 py-2 text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)] transition-all"
+                <div className="flex flex-col gap-2">
+                  <div
+                    onDragOver={handleDragOver}
+                    onDragLeave={handleDragLeave}
+                    onDrop={handleDrop}
+                    onClick={() => fileInputRef.current?.click()}
+                    className={`rounded-xl border-2 border-dashed flex p-6 flex-col justify-center items-center gap-3 min-h-36 cursor-pointer transition-colors ${
+                      isDragging
+                        ? 'bg-[#EAF0FF] border-[#0057FF]'
+                        : 'bg-[#F8F7F4]/60 border-[#C6CAD3] hover:bg-[#F0F4FF]'
+                    }`}
                   >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isUploadingQuestionBank}
-                    className="inline-flex items-center gap-2 rounded-[8px] bg-[var(--primary)] px-5 py-2 text-xs font-semibold text-[var(--primary-foreground)] hover:opacity-90 transition-all disabled:opacity-50 shadow-sm"
-                  >
-                    {isUploadingQuestionBank && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
-                    <span>{isUploadingQuestionBank ? 'Uploading Paper...' : 'Create Question Bank'}</span>
-                  </button>
+                    <Upload className="text-[#0057FF] size-7" />
+                    <p className="font-medium text-sm text-[#19243B]">
+                      Drop your PDF papers here
+                    </p>
+                    <p className="text-[#526078] text-xs">
+                      Supporting 1–10 PDFs
+                    </p>
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        fileInputRef.current?.click();
+                      }}
+                      className="font-medium shadow-xs rounded-lg bg-white text-sm border border-[#E2E0D9] py-2 px-4 hover:bg-[#F1F0EC] transition-colors cursor-pointer text-[#19243B]"
+                    >
+                      Choose files
+                    </button>
+                  </div>
+                  <p className="text-[#687184] text-xs">Up to 10 PDFs</p>
                 </div>
-              </form>
-            </div>
+
+                {files.length > 0 && (
+                  <div className="flex flex-col gap-2">
+                    {files.map((fileItem, idx) => (
+                      <div
+                        key={idx}
+                        className="rounded-lg border border-[#E2E0D9] bg-white flex py-3 px-4 justify-between items-center shadow-xs"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="rounded-lg bg-[#0057FF]/10 text-[#0057FF] flex justify-center items-center size-9 shrink-0">
+                            <FileText className="size-5" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="font-medium text-sm text-[#19243B] truncate">
+                              {fileItem.name}
+                            </p>
+                            <p className="text-[#526078] text-xs mt-0.5">
+                              {(fileItem.size / (1024 * 1024)).toFixed(1)} MB · PDF ·{' '}
+                              <span className="text-emerald-600 font-semibold">Valid</span>
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setFiles((prev) => prev.filter((_, i) => i !== idx))
+                          }
+                          aria-label="Remove file"
+                          className="rounded-md text-[#526078] hover:text-[#B42318] hover:bg-[#FFF0EE] p-2 transition-colors cursor-pointer shrink-0"
+                        >
+                          <X className="size-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="border-t border-[#E2E0D9] flex py-5 px-8 justify-end items-center gap-3 shrink-0 bg-[#FDFCFA]">
+                <button
+                  type="button"
+                  onClick={() => setIsUploadModalOpen(false)}
+                  className="font-medium rounded-lg bg-white text-sm border border-[#E2E0D9] py-2.5 px-4 text-[#526078] hover:bg-[#F1F0EC] transition-colors cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isUploadingQuestionBank || files.length === 0}
+                  className="font-medium rounded-lg bg-[#0057FF] hover:bg-[#0047D4] text-white text-sm py-2.5 px-5 shadow-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
+                >
+                  {isUploadingQuestionBank && <Loader2 className="size-4 animate-spin" />}
+                  <span>{isUploadingQuestionBank ? 'Uploading papers...' : 'Upload papers'}</span>
+                </button>
+              </div>
+            </form>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };
+
+export default QuestionBankManager;

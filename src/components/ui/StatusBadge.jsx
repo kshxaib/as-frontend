@@ -1,40 +1,30 @@
 import React from 'react';
 
-/**
- * StatusBadge — DESIGN_TOKENS §14
- * Types:
- * - 'success' (green): Indexed, Complete, Active key
- * - 'amber' (amber): Indexing, Extracting, AI Action, Pending
- * - 'error' (brick): Failed, Error
- * - 'neutral' (slate): Draft, Unindexed, Inactive
- * - 'community' (gold): Community, Public
- */
 export const StatusBadge = ({ variant = 'neutral', children, pulse = false, icon: Icon }) => {
   const getStyles = () => {
     switch (variant) {
       case 'success':
-        return 'bg-[rgba(34,197,94,0.1)] text-[#22c55e] dark:text-[#4ade80] border-[rgba(34,197,94,0.25)]';
+        return 'bg-[#EAF5EF] text-[#187347] border-[#A6F4C5]';
       case 'amber':
       case 'warning':
-        return 'bg-[rgba(245,158,11,0.1)] text-[#d97706] dark:text-[#fbbf24] border-[rgba(245,158,11,0.25)]';
+        return 'bg-[#FFFAEB] text-[#B54708] border-[#FEDF89]';
       case 'error':
       case 'danger':
-        return 'bg-[rgba(239,68,68,0.1)] text-[#dc2626] dark:text-[#f87171] border-[rgba(239,68,68,0.25)]';
+        return 'bg-[#FFF0EE] text-[#B42318] border-[#FECDCA]';
       case 'community':
       case 'gold':
-        return 'bg-[rgba(200,168,32,0.1)] text-[#a88a16] dark:text-[#eab308] border-[rgba(200,168,32,0.25)]';
       case 'primary':
       case 'teal':
-        return 'bg-[rgba(20,184,166,0.1)] text-[#0f766e] dark:text-[#2dd4bf] border-[rgba(20,184,166,0.25)]';
+        return 'bg-[#EAF0FF] text-[#0057FF] border-[#C8D8FF]';
       case 'neutral':
       default:
-        return 'bg-[var(--surface-well)] text-[var(--text-muted)] border-[var(--border)]';
+        return 'bg-[#F8F7F4] text-[#687184] border-[#E2E0D9]';
     }
   };
 
   return (
     <span
-      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-[4px] border font-mono text-[11px] font-medium tracking-wider uppercase transition-colors ${getStyles()}`}
+      className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md border text-xs font-semibold tracking-wide transition-colors ${getStyles()}`}
     >
       {pulse && (
         <span className="relative flex h-1.5 w-1.5">

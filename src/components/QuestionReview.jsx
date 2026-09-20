@@ -1,23 +1,26 @@
 import React, { useEffect, useState } from 'react';
 import {
-  FileText,
+  Search,
+  Download,
   Plus,
   ArrowRight,
-  RefreshCw,
-  Search,
-  CheckCircle2,
+  Sparkles,
+  AlertTriangle,
+  Info,
+  Trash2,
+  FileText,
   AlertCircle,
-  Layers,
-  Download,
-  Workflow,
+  CheckCircle2,
+  ChevronDown,
+  RefreshCw,
+  CircleAlert,
+  LoaderCircle,
 } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { QuestionCard } from './QuestionCard';
 import { AddQuestionModal } from './AddQuestionModal';
-import { ConfirmationModal } from './ConfirmationModal';
 import { AiProgressModal } from './AiProgressModal';
-import { EmptyState } from './ui/EmptyState';
 import { ApiKeyBanner } from './ui/ApiKeyBanner';
 
 export const QuestionReview = () => {
@@ -27,12 +30,16 @@ export const QuestionReview = () => {
     questions,
     isLoading,
     extractingQBs,
+    extractionFailedQB,
+    extractionErrorMessage,
+    clearExtractionFailedQB,
     isGeneratingAnswers,
     error,
     successMessage,
     fetchQuestionBanks,
     selectQuestionBank,
     extractQuestions,
+    deleteQuestion,
     generateAnswers,
     clearFeedback,
     downloadQuestionsPdf,
@@ -42,350 +49,411 @@ export const QuestionReview = () => {
   const { user } = useAuthStore();
 
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [isGenerateConfirmOpen, setIsGenerateConfirmOpen] = useState(false);
-  const [isReExtractConfirmOpen, setIsReExtractConfirmOpen] = useState(false);
+  const [deleteCandidate, setDeleteCandidate] = useState(null);
+  const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
 
   useEffect(() => {
     fetchQuestionBanks();
   }, [fetchQuestionBanks]);
 
-  // Auto-dismiss feedback after 4 seconds
-  useEffect(() => {
-    if (successMessage || error) {
-      const timer = setTimeout(clearFeedback, 4000);
-      return () => clearTimeout(timer);
+  const handleDownloadPdf = async () => {
+    if (!currentQuestionBank || isDownloadingPdf) return;
+    setIsDownloadingPdf(true);
+    try {
+      await downloadQuestionsPdf(
+        currentQuestionBank.id,
+        `Questions_${(currentQuestionBank.name || 'QB').replace(/\s+/g, '_')}.pdf`
+      );
+    } finally {
+      setIsDownloadingPdf(false);
     }
-  }, [successMessage, error, clearFeedback]);
+  };
 
-  // Calculations for stats
   const totalQuestions = (questions || []).length;
   const totalMarks = (questions || []).reduce((sum, q) => sum + (Number(q.marks) || 0), 0);
-  const explicitCount = (questions || []).filter((q) => q.marks_source === 'explicit').length;
-  const aiEstimatedCount = (questions || []).filter((q) => q.marks_source === 'ai_estimated').length;
-  const userModifiedCount = (questions || []).filter((q) => q.marks_source === 'user_modified' || (!q.marks_source && q.marks)).length;
 
-  // Filtered questions by search query
   const filteredQuestions = (questions || []).filter((q) =>
     (q.question_text || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const handleStartGeneration = async () => {
+    if (!user?.has_openai_key) {
+      setIsGenerateModalOpen(false);
+      triggerKeyModal('AI Answer Generation');
+      return;
+    }
+    setIsGenerateModalOpen(false);
+    if (currentQuestionBank) {
+      await generateAnswers(currentQuestionBank.id);
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-[var(--background)] pb-32 text-[var(--text-primary)]">
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        
-        {/* Feedback Alert Banners */}
-        {error && (
-          <div className="mb-6 flex items-center justify-between rounded-[8px] border border-[rgba(239,68,68,0.25)] bg-[rgba(239,68,68,0.08)] p-3.5 text-xs text-[var(--error)]">
-            <div className="flex items-center gap-2.5">
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              <span>{error}</span>
-            </div>
-            <button onClick={clearFeedback} className="text-xs hover:underline font-mono">
-              Dismiss
-            </button>
+    <div className="w-full font-sans space-y-6">
+      {error && (
+        <div className="flex items-center justify-between rounded-xl border border-[#F7D0CA] bg-[#FFF0EE] p-4 text-xs text-[#B42318]">
+          <div className="flex items-center gap-2.5">
+            <AlertCircle className="h-4 w-4 shrink-0 text-[#B42318]" />
+            <span>{error}</span>
           </div>
-        )}
+          <button onClick={clearFeedback} className="text-xs font-semibold hover:underline cursor-pointer">
+            Dismiss
+          </button>
+        </div>
+      )}
 
-        {successMessage && (
-          <div className="mb-6 flex items-center justify-between rounded-[8px] border border-[rgba(34,197,94,0.25)] bg-[rgba(34,197,94,0.08)] p-3.5 text-xs text-[var(--success)]">
-            <div className="flex items-center gap-2.5">
-              <CheckCircle2 className="h-4 w-4 shrink-0" />
-              <span>{successMessage}</span>
-            </div>
-            <button onClick={clearFeedback} className="text-xs hover:underline font-mono">
-              Dismiss
-            </button>
+      {successMessage && (
+        <div className="flex items-center justify-between rounded-xl border border-[#C8D8FF] bg-[#EAF0FF] p-4 text-xs text-[#0057FF]">
+          <div className="flex items-center gap-2.5">
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-[#0057FF]" />
+            <span>{successMessage}</span>
           </div>
-        )}
+          <button onClick={clearFeedback} className="text-xs font-semibold hover:underline cursor-pointer">
+            Dismiss
+          </button>
+        </div>
+      )}
 
-        {/* OpenAI Key Gating Alert */}
-        <ApiKeyBanner feature="Solution Generation & AI Review" />
+      <ApiKeyBanner feature="AI Answer Generation" />
 
-        {/* Top Control Bar */}
-        <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between pb-6 border-b border-[var(--border)]">
-          <div>
-            <span className="font-mono text-[11px] uppercase tracking-widest text-[var(--text-muted)] flex items-center gap-1.5 mb-1">
-              <Layers className="h-3.5 w-3.5 stroke-[1.5]" />
-              Editorial Review
-            </span>
-            <h1 className="font-display text-2xl sm:text-3xl font-normal text-[var(--text-primary)] tracking-tight">
-              Question Verification & Marks Allocation
-            </h1>
-            <p className="mt-1 text-xs sm:text-sm text-[var(--text-secondary)]">
-              Audit parsed questions, customize point weights, and review before generating grounded solution manuscripts.
-            </p>
-          </div>
-
-          {/* Controls: Switcher & Actions */}
-          <div className="flex flex-wrap items-center gap-3">
-            {questionBanks.length > 0 && (
-              <div className="relative">
-                <select
-                  value={currentQuestionBank?.id || ''}
-                  onChange={(e) => selectQuestionBank(Number(e.target.value))}
-                  className="rounded-[8px] border border-[var(--border)] bg-[var(--surface-well)] px-3 py-2 text-xs font-medium text-[var(--text-primary)] focus:border-[var(--primary)] focus:outline-none"
-                >
-                  {questionBanks.map((qb) => (
-                    <option key={qb.id} value={qb.id}>
-                      {qb.name} ({qb.subject})
-                    </option>
-                  ))}
-                </select>
-              </div>
-            )}
-
-            {currentQuestionBank && (
-              <button
-                onClick={() => {
-                  if (!user?.has_openai_key) {
-                    triggerKeyModal('AI Question Extraction');
-                    return;
-                  }
-                  if (currentQuestionBank.status === 'extracted') {
-                    setIsReExtractConfirmOpen(true);
-                  } else {
-                    extractQuestions(currentQuestionBank.id);
-                  }
-                }}
-                disabled={!!extractingQBs[currentQuestionBank.id]}
-                className="inline-flex items-center gap-1.5 rounded-[8px] border border-[rgba(245,158,11,0.3)] bg-[rgba(245,158,11,0.08)] px-3.5 py-2 font-mono text-[11px] font-medium text-[var(--ai)] hover:bg-[rgba(245,158,11,0.15)] transition-all disabled:opacity-40"
-              >
-                <Workflow className={`h-3.5 w-3.5 stroke-[1.5] ${extractingQBs[currentQuestionBank.id] ? 'animate-spin' : ''}`} />
-                <span>
-                  {extractingQBs[currentQuestionBank.id]
-                    ? 'Extracting...'
-                    : currentQuestionBank.status === 'extracted'
-                    ? 'Re-extract Questions'
-                    : 'Extract with AI'}
-                </span>
-              </button>
-            )}
-
-            {currentQuestionBank && (
-              <button
-                onClick={() => setIsAddModalOpen(true)}
-                className="inline-flex items-center gap-1.5 rounded-[8px] bg-[var(--primary)] px-3.5 py-2 text-xs font-semibold text-[var(--primary-foreground)] hover:opacity-90 transition-all shadow-sm"
-              >
-                <Plus className="h-3.5 w-3.5 stroke-[2]" />
-                <span>Add Question</span>
-              </button>
-            )}
-
-            {currentQuestionBank && questions.length > 0 && (
-              <button
-                onClick={() =>
-                  downloadQuestionsPdf(
-                    currentQuestionBank.id,
-                    `Questions_${(currentQuestionBank.name || 'QB').replace(/\s+/g, '_')}.pdf`
-                  )
-                }
-                className="inline-flex items-center gap-1.5 rounded-[8px] border border-[var(--border)] bg-[var(--surface-well)] px-3.5 py-2 text-xs font-semibold text-[var(--text-primary)] hover:bg-[var(--surface-muted)] transition-all"
-              >
-                <Download className="h-3.5 w-3.5 stroke-[2]" />
-                <span>Download Questions PDF</span>
-              </button>
-            )}
-          </div>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-1">
+        <div className="flex flex-col gap-1">
+          <h1 className="font-bold text-2xl sm:text-3xl tracking-tight text-[#19243B]">
+            Check your questions
+          </h1>
+          <p className="text-[#526078] text-sm sm:text-base mt-0.5">
+            Review the wording and marks before creating your answers.
+          </p>
         </div>
 
-        {/* Current Question Bank Details & Stats */}
-        {currentQuestionBank ? (
-          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-[10px] border border-[var(--border)] bg-[var(--surface-well)] p-4">
-              <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--text-muted)]">Total Questions</span>
-              <p className="mt-1 font-mono text-2xl font-semibold text-[var(--text-primary)]">{totalQuestions}</p>
-              <p className="mt-0.5 text-[11px] text-[var(--text-muted)]">Verified question entries</p>
-            </div>
-
-            <div className="rounded-[10px] border border-[var(--border)] bg-[var(--surface-well)] p-4">
-              <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--text-muted)]">Total Marks</span>
-              <p className="mt-1 font-mono text-2xl font-semibold text-[var(--primary)]">{totalMarks} Marks</p>
-              <p className="mt-0.5 text-[11px] text-[var(--text-muted)]">Sum of examination weights</p>
-            </div>
-
-            <div className="rounded-[10px] border border-[var(--border)] bg-[var(--surface-well)] p-4">
-              <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--text-muted)]">Marks Provenance</span>
-              <div className="mt-2 flex items-center gap-1.5 font-mono text-[10px]">
-                <span className="bg-[rgba(34,197,94,0.1)] text-[var(--success)] px-1.5 py-0.5 rounded border border-[rgba(34,197,94,0.2)]">
-                  {explicitCount} Explicit
-                </span>
-                <span className="bg-[rgba(245,158,11,0.1)] text-[var(--ai)] px-1.5 py-0.5 rounded border border-[rgba(245,158,11,0.2)]">
-                  {aiEstimatedCount} AI
-                </span>
-                {userModifiedCount > 0 && (
-                  <span className="bg-[var(--surface)] text-[var(--text-muted)] px-1.5 py-0.5 rounded border border-[var(--border)]">
-                    {userModifiedCount} Modified
-                  </span>
-                )}
-              </div>
-              <p className="mt-1 text-[11px] text-[var(--text-muted)]">Mark allocation sources</p>
-            </div>
-
-            <div className="rounded-[10px] border border-[var(--border)] bg-[var(--surface-well)] p-4">
-              <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--text-muted)]">Subject Archive</span>
-              <p className="mt-1 font-display text-sm font-medium text-[var(--text-primary)] truncate">
-                {currentQuestionBank.subject}
-              </p>
-              <p className="mt-0.5 font-mono text-[10px] text-[var(--text-muted)] truncate">
-                Linked IDs: {currentQuestionBank.resource_ids || 'All Notes'}
-              </p>
-            </div>
-          </div>
-        ) : (
-          <EmptyState
-            icon={Layers}
-            title="No Question Bank Selected"
-            description="Select or upload a question bank to review and audit question structures."
-          />
-        )}
-
-        {/* Search Bar */}
-        {currentQuestionBank && questions.length > 0 && (
-          <div className="mt-6 rounded-[10px] border border-[var(--border)] bg-[var(--surface-well)] p-3">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-muted)]" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Filter questions by keyword..."
-                className="w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] py-1.5 pl-9 pr-3 text-xs text-[var(--text-primary)] placeholder-[var(--text-disabled)] focus:border-[var(--primary)] focus:outline-none"
-              />
-            </div>
-          </div>
-        )}
-
-        {/* Questions List */}
-        {currentQuestionBank && (
-          <div className="mt-6 space-y-4">
-            {isLoading ? (
-              <div className="py-20 text-center text-[var(--text-muted)]">
-                <RefreshCw className="mx-auto h-6 w-6 animate-spin text-[var(--primary)] mb-2 stroke-[1.5]" />
-                <p className="font-mono text-xs">Loading manuscript items...</p>
-              </div>
-            ) : filteredQuestions.length > 0 ? (
-              filteredQuestions.map((question, index) => (
-                <QuestionCard key={question.id} question={question} index={index} />
-              ))
-            ) : (
-              <EmptyState
-                icon={FileText}
-                title="No Questions Match Filter"
-                description={
-                  questions.length === 0
-                    ? 'No questions extracted yet. Click "Extract with AI" or add questions manually.'
-                    : 'Try clearing your search query or adjusting marks filter.'
-                }
-              />
-            )}
+        {questionBanks && questionBanks.length > 0 && (
+          <div className="w-full sm:w-80">
+            <select
+              value={currentQuestionBank?.id || ''}
+              onChange={(e) => selectQuestionBank(Number(e.target.value))}
+              className="w-full rounded-xl bg-white border border-[#E2E0D9] px-4 h-11 text-sm font-medium text-[#19243B] focus:border-[#0057FF] focus:outline-none transition-colors shadow-2xs cursor-pointer"
+            >
+              {questionBanks.map((qb) => (
+                <option key={qb.id} value={qb.id}>
+                  {qb.name}
+                </option>
+              ))}
+            </select>
           </div>
         )}
       </div>
 
-      {/* Sticky Bottom Action Bar */}
-      {currentQuestionBank && questions.length > 0 && (
-        <div className="fixed bottom-0 left-0 right-0 z-30 border-t border-[var(--border)] bg-[var(--surface)]/95 backdrop-blur-md p-3.5">
-          <div className="mx-auto flex max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center gap-3">
-              <span className="inline-block h-2 w-2 rounded-full bg-[var(--success)]" />
-              <div>
-                <p className="font-mono text-xs font-semibold text-[var(--text-primary)]">
-                  {totalQuestions} Questions Approved · {totalMarks} Total Marks
-                </p>
-                <p className="text-[11px] text-[var(--text-muted)]">
-                  Ready to synthesize grounded exam answers from linked notes
-                </p>
+      <div className="flex items-center gap-3 overflow-x-auto pb-1 text-xs">
+        <span className="font-medium px-3 py-1.5 rounded-lg bg-white border border-[#E2E0D9] text-[#19243B] shadow-2xs">
+          Questions: <strong className="text-[#0057FF]">{totalQuestions}</strong>
+        </span>
+        <span className="font-medium px-3 py-1.5 rounded-lg bg-white border border-[#E2E0D9] text-[#19243B] shadow-2xs">
+          Total Marks: <strong className="text-[#0057FF]">{totalMarks}</strong>
+        </span>
+      </div>
+
+      <div className="flex flex-col sm:flex-row mt-6 items-stretch sm:items-center gap-3">
+        <div className="relative flex-1 min-w-0">
+          <Search className="text-[#687184] absolute top-3.5 left-3.5 size-4" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search questions"
+            className="w-full rounded-xl bg-white border border-[#E2E0D9] pl-10 pr-4 h-11 text-sm text-[#19243B] placeholder-[#687184] focus:border-[#0057FF] focus:outline-none transition-colors shadow-2xs"
+          />
+        </div>
+
+        <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap sm:flex-nowrap">
+          {currentQuestionBank && questions.length > 0 && (
+            <button
+              type="button"
+              onClick={handleDownloadPdf}
+              disabled={isDownloadingPdf}
+              className="font-medium rounded-xl bg-white text-[#19243B] text-sm border border-[#E2E0D9] flex h-11 px-4 items-center justify-center gap-2 hover:bg-[#F1F0EC] transition-colors cursor-pointer shadow-2xs flex-1 sm:flex-initial disabled:opacity-60"
+            >
+              {isDownloadingPdf ? (
+                <LoaderCircle className="size-4 animate-spin text-[#0057FF]" />
+              ) : (
+                <Download className="size-4 text-[#0057FF]" />
+              )}
+              <span className="hidden sm:inline">
+                {isDownloadingPdf ? 'Generating PDF...' : 'Download PDF'}
+              </span>
+            </button>
+          )}
+
+          <button
+            type="button"
+            onClick={() => setIsAddModalOpen(true)}
+            className="font-medium rounded-xl bg-white hover:bg-[#F8F7F4] text-[#19243B] border border-[#D5D8DF] hover:border-[#19243B] text-sm flex h-11 px-4 items-center justify-center gap-2 shadow-2xs transition-all cursor-pointer flex-1 sm:flex-initial"
+          >
+            <Plus className="size-4" />
+            <span>Add question</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              if (!user?.has_openai_key) {
+                triggerKeyModal('AI Answer Generation');
+                return;
+              }
+              setIsGenerateModalOpen(true);
+            }}
+            disabled={questions.length === 0 || isGeneratingAnswers}
+            className="font-semibold rounded-xl bg-[#0057FF] hover:bg-[#0047D4] text-white text-sm flex h-11 px-5 items-center justify-center gap-2 shadow-xs transition-all disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed flex-1 sm:flex-initial"
+          >
+            <Sparkles className="size-4" />
+            <span>{isGeneratingAnswers ? 'Generating answers...' : 'Generate answers'}</span>
+            <ArrowRight className="size-3.5" />
+          </button>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-2.5 min-w-0 mt-5">
+        <div className="flex justify-between items-center select-none pb-0.5">
+          <h3 className="font-semibold text-base text-[#19243B]">Questions</h3>
+          <span className="text-[#526078] text-xs font-medium">
+            {filteredQuestions.length} {filteredQuestions.length === 1 ? 'question' : 'questions'}
+          </span>
+        </div>
+
+        {isLoading ? (
+          <div className="py-20 text-center text-[#526078] bg-white rounded-xl border border-[#E2E0D9]">
+            <RefreshCw className="mx-auto h-6 w-6 animate-spin text-[#0057FF] mb-2.5" />
+            <p className="text-xs font-medium">Loading questions archive...</p>
+          </div>
+        ) : filteredQuestions.length > 0 ? (
+          <div className="flex flex-col gap-2">
+            {filteredQuestions.map((q, idx) => (
+              <QuestionCard
+                key={q.id}
+                question={q}
+                index={idx}
+                onDeleteRequest={(targetQuestion) => setDeleteCandidate(targetQuestion)}
+              />
+            ))}
+          </div>
+        ) : questions.length === 0 ? (
+          <div className="text-center rounded-2xl bg-[#F8F7F4]/60 border border-dashed border-[#C6CAD3] flex px-8 py-16 flex-col justify-center items-center">
+            <div className="rounded-2xl bg-[#0057FF]/10 text-[#0057FF] grid mb-4 place-items-center size-14">
+              <FileText className="size-7" />
+            </div>
+            <h3 className="font-semibold text-xl text-[#19243B]">
+              No questions in this collection yet
+            </h3>
+            <p className="text-[#526078] text-sm mt-2 max-w-md">
+              Click "Add question" to add questions manually, or re-extract from your uploaded past papers.
+            </p>
+            <button
+              onClick={() => setIsAddModalOpen(true)}
+              className="mt-5 font-medium rounded-lg bg-[#0057FF] hover:bg-[#0047D4] text-white text-sm py-2.5 px-5 shadow-sm transition-all cursor-pointer flex items-center gap-2"
+            >
+              <Plus className="size-4" />
+              <span>Add first question</span>
+            </button>
+          </div>
+        ) : (
+          <div className="text-center rounded-2xl bg-[#F8F7F4]/60 border border-dashed border-[#C6CAD3] flex px-8 py-14 flex-col justify-center items-center">
+            <div className="rounded-2xl bg-[#0057FF]/10 text-[#0057FF] grid mb-4 place-items-center size-14">
+              <Search className="size-7" />
+            </div>
+            <h3 className="font-semibold text-lg text-[#19243B]">
+              No questions match your search
+            </h3>
+            <p className="text-[#526078] text-sm mt-1 max-w-sm">
+              Try a different keyword or clear your search to see all questions.
+            </p>
+            <button
+              onClick={() => setSearchQuery('')}
+              className="mt-4 rounded-lg bg-white border border-[#E2E0D9] text-[#19243B] px-4 py-2 text-xs font-semibold hover:bg-[#F1F0EC] transition-colors cursor-pointer"
+            >
+              Clear search
+            </button>
+          </div>
+        )}
+      </div>
+
+      <AddQuestionModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        questionBankId={currentQuestionBank?.id}
+        nextNumber={totalQuestions + 1}
+      />
+
+      {deleteCandidate && (
+        <div className="bg-[#19243B]/40 flex fixed z-50 top-0 right-0 bottom-0 left-0 pt-8 pr-8 pb-8 pl-8 justify-center items-center backdrop-blur-xs animate-in fade-in duration-150 selection:bg-[#0057FF] selection:text-white">
+          <div className="shadow-[0px_25px_50px_-12px_rgba(0,0,0,0.25)] rounded-2xl bg-white border border-[#E2E0D9] w-[480px] max-w-full overflow-hidden text-[#19243B] my-auto">
+            
+            <div className="border-b border-[#E2E0D9] flex pt-6 pr-6 pb-6 pl-6 items-start gap-4">
+              <div className="rounded-xl bg-[#FFF0EE] text-[#B42318] flex justify-center items-center shrink-0 size-10">
+                <AlertTriangle className="size-5" />
+              </div>
+              <div className="flex-1">
+                <h2 className="font-semibold text-xl tracking-tight text-[#19243B]">
+                  Delete this question?
+                </h2>
               </div>
             </div>
 
-            <button
-              onClick={() => {
-                if (!user?.has_openai_key) {
-                  triggerKeyModal('RAG Answer Generation & AI Review');
-                  return;
-                }
-                setIsGenerateConfirmOpen(true);
-              }}
-              disabled={isGeneratingAnswers}
-              className="inline-flex items-center gap-2 rounded-[8px] bg-[var(--primary)] px-5 py-2 text-xs font-semibold text-[var(--primary-foreground)] hover:opacity-90 transition-all disabled:opacity-50 shadow-sm"
-            >
-              <Workflow className={`h-4 w-4 stroke-[1.5] ${isGeneratingAnswers ? 'animate-spin' : ''}`} />
-              <span>{isGeneratingAnswers ? 'Generating Answers...' : 'Generate Solution Manuscript'}</span>
-              <ArrowRight className="h-3.5 w-3.5 stroke-[2]" />
-            </button>
+            <div className="flex pt-6 pr-6 pb-6 pl-6 flex-col gap-4">
+              <div className="rounded-xl bg-[#F8F7F4] text-[#526078] text-sm border border-[#E2E0D9] pt-4 pr-4 pb-4 pl-4 leading-relaxed">
+                {deleteCandidate.question_text}
+              </div>
+              <p className="text-[#526078] text-sm">
+                This will remove the question from this question bank.
+              </p>
+            </div>
+
+            <div className="border-t border-[#E2E0D9] flex pt-6 pr-6 pb-6 pl-6 justify-end gap-2 bg-[#FDFCFA]">
+              <button
+                type="button"
+                onClick={() => setDeleteCandidate(null)}
+                className="font-medium rounded-lg bg-white text-[#19243B] text-sm border border-[#E2E0D9] pt-2 pr-4 pb-2 pl-4 hover:bg-[#F1F0EC] transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (deleteCandidate) {
+                    await deleteQuestion(deleteCandidate.id);
+                    setDeleteCandidate(null);
+                  }
+                }}
+                className="font-medium rounded-lg bg-[#B42318] hover:bg-[#91180D] text-white text-sm flex pt-2 pr-4 pb-2 pl-4 items-center gap-2 shadow-sm transition-all cursor-pointer"
+              >
+                <Trash2 className="size-4" />
+                <span>Delete question</span>
+              </button>
+            </div>
           </div>
         </div>
       )}
 
-      {/* Re-extract Confirmation Modal */}
-      {currentQuestionBank && (
-        <ConfirmationModal
-          isOpen={isReExtractConfirmOpen}
-          title="Re-extract Question Bank?"
-          message={`Existing extracted questions for "${currentQuestionBank.name}" will be replaced with fresh AI extraction. Any custom question modifications will be lost.`}
-          confirmText="Yes, Re-extract Questions"
-          cancelText="Cancel"
-          confirmVariant="warning"
-          iconType="sparkles"
-          onConfirm={() => {
-            if (!user?.has_openai_key) {
-              setIsReExtractConfirmOpen(false);
-              triggerKeyModal('AI Question Extraction');
-              return;
-            }
-            setIsReExtractConfirmOpen(false);
-            extractQuestions(currentQuestionBank.id);
-          }}
-          onCancel={() => setIsReExtractConfirmOpen(false)}
-        />
+      {isGenerateModalOpen && (
+        <div className="bg-[#19243B]/40 flex fixed z-50 top-0 right-0 bottom-0 left-0 pt-8 pr-8 pb-8 pl-8 justify-center items-center backdrop-blur-xs animate-in fade-in duration-150 selection:bg-[#0057FF] selection:text-white">
+          <div className="shadow-[0px_25px_50px_-12px_rgba(0,0,0,0.25)] rounded-2xl bg-white border border-[#E2E0D9] w-[560px] max-w-full overflow-hidden text-[#19243B] my-auto">
+            
+            <div className="border-b border-[#E2E0D9] flex pt-6 pr-6 pb-6 pl-6 flex-col gap-2">
+              <h2 className="font-semibold text-xl tracking-tight text-[#19243B]">
+                Create answers for this question bank?
+              </h2>
+              <p className="text-[#526078] text-sm leading-6">
+                AcademicStack will use your linked study materials and your OpenAI API key. OpenAI usage charges may apply.
+              </p>
+            </div>
+
+            <div className="pt-6 pr-6 pb-6 pl-6">
+              <div className="rounded-lg bg-[#0057FF]/10 border border-[#0057FF]/20 flex pt-4 pr-4 pb-4 pl-4 items-start gap-3">
+                <Info className="text-[#0057FF] mt-0.5 shrink-0 size-4" />
+                <div className="flex flex-col gap-1">
+                  <p className="font-medium text-[#19243B] text-sm">
+                    {currentQuestionBank?.name || 'Operating Systems — Previous Papers'}
+                  </p>
+                  <p className="text-[#526078] text-sm">
+                    {totalQuestions} reviewed questions, {totalMarks} total marks
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="border-t border-[#E2E0D9] flex pt-6 pr-6 pb-6 pl-6 justify-end items-center gap-2 bg-[#FDFCFA]">
+              <button
+                type="button"
+                onClick={() => setIsGenerateModalOpen(false)}
+                className="font-medium rounded-lg bg-white text-[#19243B] text-sm border border-[#E2E0D9] pt-2 pr-4 pb-2 pl-4 hover:bg-[#F1F0EC] transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleStartGeneration}
+                className="font-medium rounded-lg bg-[#0057FF] hover:bg-[#0047D4] text-white text-sm pt-2 pr-4 pb-2 pl-4 shadow-sm transition-all cursor-pointer"
+              >
+                Generate answers
+              </button>
+            </div>
+          </div>
+        </div>
       )}
 
-      {/* Generate Solutions Confirmation Modal */}
-      {currentQuestionBank && (
-        <ConfirmationModal
-          isOpen={isGenerateConfirmOpen}
-          title="Generate Solution Manuscript?"
-          message={`AcademicStack will retrieve grounded notes from Qdrant, draft complete examination answers for all ${totalQuestions} questions (${totalMarks} marks total), and run an Academic AI Review pass with LaTeX math verification.`}
-          confirmText="Start Solution Generation"
-          cancelText="Cancel"
-          confirmVariant="primary"
-          iconType="ai"
-          onConfirm={() => {
-            if (!user?.has_openai_key) {
-              setIsGenerateConfirmOpen(false);
-              triggerKeyModal('RAG Answer Generation & AI Review');
-              return;
-            }
-            setIsGenerateConfirmOpen(false);
-            generateAnswers(currentQuestionBank.id);
-          }}
-          onCancel={() => setIsGenerateConfirmOpen(false)}
-        />
-      )}
-
-      {/* Live AI Progress Modal (Extraction & Generation) */}
       <AiProgressModal
         isOpen={Object.values(extractingQBs).some(Boolean)}
         type="extraction"
-        title="AI Question Extraction in Progress"
-        subtitle="AcademicStack is scanning exam paper layout, parsing questions, and resolving marks with AI router."
+        title="Creating your questions"
+        itemName={currentQuestionBank?.name || 'Past Exam Papers'}
+        noticeText="Questions will appear here once extraction is complete."
       />
 
       <AiProgressModal
         isOpen={isGeneratingAnswers}
         type="generation"
-        title="Generating Solution Manuscript"
-        subtitle={`Synthesizing solutions for ${totalQuestions} questions with vector retrieval, multi-provider drafting, and Academic Review pass.`}
+        title="Generating manuscript solutions"
+        itemName={currentQuestionBank?.name || 'Question Bank Solutions'}
+        noticeText={`Synthesizing solutions for ${totalQuestions} questions with Qdrant vector retrieval and OpenAI RAG.`}
       />
 
-      {/* Add Question Modal */}
-      {currentQuestionBank && (
-        <AddQuestionModal
-          isOpen={isAddModalOpen}
-          onClose={() => setIsAddModalOpen(false)}
-          questionBankId={currentQuestionBank.id}
-        />
+      {extractionFailedQB && (
+        <div className="bg-[#19243B]/40 flex fixed z-50 top-0 right-0 bottom-0 left-0 pt-8 pr-8 pb-8 pl-8 justify-center items-center backdrop-blur-xs animate-in fade-in duration-150 selection:bg-[#0057FF] selection:text-white">
+          <div className="shadow-[0px_25px_50px_-12px_rgba(0,0,0,0.25)] rounded-2xl bg-white border border-[#E2E0D9] w-[520px] max-w-full overflow-hidden text-[#19243B] my-auto">
+            <div className="border-b border-[#E2E0D9] pt-5 pr-6 pb-5 pl-6">
+              <h2 className="font-semibold text-xl tracking-tight text-[#19243B]">
+                Couldn't create questions
+              </h2>
+            </div>
+            <div className="flex pt-6 pr-6 pb-6 pl-6 flex-col gap-4">
+              <div className="rounded-lg bg-white border border-[#E2E0D9] flex pt-3 pr-4 pb-3 pl-4 items-center gap-4 shadow-xs">
+                <div className="rounded-lg bg-[#F1F0EC] text-[#0057FF] flex justify-center items-center shrink-0 size-10">
+                  <FileText className="size-5" />
+                </div>
+                <div className="flex flex-col flex-1 gap-0.5 min-w-0">
+                  <span className="font-medium text-ellipsis whitespace-nowrap text-sm overflow-hidden text-[#19243B]">
+                    {extractionFailedQB.name || 'operating-systems-midterm-2023.pdf'}
+                  </span>
+                  <span className="text-[#526078] text-xs">
+                    {extractionFailedQB.subject ? `${extractionFailedQB.subject} · PDF` : '4.8 MB'}
+                  </span>
+                </div>
+              </div>
+              <div className="rounded-lg bg-[#FFF0EE] text-[#B42318] border border-[#B42318]/20 flex pt-4 pr-4 pb-4 pl-4 gap-3">
+                <CircleAlert className="mt-0.5 shrink-0 size-5 text-[#B42318]" />
+                <p className="text-sm leading-6">
+                  {extractionErrorMessage ||
+                    "We couldn't read the question text from this paper. Try uploading a clearer PDF or remove password protection."}
+                </p>
+              </div>
+              <p className="text-[#526078] text-sm">
+                No questions were created.
+              </p>
+            </div>
+            <div className="bg-[#FDFCFA] border-t border-[#E2E0D9] flex pt-4 pr-6 pb-4 pl-6 justify-end gap-3">
+              <button
+                type="button"
+                onClick={clearExtractionFailedQB}
+                className="font-medium rounded-lg bg-white text-[#19243B] text-sm border border-[#E2E0D9] pt-2.5 pr-4 pb-2.5 pl-4 hover:bg-[#F1F0EC] transition-colors cursor-pointer"
+              >
+                Close
+              </button>
+              <button
+                type="button"
+                onClick={async () => {
+                  const targetId = extractionFailedQB.id;
+                  clearExtractionFailedQB();
+                  if (targetId) {
+                    await extractQuestions(targetId);
+                  }
+                }}
+                className="font-medium rounded-lg bg-[#0057FF] hover:bg-[#0047D4] text-white text-sm pt-2.5 pr-4 pb-2.5 pl-4 shadow-sm transition-all cursor-pointer"
+              >
+                Try again
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

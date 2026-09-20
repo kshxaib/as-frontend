@@ -1,165 +1,76 @@
-import React, { useEffect, useState } from 'react';
-import {
-  Cpu,
-  Database,
-  FileText,
-  CheckCircle2,
-  Loader2,
-  Workflow,
-  Sparkles,
-  Check,
-} from 'lucide-react';
+import React from 'react';
+import { LoaderCircle } from 'lucide-react';
 
 const AiProgressModalContent = ({
-  type = 'extraction', // 'extraction' | 'generation' | 'indexing'
-  title = 'AI Processing in Progress',
-  subtitle = 'Please wait while AcademicStack processes your academic materials.',
-  totalItems = 0,
-  currentItem = 0,
+  type = 'generation',
+  title,
+  subtitle,
+  itemName,
+  noticeText,
 }) => {
-  const [activeStep, setActiveStep] = useState(0);
-  const [elapsedSeconds, setElapsedSeconds] = useState(0);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setElapsedSeconds((prev) => prev + 1);
-    }, 1000);
-
-    // Dynamic step progression
-    const stepInterval = setInterval(() => {
-      setActiveStep((prev) => (prev < 3 ? prev + 1 : prev));
-    }, 3200);
-
-    return () => {
-      clearInterval(timer);
-      clearInterval(stepInterval);
-    };
-  }, []);
-
-  const extractionSteps = [
-    { label: 'Reading PDF & Extracting Text', icon: FileText, desc: 'PyMuPDF layout parsing' },
-    { label: 'Analyzing Exam Structure', icon: Cpu, desc: 'Multi-provider failover routing' },
-    { label: 'Parsing Questions & Marks', icon: Workflow, desc: 'Explicit marks & sequential numbering' },
-    { label: 'Saving to Question Archive', icon: Database, desc: 'Finalizing question bank' },
-  ];
-
-  const generationSteps = [
-    { label: 'Retrieving Notes from Qdrant', icon: Database, desc: 'Cosine similarity vector search' },
-    { label: 'Drafting Manuscript Answers', icon: Cpu, desc: 'Grounded RAG synthesis' },
-    { label: 'Academic Reviewer Pass', icon: Workflow, desc: 'LaTeX math & alignment check' },
-    { label: 'Finalizing Solution Set', icon: CheckCircle2, desc: 'Building PDF & citation links' },
-  ];
-
-  const indexingSteps = [
-    { label: 'Chunking Document Text', icon: FileText, desc: 'Semantic chapter chunking' },
-    { label: 'Computing Vector Embeddings', icon: Cpu, desc: '1536-dimensional vector computation' },
-    { label: 'Indexing into Qdrant', icon: Database, desc: 'Storing searchable vector points' },
-    { label: 'Document Library Ready', icon: CheckCircle2, desc: 'Resource verified' },
-  ];
-
-  const steps =
+  const defaultTitle =
     type === 'extraction'
-      ? extractionSteps
+      ? 'Extracting questions'
       : type === 'indexing'
-      ? indexingSteps
-      : generationSteps;
+      ? 'Indexing study material'
+      : 'Generating answers';
+
+  const defaultDescription =
+    type === 'extraction'
+      ? 'Extracting and structuring examination questions from the document.'
+      : type === 'indexing'
+      ? 'Processing and indexing document for solution grounding.'
+      : 'Synthesizing verified answers grounded in your study materials.';
+
+  const defaultNotice =
+    type === 'extraction'
+      ? 'Questions will appear here once extraction is complete.'
+      : type === 'indexing'
+      ? 'This material will be ready for grounding once indexing is complete.'
+      : 'Your answers are being generated. This may take a moment.';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[var(--overlay)] p-4 backdrop-blur-sm animate-in fade-in duration-200">
-      <div className="relative w-full max-w-lg rounded-[20px] border border-[var(--border)] bg-[var(--surface-elevated)] p-6 sm:p-7 shadow-[var(--shadow-lg)] my-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#19243B]/40 p-4 sm:p-8 backdrop-blur-xs animate-in fade-in duration-150 selection:bg-[#0057FF] selection:text-white">
+      <section className="shadow-[0px_25px_50px_-12px_rgba(0,0,0,0.25)] rounded-2xl bg-white border border-[#E2E0D9] w-[480px] max-w-full overflow-hidden text-[#19243B] my-auto">
+        <div className="border-b border-[#E2E0D9] pt-6 px-6 sm:px-8 pb-5">
+          <h2 className="font-semibold text-lg sm:text-xl tracking-tight text-[#19243B]">
+            {title || defaultTitle}
+          </h2>
+        </div>
 
-        
-        {/* Header Block */}
-        <div className="flex items-center gap-3.5 pb-4 border-b border-[var(--border-subtle)]">
-          <div className="flex h-11 w-11 items-center justify-center rounded-[12px] bg-[rgba(245,158,11,0.1)] border border-[rgba(245,158,11,0.25)] text-[var(--ai)] shrink-0">
-            <Workflow className="h-5 w-5 stroke-[1.5]" />
-          </div>
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center justify-between gap-2">
-              <h3 className="font-display text-base font-normal text-[var(--text-primary)] tracking-tight truncate">
-                {title}
-              </h3>
-              <span className="font-mono text-[11px] font-medium text-[var(--text-muted)] bg-[var(--surface-well)] px-2 py-0.5 rounded-[4px] border border-[var(--border)] shrink-0">
-                {elapsedSeconds}s
-              </span>
+        <div className="py-8 px-6 sm:px-8 flex flex-col items-center text-center space-y-4">
+          {(itemName || subtitle) && (
+            <div className="font-semibold rounded-xl bg-[#F8F7F4] text-xs sm:text-sm text-[#19243B] border border-[#E2E0D9] py-2.5 px-4 max-w-full truncate shadow-2xs">
+              {itemName || subtitle}
             </div>
-            <p className="text-xs text-[var(--text-muted)] mt-0.5 truncate">
-              {subtitle} {totalItems > 0 ? `(${currentItem} / ${totalItems})` : ''}
+          )}
+
+          <div className="flex flex-col items-center justify-center py-2 space-y-3">
+            <div className="size-12 rounded-2xl bg-[#EAF0FF] flex items-center justify-center border border-[#C8D8FF]">
+              <LoaderCircle className="animate-spin text-[#0057FF] size-6" />
+            </div>
+            <p className="font-semibold text-sm sm:text-base text-[#19243B] max-w-sm leading-relaxed">
+              {defaultDescription}
             </p>
           </div>
-        </div>
 
-        {/* Live Progress Stages */}
-        <div className="mt-5 space-y-2.5">
-          {steps.map((step, idx) => {
-            const Icon = step.icon;
-            const isDone = activeStep > idx;
-            const isCurrent = activeStep === idx;
-
-            return (
-              <div
-                key={step.label}
-                className={`flex items-center justify-between rounded-[10px] p-3 border transition-all duration-200 ${
-                  isCurrent
-                    ? 'bg-[var(--surface-well)] border-[var(--primary)]'
-                    : isDone
-                    ? 'bg-[var(--surface)] border-[var(--border-subtle)] text-[var(--text-secondary)]'
-                    : 'bg-[var(--surface-muted)] border-[var(--border-subtle)] opacity-50 text-[var(--text-disabled)]'
-                }`}
-              >
-                <div className="flex items-center gap-3 min-w-0">
-                  <div
-                    className={`flex h-7 w-7 items-center justify-center rounded-[6px] border shrink-0 ${
-                      isDone
-                        ? 'bg-[rgba(34,197,94,0.1)] border-[rgba(34,197,94,0.25)] text-[var(--success)]'
-                        : isCurrent
-                        ? 'bg-[var(--primary)] border-[var(--primary)] text-[var(--primary-foreground)]'
-                        : 'bg-[var(--surface-well)] border-[var(--border)] text-[var(--text-muted)]'
-                    }`}
-                  >
-                    {isDone ? (
-                      <Check className="h-3.5 w-3.5 stroke-[2.5]" />
-                    ) : isCurrent ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : (
-                      <Icon className="h-3.5 w-3.5 stroke-[1.5]" />
-                    )}
-                  </div>
-                  <div className="min-w-0">
-                    <h4
-                      className={`text-xs font-medium truncate ${
-                        isCurrent ? 'text-[var(--text-primary)] font-semibold' : isDone ? 'text-[var(--text-secondary)]' : 'text-[var(--text-disabled)]'
-                      }`}
-                    >
-                      {step.label}
-                    </h4>
-                    <p className="text-[11px] text-[var(--text-muted)] truncate">{step.desc}</p>
-                  </div>
-                </div>
-
-                <span className="font-mono text-[10px] uppercase tracking-wider shrink-0 ml-3">
-                  {isDone ? (
-                    <span className="text-[var(--success)] font-medium">Done</span>
-                  ) : isCurrent ? (
-                    <span className="text-[var(--primary)] font-medium">Active</span>
-                  ) : (
-                    <span className="text-[var(--text-disabled)]">Pending</span>
-                  )}
-                </span>
-              </div>
-            );
-          })}
-        </div>
-
-        {/* Restrained Informative Footer */}
-        <div className="mt-5 rounded-[8px] bg-[var(--surface-well)] border border-[var(--border)] p-2.5 text-center">
-          <p className="text-[11px] text-[var(--text-muted)] font-mono flex items-center justify-center gap-2">
-            <span className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--success)]" />
-            <span>OpenAI API active (GPT-4o Mini · Text-Embedding-3-Small)</span>
+          <p className="text-[#687184] text-xs sm:text-sm leading-relaxed max-w-sm pt-3 border-t border-[#E2E0D9] w-full">
+            {noticeText || defaultNotice}
           </p>
         </div>
 
-      </div>
+        <div className="border-t border-[#E2E0D9] flex pt-4 px-6 sm:px-8 pb-4 justify-end bg-[#FCFBF9]">
+          <span className="text-xs text-[#687184] font-medium self-center mr-auto">
+            Please wait...
+          </span>
+          <button
+            disabled={true}
+            className="font-medium opacity-60 rounded-lg bg-[#F1F0EC] text-[#526078] text-xs sm:text-sm border border-[#E2E0D9] px-4 py-1.5 cursor-not-allowed"
+          >
+            In Progress
+          </button>
+        </div>
+      </section>
     </div>
   );
 };
@@ -168,3 +79,5 @@ export const AiProgressModal = (props) => {
   if (!props.isOpen) return null;
   return <AiProgressModalContent {...props} />;
 };
+
+export default AiProgressModal;

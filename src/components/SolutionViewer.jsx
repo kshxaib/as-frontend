@@ -1,25 +1,29 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkMath from 'remark-math';
+import rehypeKatex from 'rehype-katex';
+import remarkGfm from 'remark-gfm';
 import {
-  FileCheck2,
+  BookOpen,
+  ChevronDown,
+  Download,
+  FileText,
+  Copy,
+  Sparkles,
   RefreshCw,
   Search,
-  BookOpen,
-  Download,
-  Share2,
   CheckCircle2,
   AlertCircle,
-  Layers,
-  Zap,
+  CircleAlert,
+  ArrowUpRight,
   Workflow,
-  Eye,
-  EyeOff,
-  RotateCcw,
-  Target,
+  Share2,
+  Zap,
+  LoaderCircle,
 } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
 import { useAuthStore } from '../store/useAuthStore';
-import { usePracticeStore } from '../store/usePracticeStore';
-import { AnswerCard } from './AnswerCard';
+import { AnswerCard, extractQuickRecall } from './AnswerCard';
 import { ConfirmationModal } from './ConfirmationModal';
 import { AiProgressModal } from './AiProgressModal';
 import { EmptyState } from './ui/EmptyState';
@@ -49,38 +53,53 @@ export const SolutionViewer = () => {
 
   const { user } = useAuthStore();
 
+  const [studyMode, setStudyMode] = useState('read');
+  const [selectedQuestionIndex, setSelectedQuestionIndex] = useState(0);
   const [searchQuery, setSearchQuery] = useState('');
-  const [showHighYieldOnly, setShowHighYieldOnly] = useState(false);
-  const [selectedMarkFilter, setSelectedMarkFilter] = useState('ALL');
-  const [isExamHallMode, setIsExamHallMode] = useState(false);
+  const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const [isRegenerateConfirmOpen, setIsRegenerateConfirmOpen] = useState(false);
-  const [isResetConfirmOpen, setIsResetConfirmOpen] = useState(false);
+  const [copiedAll, setCopiedAll] = useState(false);
+  const [isDownloadingSolved, setIsDownloadingSolved] = useState(false);
+  const [isDownloadingCheatsheet, setIsDownloadingCheatsheet] = useState(false);
 
-  // Active Recall practice store
-  const {
-    isTestMode,
-    toggleTestMode,
-    practiceFilter,
-    setPracticeFilter,
-    masteryMap,
-    revealAll,
-    hideAll,
-    resetBankMastery,
-  } = usePracticeStore();
+  const exportMenuRef = useRef(null);
 
-  // 1. On mount: Fetch question banks if list is empty or ensure current is selected
+  const handleDownloadSolved = async () => {
+    if (!currentAnswerSet || isDownloadingSolved) return;
+    setIsDownloadingSolved(true);
+    try {
+      await downloadSolvedPdf(
+        currentAnswerSet.id,
+        `AcademicStack_${(currentQuestionBank?.subject || 'Subject').replace(/\s+/g, '_')}_${(currentQuestionBank?.name || 'QB').replace(/\s+/g, '_')}_Solved.pdf`
+      );
+    } finally {
+      setIsDownloadingSolved(false);
+    }
+  };
+
+  const handleDownloadCheatsheet = async () => {
+    if (!currentAnswerSet || isDownloadingCheatsheet) return;
+    setIsDownloadingCheatsheet(true);
+    try {
+      await downloadCheatsheetPdf(
+        currentAnswerSet.id,
+        `AcademicStack_${(currentQuestionBank?.subject || 'Subject').replace(/\s+/g, '_')}_${(currentQuestionBank?.name || 'QB').replace(/\s+/g, '_')}_Cheatsheet.pdf`
+      );
+    } finally {
+      setIsDownloadingCheatsheet(false);
+    }
+  };
+
   useEffect(() => {
     fetchQuestionBanks();
   }, [fetchQuestionBanks]);
 
-  // 2. If question banks exist but none selected, select the first one
   useEffect(() => {
     if (questionBanks.length > 0 && !currentQuestionBank) {
       selectQuestionBank(questionBanks[0].id);
     }
   }, [questionBanks, currentQuestionBank, selectQuestionBank]);
 
-  // 3. If currentQuestionBank is set but currentAnswerSet is missing or lacks answers, refresh it
   const currentBankId = currentQuestionBank?.id;
   const currentAnswerSetBankId = currentAnswerSet?.question_bank_id;
   useEffect(() => {
@@ -89,7 +108,6 @@ export const SolutionViewer = () => {
     }
   }, [currentBankId, currentAnswerSetBankId, selectQuestionBank]);
 
-  // 4. Auto dismiss feedback
   useEffect(() => {
     if (successMessage || error) {
       const timer = setTimeout(clearFeedback, 4000);
@@ -97,535 +115,555 @@ export const SolutionViewer = () => {
     }
   }, [successMessage, error, clearFeedback]);
 
-  // If no Question Banks at all in user's account
-  if (!isLoading && questionBanks.length === 0) {
-    return (
-      <div className="min-h-screen bg-[var(--background)] pb-24 text-[var(--text-primary)]">
-        <div className="mx-auto max-w-7xl px-4 py-16 sm:px-6 lg:px-8 text-center">
-          <EmptyState
-            icon={BookOpen}
-            title="No Question Banks Available"
-            description="Upload an examination paper in the Question Banks section to extract questions and synthesize grounded solutions."
-            actionText="Go to Question Banks"
-            onAction={() => setActiveTab('question_banks')}
-          />
-        </div>
-      </div>
-    );
-  }
-
-  const answers = (currentAnswerSet?.answers || []).filter(Boolean);
-  const completedCount = answers.filter((a) => a.status === 'completed').length;
-  const totalMarksSolved = answers
-    .filter((a) => a.status === 'completed')
-    .reduce((sum, a) => sum + (Number(a.marks) || 0), 0);
-
-  const masteredCount = answers.filter((a) => masteryMap[a.id] === 'mastered').length;
-  const needPracticeCount = answers.filter((a) => masteryMap[a.id] === 'need_practice').length;
-  const untestedCount = Math.max(0, answers.length - masteredCount - needPracticeCount);
-  const readinessPercent = answers.length > 0 ? Math.round((masteredCount / answers.length) * 100) : 0;
-
-  const filteredAnswers = answers.filter((a) => {
-    const matchesSearch =
-      a.question_text.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (a.content && a.content.toLowerCase().includes(searchQuery.toLowerCase()));
-    const matchesHighYield = showHighYieldOnly ? (a.repeat_count > 1) : true;
-    const matchesMarks = selectedMarkFilter === 'ALL' || Number(a.marks) === Number(selectedMarkFilter);
-
-    // Filter by mastery status in Self-Test Mode
-    let matchesPractice = true;
-    if (isTestMode && practiceFilter !== 'ALL') {
-      const status = masteryMap[a.id];
-      if (practiceFilter === 'MASTERED') matchesPractice = status === 'mastered';
-      else if (practiceFilter === 'NEED_PRACTICE') matchesPractice = status === 'need_practice';
-      else if (practiceFilter === 'UNTESTED') matchesPractice = !status;
+  useEffect(() => {
+    const handleOutside = (e) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target)) {
+        setIsExportMenuOpen(false);
+      }
+    };
+    if (isExportMenuOpen) {
+      document.addEventListener('mousedown', handleOutside);
     }
+    return () => {
+      document.removeEventListener('mousedown', handleOutside);
+    };
+  }, [isExportMenuOpen]);
 
-    return matchesSearch && matchesHighYield && matchesMarks && matchesPractice;
-  });
+  const answers = useMemo(() => {
+    return (currentAnswerSet?.answers || []).filter(Boolean);
+  }, [currentAnswerSet]);
+
+  const totalMarks = useMemo(() => {
+    return answers.reduce((acc, a) => acc + (Number(a.marks) || 0), 0);
+  }, [answers]);
+
+  const filteredAnswers = useMemo(() => {
+    return answers.filter((a) => {
+      if (!searchQuery) return true;
+      const q = searchQuery.toLowerCase();
+      return (
+        a.question_text?.toLowerCase().includes(q) ||
+        (a.content && a.content.toLowerCase().includes(q))
+      );
+    });
+  }, [answers, searchQuery]);
+
+  const isClickingQuestionRef = useRef(false);
+
+  useEffect(() => {
+    if (studyMode !== 'read' || filteredAnswers.length === 0) return;
+
+    const handleScroll = () => {
+      if (isClickingQuestionRef.current) return;
+      const triggerY = window.scrollY + 200;
+
+      for (let i = filteredAnswers.length - 1; i >= 0; i--) {
+        const el = document.getElementById(`q-${filteredAnswers[i].id}`);
+        if (el) {
+          const rect = el.getBoundingClientRect();
+          const top = rect.top + window.scrollY;
+          if (triggerY >= top) {
+            setSelectedQuestionIndex(i);
+            const sideBtn = document.getElementById(`side-q-${filteredAnswers[i].id}`);
+            if (sideBtn) {
+              sideBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+            break;
+          }
+        }
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [studyMode, filteredAnswers]);
+
+  const activeQuestion = filteredAnswers[selectedQuestionIndex] || filteredAnswers[0] || answers[0];
+
+  const handleCopyAllAnswers = () => {
+    if (answers.length === 0) return;
+    const compiled = answers
+      .map(
+        (a, idx) =>
+          `### Q${String(a.question_number || idx + 1).padStart(2, '0')} (${a.marks || 5} marks)\n**${a.question_text}**\n\n${a.content || ''}\n\n---`
+      )
+      .join('\n\n');
+    navigator.clipboard.writeText(compiled);
+    setCopiedAll(true);
+    setIsExportMenuOpen(false);
+    setTimeout(() => setCopiedAll(false), 2500);
+  };
+
+  const handleOpenFullAnswer = (index) => {
+    isClickingQuestionRef.current = true;
+    setSelectedQuestionIndex(index);
+    setStudyMode('read');
+    setTimeout(() => {
+      const el = document.getElementById(`q-${answers[index]?.id}`);
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      setTimeout(() => {
+        isClickingQuestionRef.current = false;
+      }, 800);
+    }, 100);
+  };
+
+  const handleTriggerGenerate = () => {
+    if (!currentQuestionBank) return;
+    if (!user?.has_openai_key) {
+      triggerKeyModal('RAG Answer Generation & AI Review');
+      return;
+    }
+    if (answers.length > 0) {
+      setIsRegenerateConfirmOpen(true);
+    } else {
+      generateAnswers(currentQuestionBank.id);
+    }
+  };
 
   const isShared = currentAnswerSet?.visibility === 'community';
-
-  // A previously-shared version of this bank exists, but the current (regenerated)
-  // set is not the shared one — offer to push the update into that Hub entry.
   const sharedSibling = (answerSetsList || []).find(
     (a) => a.visibility === 'community' && a.id !== currentAnswerSet?.id
   );
 
-  return (
-    <div className="min-h-screen bg-[var(--background)] pb-24 text-[var(--text-primary)]">
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        
-        {/* Feedback Alert Banners */}
-        {error && (
-          <div className="mb-6 flex items-center justify-between rounded-[8px] border border-[rgba(239,68,68,0.25)] bg-[rgba(239,68,68,0.08)] p-3.5 text-xs text-[var(--error)]">
-            <div className="flex items-center gap-2.5">
-              <AlertCircle className="h-4 w-4 shrink-0" />
-              <span>{error}</span>
-            </div>
-            <button onClick={clearFeedback} className="text-xs hover:underline font-mono">Dismiss</button>
-          </div>
-        )}
-
-        {successMessage && (
-          <div className="mb-6 flex items-center justify-between rounded-[8px] border border-[rgba(34,197,94,0.25)] bg-[rgba(34,197,94,0.08)] p-3.5 text-xs text-[var(--success)]">
-            <div className="flex items-center gap-2.5">
-              <CheckCircle2 className="h-4 w-4 shrink-0" />
-              <span>{successMessage}</span>
-            </div>
-            <button onClick={clearFeedback} className="text-xs hover:underline font-mono">Dismiss</button>
-          </div>
-        )}
-
-        {/* OpenAI Key Gating Alert */}
-        <ApiKeyBanner feature="Solution Manuscript Synthesis & AI Review" />
-
-        {/* ── Top Bar: Navigation, Question Bank Switcher & Actions ── */}
-        <div className="flex flex-col gap-6 pb-6 border-b border-[var(--border)]">
-          
-          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-            <div>
-              <span className="font-mono text-[11px] uppercase tracking-widest text-[var(--text-muted)] flex items-center gap-1.5 mb-1">
-                <FileCheck2 className="h-3.5 w-3.5 stroke-[1.5]" />
-                Solution Manuscript Reader
-              </span>
-              <h1 className="font-display text-2xl sm:text-3xl font-normal text-[var(--text-primary)] tracking-tight">
-                {currentQuestionBank ? currentQuestionBank.name : 'Select a Question Bank'}
-              </h1>
-              {currentQuestionBank && (
-                <p className="mt-1 text-xs sm:text-sm text-[var(--text-secondary)]">
-                  Subject: <span className="font-semibold text-[var(--text-primary)]">{currentQuestionBank.subject}</span> · Grounded in linked study notes
-                </p>
-              )}
-            </div>
-
-            {/* Selection & Actions */}
-            <div className="flex flex-wrap items-center gap-3">
-              {questionBanks.length > 0 && (
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-[11px] text-[var(--text-muted)] uppercase hidden sm:inline">Bank:</span>
-                  <select
-                    value={currentQuestionBank?.id || ''}
-                    onChange={(e) => selectQuestionBank(Number(e.target.value))}
-                    className="rounded-[8px] border border-[var(--border)] bg-[var(--surface-well)] px-3 py-1.5 text-xs font-medium text-[var(--text-primary)] focus:border-[var(--primary)] focus:outline-none"
-                  >
-                    {questionBanks.map((qb) => (
-                      <option key={qb.id} value={qb.id}>
-                        {qb.name} ({qb.subject})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-
-              {currentQuestionBank && (
-                <button
-                  onClick={() => setActiveTab('review')}
-                  className="inline-flex items-center gap-1.5 rounded-[8px] border border-[var(--border)] bg-[var(--surface-well)] px-3 py-1.5 text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:border-[var(--text-muted)] transition-colors"
-                >
-                  <Layers className="h-3.5 w-3.5 stroke-[1.5]" />
-                  <span>Review Questions</span>
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* Quick Bank Tabs Strip (if user has multiple question banks) */}
-          {questionBanks.length > 1 && (
-            <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
-              <span className="font-mono text-[11px] text-[var(--text-muted)] uppercase mr-1 whitespace-nowrap">Archives:</span>
-              {questionBanks.map((qb) => {
-                const isSelected = currentQuestionBank?.id === qb.id;
-                return (
-                  <button
-                    key={qb.id}
-                    onClick={() => selectQuestionBank(qb.id)}
-                    className={`flex items-center gap-2 rounded-[6px] px-3 py-1 font-mono text-xs transition-all ${
-                      isSelected
-                        ? 'bg-[var(--sidebar-active-bg)] text-[var(--primary)] font-semibold border border-[rgba(20,184,166,0.3)]'
-                        : 'border border-[var(--border)] bg-[var(--surface-well)] text-[var(--text-muted)] hover:text-[var(--text-primary)]'
-                    }`}
-                  >
-                    <span>{qb.name}</span>
-                    <span className="text-[10px] opacity-75">[{qb.subject}]</span>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Action Buttons Row */}
-          {currentQuestionBank && (
-            <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-              <div className="flex flex-wrap items-center gap-2.5">
-                {currentAnswerSet && answers.length > 0 && (
-                  <>
-                    {/* Download PDF Button */}
-                    <button
-                      onClick={() =>
-                        downloadSolvedPdf(
-                          currentAnswerSet.id,
-                          `AcademicStack_${(currentQuestionBank?.subject || 'Subject').replace(/\s+/g, '_')}_${(currentQuestionBank?.name || 'QB').replace(/\s+/g, '_')}_Solved.pdf`
-                        )
-                      }
-                      className="inline-flex items-center gap-2 rounded-[8px] bg-[var(--community)] px-3.5 py-1.5 text-xs font-semibold text-[var(--community-foreground)] hover:opacity-90 transition-all shadow-sm"
-                    >
-                      <Download className="h-3.5 w-3.5 stroke-[2]" />
-                      <span>Download Solved PDF</span>
-                    </button>
-
-                    {/* Export 2-Page Cheatsheet Button */}
-                    <button
-                      onClick={() =>
-                        downloadCheatsheetPdf(
-                          currentAnswerSet.id,
-                          `AcademicStack_${(currentQuestionBank?.subject || 'Subject').replace(/\s+/g, '_')}_${(currentQuestionBank?.name || 'QB').replace(/\s+/g, '_')}_Cheatsheet.pdf`
-                        )
-                      }
-                      className="inline-flex items-center gap-2 rounded-[8px] border border-amber-500/35 bg-amber-500/10 px-3.5 py-1.5 text-xs font-semibold text-amber-400 hover:bg-amber-500/20 transition-all shadow-sm cursor-pointer"
-                      title="Export dense 2-column formula, diagram & definition cheatsheet (4x-5x more compact than full PDF)"
-                    >
-                      <Download className="h-3.5 w-3.5 stroke-[2]" />
-                      <span>Export Cheatsheet (Compact)</span>
-                    </button>
-
-                    {/* Share to Community */}
-                    <button
-                      onClick={() => toggleAnswerSetShare(currentAnswerSet.id)}
-                      className={`inline-flex items-center gap-2 rounded-[8px] border px-3 py-1.5 text-xs font-medium transition-all ${
-                        isShared
-                          ? 'border-[rgba(200,168,32,0.3)] bg-[rgba(200,168,32,0.1)] text-[var(--community)]'
-                          : 'border-[var(--border)] bg-[var(--surface-well)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-                      }`}
-                    >
-                      <Share2 className="h-3.5 w-3.5 stroke-[1.5]" />
-                      <span>{isShared ? 'Shared with The Commons' : 'Share with The Commons'}</span>
-                    </button>
-
-                    {/* Share Updated Answer Set — updates the existing Hub entry in place (no duplicate) */}
-                    {!isShared && sharedSibling && (
-                      <button
-                        onClick={() => shareUpdatedAnswerSet(currentAnswerSet.id)}
-                        className="inline-flex items-center gap-2 rounded-[8px] border border-[rgba(200,168,32,0.3)] bg-[rgba(200,168,32,0.1)] px-3 py-1.5 text-xs font-medium text-[var(--community)] hover:opacity-90 transition-all"
-                        title="Replace the version already shared in The Commons with this regenerated set (no duplicate)"
-                      >
-                        <RefreshCw className="h-3.5 w-3.5 stroke-[1.5]" />
-                        <span>Share Updated Answer Set</span>
-                      </button>
-                    )}
-                  </>
-                )}
-              </div>
-
-              <button
-                onClick={() => {
-                  if (!user?.has_openai_key) {
-                    triggerKeyModal('RAG Answer Generation & AI Review');
-                    return;
-                  }
-                  if (answers.length > 0) {
-                    setIsRegenerateConfirmOpen(true);
-                  } else {
-                    generateAnswers(currentQuestionBank.id);
-                  }
-                }}
-                disabled={isGeneratingAnswers}
-                className="inline-flex items-center gap-1.5 rounded-[8px] border border-[rgba(245,158,11,0.3)] bg-[rgba(245,158,11,0.08)] px-3.5 py-1.5 font-mono text-xs font-medium text-[var(--ai)] hover:bg-[rgba(245,158,11,0.15)] transition-all disabled:opacity-40"
-              >
-                <Workflow className={`h-3.5 w-3.5 stroke-[1.5] ${isGeneratingAnswers ? 'animate-spin' : ''}`} />
-                <span>{isGeneratingAnswers ? 'Synthesizing Answers...' : answers.length > 0 ? 'Regenerate Answers' : 'Generate Solutions (AI)'}</span>
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* ── Stats Strip ── */}
-        {currentQuestionBank && answers.length > 0 && (
-          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
-            <div className="rounded-[10px] border border-[var(--border)] bg-[var(--surface-well)] p-4">
-              <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--text-muted)]">Completed Answers</span>
-              <p className="mt-1 font-mono text-2xl font-semibold text-[var(--text-primary)]">
-                {completedCount} <span className="text-sm font-normal text-[var(--text-muted)]">/ {answers.length}</span>
-              </p>
-              <p className="mt-0.5 text-[11px] text-[var(--text-muted)]">Total questions solved</p>
-            </div>
-
-            <div className="rounded-[10px] border border-[var(--border)] bg-[var(--surface-well)] p-4">
-              <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--text-muted)]">Solved Points</span>
-              <p className="mt-1 font-mono text-2xl font-semibold text-[var(--primary)]">{totalMarksSolved} Marks</p>
-              <p className="mt-0.5 text-[11px] text-[var(--text-muted)]">Calculated question marks</p>
-            </div>
-
-            <div className="rounded-[10px] border border-[var(--border)] bg-[var(--surface-well)] p-4">
-              <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--text-muted)]">Grounded Pipeline</span>
-              <p className="mt-1 font-mono text-xs font-semibold text-[var(--text-primary)] flex items-center gap-1.5">
-                <span className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--success)]" />
-                <span>Vector RAG Grounded</span>
-              </p>
-              <p className="mt-0.5 font-mono text-[10px] text-[var(--text-muted)] truncate">
-                Linked: {currentQuestionBank.resource_ids || 'All Indexed Notes'}
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* ── Search + Filter Bar ── */}
-        {answers.length > 0 && (
-          <div className="mt-6 flex flex-wrap items-center gap-2 rounded-[10px] border border-[var(--border)] bg-[var(--surface-well)] p-3">
-            <div className="relative flex-1 min-w-[180px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-muted)]" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search solutions by concept, keyword, or equation..."
-                className="w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] py-1.5 pl-9 pr-3 text-xs text-[var(--text-primary)] placeholder-[var(--text-disabled)] focus:border-[var(--primary)] focus:outline-none"
-              />
-            </div>
-
-            <div className="h-4 w-px bg-[var(--border)]" />
-
-            {['ALL', 2, 5, 10].map((f) => (
-              <button
-                key={f}
-                onClick={() => setSelectedMarkFilter(f)}
-                className={`rounded-[4px] px-2 py-0.5 font-mono text-[11px] font-medium transition-all ${
-                  selectedMarkFilter === f
-                    ? 'bg-[var(--primary)] text-[var(--primary-foreground)] font-semibold shadow-xs'
-                    : 'border border-[var(--border)] bg-[var(--surface)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-                }`}
-              >
-                {f === 'ALL' ? 'All' : `${f}M`}
-              </button>
-            ))}
-
-            <div className="h-4 w-px bg-[var(--border)]" />
-
-            <button
-              onClick={() => setShowHighYieldOnly(!showHighYieldOnly)}
-              className={`shrink-0 h-8 px-3 rounded-[6px] border font-mono text-[11px] font-medium transition-colors cursor-pointer ${
-                showHighYieldOnly
-                  ? 'border-orange-500/50 bg-orange-500/10 text-orange-500'
-                  : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-secondary)] hover:bg-[var(--surface-muted)]'
-              }`}
-            >
-              🔥 High-Yield Only
-            </button>
-
-            <button
-              onClick={() => setIsExamHallMode(!isExamHallMode)}
-              className={`shrink-0 h-8 px-3 rounded-[6px] border font-mono text-[11px] font-medium transition-colors cursor-pointer flex items-center gap-1.5 ${
-                isExamHallMode
-                  ? 'border-amber-500/50 bg-amber-500/15 text-amber-400 font-semibold shadow-xs'
-                  : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] hover:text-amber-400'
-              }`}
-              title="Toggle 2-Minute Quick Recall Mode across all answers"
-            >
-              <Zap className={`h-3 w-3 ${isExamHallMode ? 'fill-amber-400 text-amber-400' : 'text-amber-400'}`} />
-              <span>⚡ Exam-Hall Mode</span>
-            </button>
-
-            <button
-              onClick={toggleTestMode}
-              className={`shrink-0 h-8 px-3 rounded-[6px] border font-mono text-[11px] font-medium transition-colors cursor-pointer flex items-center gap-1.5 ${
-                isTestMode
-                  ? 'border-indigo-500/50 bg-indigo-500/15 text-indigo-400 font-semibold shadow-xs'
-                  : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] hover:text-indigo-400'
-              }`}
-              title="Toggle Active Recall Self-Test Mode (conceal solutions until tested)"
-            >
-              <EyeOff className={`h-3.5 w-3.5 ${isTestMode ? 'text-indigo-400' : 'text-[var(--text-muted)]'}`} />
-              <span>🎯 Self-Test Mode</span>
-            </button>
-
-            <span className="font-mono text-[11px] text-[var(--text-muted)] ml-auto hidden sm:inline shrink-0">
-              Showing {filteredAnswers.length} of {answers.length} Solutions
-            </span>
-          </div>
-        )}
-
-        {/* ── Active Recall Scorecard Banner (when Self-Test Mode is active) ── */}
-        {isTestMode && answers.length > 0 && (
-          <div className="mt-6 rounded-[12px] border border-indigo-500/30 bg-gradient-to-r from-indigo-500/[0.08] via-indigo-500/[0.03] to-transparent p-5">
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-              
-              {/* Title & Readiness Progress */}
-              <div className="flex items-center gap-3.5">
-                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-indigo-500/20 border border-indigo-500/30 text-indigo-400">
-                  <Target className="h-5 w-5 stroke-[1.8]" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-display text-base font-normal text-[var(--text-primary)]">
-                      Active Recall · Blind Rehearsal
-                    </h3>
-                    <span className="font-mono text-[10px] font-semibold text-indigo-400 bg-indigo-500/15 px-2 py-0.5 rounded-[4px] border border-indigo-500/30">
-                      {readinessPercent}% Exam Ready
-                    </span>
-                  </div>
-                  <p className="mt-0.5 text-xs text-[var(--text-secondary)]">
-                    Solutions are concealed. Recall or write steps on paper, then reveal and rate your mastery.
-                  </p>
-                </div>
-              </div>
-
-              {/* Quick Action Buttons (Reveal All, Hide All, Reset) */}
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  onClick={() => revealAll(answers.map((a) => a.id))}
-                  className="inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 font-mono text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all cursor-pointer"
-                  title="Reveal all solutions at once"
-                >
-                  <Eye className="h-3.5 w-3.5 stroke-[1.5]" />
-                  <span>Reveal All</span>
-                </button>
-
-                <button
-                  onClick={() => hideAll(answers.map((a) => a.id))}
-                  className="inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-1.5 font-mono text-xs text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-all cursor-pointer"
-                  title="Hide all solutions"
-                >
-                  <EyeOff className="h-3.5 w-3.5 stroke-[1.5]" />
-                  <span>Hide All</span>
-                </button>
-
-                {(masteredCount > 0 || needPracticeCount > 0) && (
-                  <button
-                    onClick={() => setIsResetConfirmOpen(true)}
-                    className="inline-flex items-center gap-1.5 rounded-[6px] border border-[rgba(239,68,68,0.25)] bg-[rgba(239,68,68,0.06)] px-2.5 py-1.5 font-mono text-xs text-[var(--error)] hover:bg-[rgba(239,68,68,0.12)] transition-all cursor-pointer"
-                    title="Reset practice ratings for this question bank"
-                  >
-                    <RotateCcw className="h-3 w-3 stroke-[1.5]" />
-                    <span>Reset Stats</span>
-                  </button>
-                )}
-              </div>
-            </div>
-
-            {/* Mastery Filter Tabs Strip */}
-            <div className="mt-4 pt-3 border-t border-indigo-500/20 flex flex-wrap items-center gap-2 font-mono text-xs">
-              <span className="text-[11px] text-[var(--text-muted)] mr-1">Filter By Mastery:</span>
-              {[
-                { id: 'ALL', label: 'All Questions', count: answers.length, badge: 'border-[var(--border)] bg-[var(--surface-well)] text-[var(--text-secondary)]' },
-                { id: 'NEED_PRACTICE', label: 'Need Practice', count: needPracticeCount, badge: 'text-amber-400 bg-amber-500/10 border-amber-500/30' },
-                { id: 'UNTESTED', label: 'Untested', count: untestedCount, badge: 'text-[var(--text-muted)] bg-[var(--surface)] border-[var(--border)]' },
-                { id: 'MASTERED', label: 'Mastered', count: masteredCount, badge: 'text-emerald-400 bg-emerald-500/10 border-emerald-500/30' },
-              ].map((tab) => {
-                const isSelected = practiceFilter === tab.id;
-                return (
-                  <button
-                    key={tab.id}
-                    onClick={() => setPracticeFilter(tab.id)}
-                    className={`flex items-center gap-1.5 rounded-[6px] px-3 py-1 text-xs transition-all cursor-pointer border ${
-                      isSelected
-                        ? 'border-indigo-500 bg-indigo-500/20 text-indigo-300 font-semibold shadow-xs'
-                        : 'border-[var(--border)] bg-[var(--surface)] text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
-                    }`}
-                  >
-                    <span>{tab.label}</span>
-                    <span className={`px-1.5 py-0.2 rounded-[4px] text-[10px] font-bold border ${tab.badge}`}>
-                      {tab.count}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* ── Solutions List ── */}
-        <div className="mt-6 space-y-6">
-          {isLoading ? (
-            <div className="py-20 text-center text-[var(--text-muted)]">
-              <RefreshCw className="mx-auto h-6 w-6 animate-spin text-[var(--primary)] mb-2 stroke-[1.5]" />
-              <p className="font-mono text-xs">Loading solutions for {currentQuestionBank?.name}...</p>
-            </div>
-          ) : isGeneratingAnswers ? (
-            <div className="py-24 text-center rounded-[12px] border border-dashed border-[rgba(245,158,11,0.3)] bg-[rgba(245,158,11,0.04)]">
-              <RefreshCw className="mx-auto h-8 w-8 animate-spin text-[var(--ai)] mb-3 stroke-[1.5]" />
-              <h3 className="font-display text-lg font-normal text-[var(--text-primary)]">Synthesizing Examination Solutions...</h3>
-              <p className="mt-1 text-xs text-[var(--text-muted)] max-w-md mx-auto">
-                Retrieving vector contexts from Qdrant, drafting syllabus-calibrated answers, and passing through Academic Review.
-              </p>
-            </div>
-          ) : filteredAnswers.length > 0 ? (
-            filteredAnswers.map((answer, index) => (
-              // Key on the stable question_id (copied verbatim across a private
-              // fork) rather than answer.id, which changes when a shared set is
-              // regenerated into a working copy. This keeps each card's instance
-              // mounted so its expand/collapse state and scroll position survive.
-              <AnswerCard
-                key={answer.question_id ?? answer.id}
-                answer={answer}
-                index={index}
-                globalTldrMode={isExamHallMode}
-              />
-            ))
-          ) : (
-            <EmptyState
-              icon={BookOpen}
-              title={
-                currentQuestionBank
-                  ? `No Solutions Generated for "${currentQuestionBank.name}" Yet`
-                  : 'No Answers Generated Yet'
-              }
-              description="Click 'Generate Solutions' to synthesize complete, step-by-step examination solutions strictly grounded in your indexed study notes."
-              actionText="Generate Solutions (AI)"
-              actionVariant="amber"
-              onAction={() => currentQuestionBank && generateAnswers(currentQuestionBank.id)}
-            />
-          )}
-        </div>
-
-        {/* Regenerate Confirmation Modal */}
-        {currentQuestionBank && (
-          <ConfirmationModal
-            isOpen={isRegenerateConfirmOpen}
-            title="Regenerate All Exam Solutions?"
-            message={`All existing answers for "${currentQuestionBank.name}" will be regenerated from scratch using Qdrant vector retrieval and Academic AI Review.`}
-            confirmText="Yes, Regenerate Answers"
-            cancelText="Cancel"
-            confirmVariant="warning"
-            iconType="ai"
-            onConfirm={() => {
-              if (!user?.has_openai_key) {
-                setIsRegenerateConfirmOpen(false);
-                triggerKeyModal('RAG Answer Generation & AI Review');
-                return;
-              }
-              setIsRegenerateConfirmOpen(false);
-              generateAnswers(currentQuestionBank.id);
-            }}
-            onCancel={() => setIsRegenerateConfirmOpen(false)}
-          />
-        )}
-
-        {/* Reset Practice Stats Confirmation Modal */}
-        {currentQuestionBank && (
-          <ConfirmationModal
-            isOpen={isResetConfirmOpen}
-            title="Reset Practice Stats?"
-            message={`This will clear all "Mastered" and "Needs Practice" ratings for questions in "${currentQuestionBank.name}". You can start a fresh blind-test rehearsal.`}
-            confirmText="Yes, Reset Practice Stats"
-            cancelText="Cancel"
-            confirmVariant="danger"
-            iconType="danger"
-            onConfirm={() => {
-              resetBankMastery(answers.map((a) => a.id));
-              setIsResetConfirmOpen(false);
-            }}
-            onCancel={() => setIsResetConfirmOpen(false)}
-          />
-        )}
-
-        {/* Live Answer Generation Progress Modal */}
-        <AiProgressModal
-          isOpen={isGeneratingAnswers}
-          type="generation"
-          title="Synthesizing Solution Manuscript"
-          subtitle={`Solving questions with Qdrant vector retrieval, multi-provider drafting, and Academic Review.`}
+  if (!isLoading && questionBanks.length === 0) {
+    return (
+      <div className="min-h-[80vh] flex items-center justify-center p-4">
+        <EmptyState
+          icon={BookOpen}
+          title="No Question Banks Available"
+          description="Upload an examination past paper in the Past papers section to extract questions and synthesize grounded solutions."
+          actionText="Go to Past papers"
+          onAction={() => setActiveTab('question_banks')}
         />
       </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6 pb-20 animate-in fade-in duration-150">
+      {error && (
+        <div className="flex items-center justify-between rounded-xl border border-red-200 bg-red-50 p-4 text-xs text-red-700 shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <AlertCircle className="size-4 shrink-0 text-red-600" />
+            <span>{error}</span>
+          </div>
+          <button onClick={clearFeedback} className="font-medium hover:underline text-xs cursor-pointer">
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {successMessage && (
+        <div className="flex items-center justify-between rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-xs text-emerald-800 shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <CheckCircle2 className="size-4 shrink-0 text-emerald-600" />
+            <span>{successMessage}</span>
+          </div>
+          <button onClick={clearFeedback} className="font-medium hover:underline text-xs cursor-pointer">
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      <ApiKeyBanner feature="Solution Manuscript Synthesis & AI Review" />
+
+      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-1">
+        <div className="flex flex-col gap-1">
+          <h1 className="font-bold text-2xl sm:text-3xl tracking-tight text-[#19243B]">
+            Answers
+          </h1>
+          <p className="text-[#526078] text-sm sm:text-base mt-0.5">
+            Review generated answers and their linked study sources.
+          </p>
+        </div>
+
+        {questionBanks && questionBanks.length > 0 && (
+          <div className="w-full sm:w-80">
+            <select
+              value={currentQuestionBank?.id || ''}
+              onChange={(e) => selectQuestionBank(Number(e.target.value))}
+              className="w-full rounded-xl bg-white border border-[#E2E0D9] px-4 h-11 text-sm font-medium text-[#19243B] focus:border-[#0057FF] focus:outline-none transition-colors shadow-2xs cursor-pointer"
+            >
+              {questionBanks.map((qb) => (
+                <option key={qb.id} value={qb.id}>
+                  {qb.name} ({qb.subject})
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+      </header>
+
+      <div className="flex items-center gap-3 overflow-x-auto pb-1 text-xs">
+        <span className="font-medium px-3 py-1.5 rounded-lg bg-white border border-[#E2E0D9] text-[#19243B] shadow-2xs">
+          Answers: <strong className="text-[#0057FF]">{answers.length}</strong>
+        </span>
+        <span className="font-medium px-3 py-1.5 rounded-lg bg-white border border-[#E2E0D9] text-[#19243B] shadow-2xs">
+          Total Marks: <strong className="text-[#0057FF]">{totalMarks}</strong>
+        </span>
+      </div>
+
+      <div className="flex flex-col sm:flex-row mt-6 items-stretch sm:items-center gap-3">
+        <div className="relative flex-1 min-w-0">
+          <Search className="text-[#687184] absolute top-3.5 left-3.5 size-4" />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search answers, concepts, equations..."
+            className="w-full rounded-xl bg-white border border-[#E2E0D9] pl-10 pr-4 h-11 text-sm text-[#19243B] placeholder-[#687184] focus:border-[#0057FF] focus:outline-none transition-colors shadow-2xs"
+          />
+        </div>
+
+        <div className="flex items-center gap-2.5 sm:gap-3 flex-wrap sm:flex-nowrap">
+          <div className="rounded-xl bg-white border border-[#E2E0D9] p-1 flex items-center gap-1 shadow-2xs h-11">
+            <button
+              type="button"
+              onClick={() => setStudyMode('read')}
+              className={`font-medium rounded-lg text-xs sm:text-sm px-3.5 h-full transition-all cursor-pointer ${
+                studyMode === 'read'
+                  ? 'bg-[#0057FF] text-white font-semibold shadow-xs'
+                  : 'text-[#526078] hover:text-[#19243B] hover:bg-[#F1F0EC]'
+              }`}
+            >
+              Read mode
+            </button>
+            <button
+              type="button"
+              onClick={() => setStudyMode('revision')}
+              className={`font-medium rounded-lg text-xs sm:text-sm px-3.5 h-full transition-all cursor-pointer ${
+                studyMode === 'revision'
+                  ? 'bg-[#0057FF] text-white font-semibold shadow-xs'
+                  : 'text-[#526078] hover:text-[#19243B] hover:bg-[#F1F0EC]'
+              }`}
+            >
+              Quick revision
+            </button>
+          </div>
+
+          {currentAnswerSet && answers.length > 0 && (
+            <div className="relative" ref={exportMenuRef}>
+              <button
+                type="button"
+                onClick={() => setIsExportMenuOpen((prev) => !prev)}
+                disabled={isDownloadingSolved || isDownloadingCheatsheet}
+                className="font-medium rounded-xl bg-white text-[#19243B] text-sm border border-[#E2E0D9] flex h-11 px-4 items-center justify-center gap-2 hover:bg-[#F1F0EC] transition-colors cursor-pointer shadow-2xs disabled:opacity-60"
+              >
+                {isDownloadingSolved || isDownloadingCheatsheet ? (
+                  <LoaderCircle className="size-4 animate-spin text-[#0057FF]" />
+                ) : (
+                  <Download className="size-4 text-[#0057FF]" />
+                )}
+                <span className="hidden sm:inline">
+                  {isDownloadingSolved || isDownloadingCheatsheet ? 'Exporting...' : 'Export'}
+                </span>
+                <ChevronDown className="size-4 text-[#526078]" />
+              </button>
+
+              {isExportMenuOpen && (
+                <div className="absolute right-0 top-12 z-30 w-56 rounded-xl border border-[#E2E0D9] bg-white p-1.5 shadow-[0px_8px_24px_rgba(25,36,59,0.1)] animate-in fade-in zoom-in-95 duration-100">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsExportMenuOpen(false);
+                      handleDownloadSolved();
+                    }}
+                    disabled={isDownloadingSolved}
+                    className="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs text-[#19243B] hover:bg-[#F1F0EC] transition-colors text-left font-medium cursor-pointer disabled:opacity-60"
+                  >
+                    {isDownloadingSolved ? (
+                      <LoaderCircle className="size-4 animate-spin text-[#0057FF]" />
+                    ) : (
+                      <FileText className="size-4 text-[#0057FF]" />
+                    )}
+                    <span>{isDownloadingSolved ? 'Generating Solved PDF...' : 'Export Solved PDF'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsExportMenuOpen(false);
+                      handleDownloadCheatsheet();
+                    }}
+                    disabled={isDownloadingCheatsheet}
+                    className="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs text-[#19243B] hover:bg-[#F1F0EC] transition-colors text-left font-medium cursor-pointer disabled:opacity-60"
+                  >
+                    {isDownloadingCheatsheet ? (
+                      <LoaderCircle className="size-4 animate-spin text-[#0057FF]" />
+                    ) : (
+                      <Zap className="size-4 text-[#0057FF]" />
+                    )}
+                    <span>{isDownloadingCheatsheet ? 'Generating Cheatsheet...' : 'Export Cheatsheet PDF'}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleCopyAllAnswers}
+                    className="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs text-[#19243B] hover:bg-[#F1F0EC] transition-colors text-left font-medium cursor-pointer"
+                  >
+                    <Copy className="size-4 text-[#526078]" />
+                    <span>{copiedAll ? 'Copied all answers!' : 'Copy all answers'}</span>
+                  </button>
+
+                  <div className="border-t border-[#E2E0D9] my-1" />
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsExportMenuOpen(false);
+                      toggleAnswerSetShare(currentAnswerSet.id);
+                    }}
+                    className="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs text-[#19243B] hover:bg-[#F1F0EC] transition-colors text-left font-medium cursor-pointer"
+                  >
+                    <Share2 className="size-4 text-[#C8A820]" />
+                    <span>{isShared ? 'Shared with The Commons' : 'Share with Community'}</span>
+                  </button>
+
+                  {!isShared && sharedSibling && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsExportMenuOpen(false);
+                        shareUpdatedAnswerSet(currentAnswerSet.id);
+                      }}
+                      className="w-full flex items-center gap-2.5 rounded-lg px-3 py-2 text-xs text-[#C8A820] hover:bg-amber-50 transition-colors text-left font-medium cursor-pointer"
+                    >
+                      <RefreshCw className="size-4 text-[#C8A820]" />
+                      <span>Share Updated Set</span>
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {currentQuestionBank && (
+            <button
+              type="button"
+              onClick={handleTriggerGenerate}
+              disabled={isGeneratingAnswers}
+              className="font-semibold rounded-xl bg-[#0057FF] hover:bg-[#0047D4] text-white text-sm flex h-11 px-5 items-center justify-center gap-2 shadow-xs transition-all disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed flex-1 sm:flex-initial"
+            >
+              <Workflow className={`size-4 ${isGeneratingAnswers ? 'animate-spin' : ''}`} />
+              <span>{isGeneratingAnswers ? 'Synthesizing...' : answers.length > 0 ? 'Regenerate all' : 'Generate Solutions (AI)'}</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      {studyMode === 'read' && (
+        <div className="grid grid-cols-1 lg:grid-cols-[160px_minmax(0,1fr)] gap-6 items-start">
+          <aside className="hidden lg:block sticky top-24 rounded-2xl bg-white border border-[#E2E0D9] p-3 shadow-[0px_1px_3px_rgba(0,0,0,0.04)]">
+            <p className="font-semibold uppercase text-[#526078] text-[10px] tracking-wider mb-2 px-1">
+              Questions ({filteredAnswers.length})
+            </p>
+            <div className="space-y-1 max-h-[75vh] overflow-y-auto scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden pr-0.5">
+              {filteredAnswers.map((ans, idx) => {
+                const qNum = String(ans.question_number || idx + 1).padStart(2, '0');
+                const isSelected = activeQuestion?.id === ans.id;
+                const isFailed = ans.status === 'failed';
+
+                return (
+                  <button
+                    key={ans.id}
+                    id={`side-q-${ans.id}`}
+                    type="button"
+                    onClick={() => {
+                      isClickingQuestionRef.current = true;
+                      setSelectedQuestionIndex(idx);
+                      const el = document.getElementById(`q-${ans.id}`);
+                      if (el) {
+                        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                      }
+                      setTimeout(() => {
+                        isClickingQuestionRef.current = false;
+                      }, 800);
+                    }}
+                    className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all text-left cursor-pointer ${
+                      isSelected
+                        ? 'bg-[#0057FF] text-white font-semibold shadow-xs'
+                        : isFailed
+                        ? 'bg-red-50 text-red-700 border border-red-200 hover:bg-red-100'
+                        : 'text-[#526078] hover:bg-[#F1F0EC] hover:text-[#19243B]'
+                    }`}
+                  >
+                    <span className="font-mono flex items-center gap-1.5">
+                      {isFailed && (
+                        <CircleAlert className={`size-3.5 ${isSelected ? 'text-white' : 'text-red-600'}`} />
+                      )}
+                      <span>Q{qNum}</span>
+                    </span>
+                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${isSelected ? 'bg-white/20 text-white' : 'bg-black/5 text-[#526078]'}`}>
+                      {ans.marks || 5}M
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </aside>
+
+          <main className="space-y-6 min-w-0">
+            {isLoading ? (
+              <div className="py-20 text-center rounded-2xl bg-white border border-[#E2E0D9] text-[#526078] shadow-xs">
+                <RefreshCw className="mx-auto size-6 animate-spin text-[#0057FF] mb-2" />
+                <p className="text-xs font-medium">Loading solutions...</p>
+              </div>
+            ) : filteredAnswers.length > 0 ? (
+              filteredAnswers.map((answer, index) => (
+                <AnswerCard
+                  key={answer.question_id ?? answer.id}
+                  id={`q-${answer.id}`}
+                  answer={answer}
+                  index={index}
+                  hasPrev={index > 0}
+                  hasNext={index < filteredAnswers.length - 1}
+                  onNavigatePrev={() => {
+                    isClickingQuestionRef.current = true;
+                    setSelectedQuestionIndex(index - 1);
+                    const prevEl = document.getElementById(`q-${filteredAnswers[index - 1]?.id}`);
+                    if (prevEl) prevEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    const sideBtn = document.getElementById(`side-q-${filteredAnswers[index - 1]?.id}`);
+                    if (sideBtn) sideBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    setTimeout(() => { isClickingQuestionRef.current = false; }, 800);
+                  }}
+                  onNavigateNext={() => {
+                    isClickingQuestionRef.current = true;
+                    setSelectedQuestionIndex(index + 1);
+                    const nextEl = document.getElementById(`q-${filteredAnswers[index + 1]?.id}`);
+                    if (nextEl) nextEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    const sideBtn = document.getElementById(`side-q-${filteredAnswers[index + 1]?.id}`);
+                    if (sideBtn) sideBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    setTimeout(() => { isClickingQuestionRef.current = false; }, 800);
+                  }}
+                />
+              ))
+            ) : answers.length === 0 ? (
+              <div className="rounded-2xl bg-white border border-[#E2E0D9] p-8 sm:p-12 text-center shadow-xs">
+                <EmptyState
+                  icon={Sparkles}
+                  title="No Solutions Generated Yet"
+                  description="Synthesize syllabus-grounded, step-by-step examination solutions directly from your lecture notes and reference textbooks."
+                  actionText={isGeneratingAnswers ? "Generating Solutions..." : "Generate Solutions (AI)"}
+                  onAction={handleTriggerGenerate}
+                  actionVariant="primary"
+                />
+              </div>
+            ) : (
+              <div className="rounded-2xl bg-white border border-[#E2E0D9] p-8 sm:p-12 text-center shadow-xs">
+                <EmptyState
+                  icon={BookOpen}
+                  title="No Answers Found"
+                  description="Try searching with different terms or keywords."
+                  actionText="Clear Search"
+                  onAction={() => setSearchQuery('')}
+                  actionVariant="secondary"
+                />
+              </div>
+            )}
+          </main>
+        </div>
+      )}
+
+      {studyMode === 'revision' && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {filteredAnswers.map((ans, idx) => {
+              const qNum = String(ans.question_number || idx + 1).padStart(2, '0');
+              const quickPoints = extractQuickRecall(ans.content, ans.question_text) || [];
+
+              return (
+                <div
+                  key={ans.id}
+                  className="rounded-2xl bg-white border border-[#E2E0D9] p-5 shadow-[0px_1px_3px_rgba(0,0,0,0.04)] flex flex-col justify-between gap-4 transition-all hover:shadow-[0px_4px_12px_rgba(25,36,59,0.06)]"
+                >
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        <span className="font-mono font-semibold text-[#0057FF] text-sm bg-[#0057FF]/10 px-2 py-0.5 rounded-md">
+                          Q{qNum}
+                        </span>
+                        <span className="font-medium rounded-full bg-[#F8F7F4] border border-[#E2E0D9] text-[#526078] text-xs px-2.5 py-0.5">
+                          {ans.marks || 5} marks
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleOpenFullAnswer(idx)}
+                        className="font-medium rounded-lg text-xs text-[#0057FF] hover:underline flex items-center gap-1 cursor-pointer"
+                      >
+                        <span>Full answer</span>
+                        <ArrowUpRight className="size-3.5" />
+                      </button>
+                    </div>
+
+                    <h4 className="font-semibold text-sm sm:text-base text-[#19243B] leading-snug">
+                      {ans.question_text}
+                    </h4>
+
+                    <div className="rounded-xl bg-[#F0F5FF]/60 border border-[#D0E1FD]/80 p-3.5 space-y-2 text-xs sm:text-sm text-[#24355A] leading-relaxed">
+                      {quickPoints.length > 0 ? (
+                        quickPoints.map((pt, pIdx) => (
+                          <div key={pIdx} className="flex items-start gap-2">
+                            <span className="size-1.5 rounded-full bg-[#0057FF] mt-2 shrink-0" />
+                            <div className="flex-1">
+                              <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>
+                                {pt}
+                              </ReactMarkdown>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="flex items-start gap-2">
+                          <span className="size-1.5 rounded-full bg-[#0057FF] mt-2 shrink-0" />
+                          <div className="flex-1">
+                            <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>
+                              {ans.content?.slice(0, 180) + '...'}
+                            </ReactMarkdown>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {currentQuestionBank && (
+        <ConfirmationModal
+          isOpen={isRegenerateConfirmOpen}
+          title="Regenerate All Exam Solutions?"
+          message={`All existing answers for "${currentQuestionBank.name}" will be regenerated from scratch using Qdrant vector retrieval and Academic AI Review.`}
+          confirmText="Yes, Regenerate Answers"
+          cancelText="Cancel"
+          confirmVariant="warning"
+          iconType="ai"
+          onConfirm={() => {
+            if (!user?.has_openai_key) {
+              setIsRegenerateConfirmOpen(false);
+              triggerKeyModal('RAG Answer Generation & AI Review');
+              return;
+            }
+            setIsRegenerateConfirmOpen(false);
+            generateAnswers(currentQuestionBank.id);
+          }}
+          onCancel={() => setIsRegenerateConfirmOpen(false)}
+        />
+      )}
+
+      <AiProgressModal
+        isOpen={isGeneratingAnswers}
+        type="generation"
+        title="Creating your answers"
+        itemName={currentQuestionBank?.name}
+        subjectName={currentQuestionBank?.subject}
+      />
     </div>
   );
 };
+
+export default SolutionViewer;

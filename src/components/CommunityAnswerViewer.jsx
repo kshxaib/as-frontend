@@ -3,18 +3,11 @@ import {
   X,
   Download,
   BookOpen,
-  User,
-  Calendar,
-  Layers,
-  Search,
   CheckCircle2,
-  Globe,
-  Loader2,
+  LoaderCircle,
   ArrowLeft,
-  ChevronRight,
-  ListOrdered,
-  FileText,
   FolderPlus,
+  Sparkles,
 } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
 import { AnswerCard } from './AnswerCard';
@@ -27,14 +20,16 @@ export const CommunityAnswerViewer = () => {
     isLoadingCommunityViewer,
     closeCommunityViewer,
     downloadSolvedPdf,
+    downloadCheatsheetPdf,
     cloneCommunityAnswerSetToWorkspace,
     isCloningCommunityAnswerSet,
+    copiedAnswerSetIds,
   } = useQuestionBankStore();
 
-  const [searchQuery, setSearchQuery] = useState('');
-  const [activeQuestionId, setActiveQuestionId] = useState(null);
+  const [isDownloadingSolved, setIsDownloadingSolved] = useState(false);
+  const [isDownloadingCheatsheet, setIsDownloadingCheatsheet] = useState(false);
+  const [copySuccessMessage, setCopySuccessMessage] = useState('');
 
-  // Close on Escape key
   useEffect(() => {
     const handleKeyDown = (e) => {
       if (e.key === 'Escape') {
@@ -51,289 +46,205 @@ export const CommunityAnswerViewer = () => {
 
   const meta = communityViewerMeta || {};
   const answers = communityViewerAnswers || [];
-
-  const filteredAnswers = answers.filter((a) => {
-    if (!searchQuery.trim()) return true;
-    const q = searchQuery.toLowerCase();
-    return (
-      (a.question_text && a.question_text.toLowerCase().includes(q)) ||
-      (a.content && a.content.toLowerCase().includes(q)) ||
-      String(a.question_number).includes(q)
-    );
-  });
-
   const totalMarks = answers.reduce((sum, a) => sum + (Number(a.marks) || 0), 0);
+  const isCopied = Boolean(meta.answer_set_id && copiedAnswerSetIds?.has(meta.answer_set_id));
 
-  const handleDownload = () => {
-    if (!meta.answer_set_id) return;
-    const filename = `AcademicStack_${(meta.subject || 'Subject').replace(/\s+/g, '_')}_${(meta.question_bank_name || 'Solved_QB').replace(/\s+/g, '_')}.pdf`;
-    downloadSolvedPdf(meta.answer_set_id, filename);
+  const handleDownloadSolved = async () => {
+    if (!meta.answer_set_id || isDownloadingSolved) return;
+    setIsDownloadingSolved(true);
+    try {
+      const filename = `AcademicStack_${(meta.subject || 'Subject').replace(/\s+/g, '_')}_${(meta.question_bank_name || 'Solved_QB').replace(/\s+/g, '_')}.pdf`;
+      await downloadSolvedPdf(meta.answer_set_id, filename);
+    } finally {
+      setIsDownloadingSolved(false);
+    }
   };
 
-  const scrollToQuestion = (id) => {
-    setActiveQuestionId(id);
-    const element = document.getElementById(`community-q-${id}`);
-    if (element) {
-      element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  const handleDownloadCheatsheet = async () => {
+    if (!meta.answer_set_id || isDownloadingCheatsheet) return;
+    setIsDownloadingCheatsheet(true);
+    try {
+      const filename = `Cheatsheet_${(meta.subject || 'Subject').replace(/\s+/g, '_')}_${(meta.question_bank_name || 'Exam').replace(/\s+/g, '_')}.pdf`;
+      await downloadCheatsheetPdf(meta.answer_set_id, filename);
+    } finally {
+      setIsDownloadingCheatsheet(false);
+    }
+  };
+
+  const handleClone = async () => {
+    if (!meta.answer_set_id || isCopied || isCloningCommunityAnswerSet) return;
+    const res = await cloneCommunityAnswerSetToWorkspace(meta.answer_set_id);
+    if (res?.success) {
+      setCopySuccessMessage(`"${meta.question_bank_name}" solved paper has been copied to your workspace.`);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-[var(--background)] text-[var(--text-primary)] animate-in fade-in duration-150 overflow-hidden">
-      
-      {/* ── Top Sticky Masthead / Navigation Bar ── */}
-      <header className="flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-[var(--border)] bg-[var(--surface)] shrink-0 z-10">
+    <div className="fixed inset-0 z-50 flex flex-col bg-[#F8F7F4] text-[#19243B] font-sans animate-in fade-in duration-150 overflow-hidden">
+      <header className="flex items-center justify-between px-4 sm:px-6 py-3.5 border-b border-[#E2E0D9] bg-white shrink-0 z-10">
         <div className="flex items-center gap-3.5 min-w-0">
           <button
+            type="button"
             onClick={closeCommunityViewer}
-            className="inline-flex items-center gap-1.5 rounded-[6px] border border-[var(--border)] bg-[var(--surface-well)] px-3 py-1.5 font-mono text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] hover:bg-[var(--surface-muted)] transition-all shrink-0"
+            className="inline-flex items-center gap-1.5 rounded-lg border border-[#E2E0D9] bg-[#F8F7F4] px-3 py-1.5 text-xs font-semibold text-[#19243B] hover:bg-[#EAE8E3] transition-all shrink-0 cursor-pointer"
           >
-            <ArrowLeft className="h-3.5 w-3.5 stroke-[1.5]" />
-            <span className="hidden sm:inline">Back to The Commons</span>
+            <ArrowLeft className="h-3.5 w-3.5 stroke-[2]" />
+            <span className="hidden sm:inline">Back to Community</span>
             <span className="sm:hidden">Back</span>
           </button>
 
-          <div className="h-5 w-px bg-[var(--border-subtle)] hidden sm:block" />
+          <div className="h-5 w-px bg-[#E2E0D9] hidden sm:block" />
 
-          <div className="min-w-0">
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--community)] bg-[rgba(200,168,32,0.1)] px-2 py-0.5 rounded-[4px] border border-[rgba(200,168,32,0.25)] font-semibold shrink-0">
-                {meta.subject || 'Academic Subject'}
-              </span>
-              <h1 className="font-display text-base sm:text-lg font-normal text-[var(--text-primary)] tracking-tight truncate">
-                {meta.question_bank_name || 'Solved Examination Manuscript'}
-              </h1>
-            </div>
+          <div className="min-w-0 flex items-center gap-2">
+            <span className="text-xs font-semibold text-[#0057FF] bg-[#EAF0FF] px-2.5 py-0.5 rounded-md border border-[#C8D8FF] shrink-0">
+              {meta.subject || 'Solved Paper'}
+            </span>
+            <h1 className="text-base sm:text-lg font-bold text-[#19243B] tracking-tight truncate">
+              {meta.question_bank_name || 'Solved Examination Manuscript'}
+            </h1>
           </div>
         </div>
 
-        {/* Right Actions */}
-        <div className="flex items-center gap-2.5 shrink-0">
-          {/* Highlighted Contributor Pill in Header */}
-          <div className="hidden md:inline-flex items-center gap-1.5 rounded-[6px] border border-[rgba(200,168,32,0.35)] bg-[rgba(200,168,32,0.08)] px-2.5 py-1 text-xs font-mono">
-            <User className="h-3.5 w-3.5 text-[var(--community)] stroke-[2]" />
-            <span className="text-[var(--text-muted)]">Shared by:</span>
-            <strong className="text-[var(--text-primary)] font-semibold">{meta.author_name || 'AcademicStack Scholar'}</strong>
-          </div>
-
+        <div className="flex items-center gap-2 shrink-0">
           <button
-            onClick={() => meta.answer_set_id && cloneCommunityAnswerSetToWorkspace(meta.answer_set_id)}
-            disabled={isCloningCommunityAnswerSet}
-            className="inline-flex items-center gap-1.5 rounded-[8px] border border-[var(--community)] bg-[rgba(200,168,32,0.1)] px-3.5 py-2 font-mono text-xs font-semibold text-[var(--community)] hover:bg-[var(--community)] hover:text-[var(--community-foreground)] transition-all shadow-xs disabled:opacity-50"
-            title="Clone this Solved Question Bank to your workspace"
+            type="button"
+            onClick={handleClone}
+            disabled={isCloningCommunityAnswerSet || isCopied}
+            className={`inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-xs font-semibold transition-all shadow-2xs cursor-pointer ${
+              isCopied
+                ? 'border border-[#A6F4C5] bg-[#EAF5EF] text-[#187347] cursor-default'
+                : 'border border-[#C6CAD3] bg-white text-[#19243B] hover:bg-[#F1F0EC] disabled:opacity-50'
+            }`}
+            title={isCopied ? 'Already copied to your workspace' : 'Clone this Solved Question Bank to your workspace'}
           >
             {isCloningCommunityAnswerSet ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              <LoaderCircle className="size-3.5 animate-spin text-[#0057FF]" />
+            ) : isCopied ? (
+              <CheckCircle2 className="size-3.5 text-[#187347]" />
             ) : (
-              <FolderPlus className="h-3.5 w-3.5 stroke-[2]" />
+              <FolderPlus className="size-3.5 text-[#187347]" />
             )}
-            <span>{isCloningCommunityAnswerSet ? 'Cloning...' : 'Clone to Workspace'}</span>
+            <span>{isCloningCommunityAnswerSet ? 'Adding...' : isCopied ? 'Copied' : 'Add to workspace'}</span>
           </button>
 
           <button
-            onClick={handleDownload}
-            className="inline-flex items-center gap-1.5 rounded-[8px] bg-[var(--community)] px-4 py-2 font-mono text-xs font-semibold text-[var(--community-foreground)] hover:opacity-90 transition-all shadow-xs"
+            type="button"
+            onClick={handleDownloadCheatsheet}
+            disabled={isDownloadingCheatsheet}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-[#C6CAD3] bg-white px-3.5 py-2 text-xs font-semibold text-[#19243B] hover:bg-[#F1F0EC] transition-all shadow-2xs cursor-pointer disabled:opacity-60"
+            title="Download quick revision bullet points & formula cheatsheet"
           >
-            <Download className="h-3.5 w-3.5 stroke-[2]" />
-            <span>Download Typeset PDF</span>
+            {isDownloadingCheatsheet ? (
+              <LoaderCircle className="size-3.5 animate-spin text-[#0057FF]" />
+            ) : (
+              <Sparkles className="size-3.5 text-[#C8A820]" />
+            )}
+            <span>{isDownloadingCheatsheet ? 'Building...' : 'Cheatsheet PDF'}</span>
           </button>
 
           <button
+            type="button"
+            onClick={handleDownloadSolved}
+            disabled={isDownloadingSolved}
+            className="inline-flex items-center gap-1.5 rounded-xl bg-[#0057FF] px-4 py-2 text-xs font-semibold text-white hover:bg-[#0047D6] transition-all shadow-xs cursor-pointer disabled:opacity-60"
+          >
+            {isDownloadingSolved ? (
+              <LoaderCircle className="size-3.5 animate-spin" />
+            ) : (
+              <Download className="size-3.5 stroke-[2]" />
+            )}
+            <span>{isDownloadingSolved ? 'Generating PDF...' : 'Download Solved PDF'}</span>
+          </button>
+
+          <button
+            type="button"
             onClick={closeCommunityViewer}
-            className="rounded-[8px] border border-[var(--border)] bg-[var(--surface-well)] p-2 text-[var(--text-muted)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)] transition-colors"
-            title="Close Viewer (Esc)"
+            className="rounded-xl border border-[#E2E0D9] bg-[#F8F7F4] p-2 text-[#687184] hover:bg-[#EAE8E3] hover:text-[#19243B] transition-colors cursor-pointer"
           >
-            <X className="h-4 w-4 stroke-[1.5]" />
+            <X className="size-4" />
           </button>
         </div>
       </header>
 
-      {/* ── Main Workspace Body (2-Column Desktop: Sidebar + Manuscript) ── */}
-      <div className="flex flex-1 overflow-hidden">
-        
-        {/* ── Left Table of Contents / Question Index ── */}
-        <aside className="w-80 xl:w-96 border-r border-[var(--border)] bg-[var(--surface)] flex flex-col shrink-0 hidden md:flex">
-          
-          {/* Search & Meta Box */}
-          <div className="p-4 border-b border-[var(--border-subtle)] space-y-3 bg-[var(--surface-well)]">
-            <div className="flex items-center justify-between text-xs font-mono text-[var(--text-muted)]">
-              <span className="flex items-center gap-1.5 text-[var(--text-secondary)] font-medium">
-                <ListOrdered className="h-3.5 w-3.5 text-[var(--primary)]" />
-                Table of Contents
-              </span>
-              <span>{answers.length} Questions</span>
+      <main className="flex-1 overflow-y-auto p-4 sm:p-8 lg:p-12 bg-[#F8F7F4]">
+        <div className="mx-auto max-w-4xl space-y-8">
+          {copySuccessMessage && (
+            <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center justify-between animate-in fade-in duration-200">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 className="size-4 text-emerald-600 shrink-0" />
+                <span>{copySuccessMessage}</span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCopySuccessMessage('')}
+                className="text-emerald-700 hover:text-emerald-900 font-medium text-xs cursor-pointer underline"
+              >
+                Dismiss
+              </button>
+            </div>
+          )}
+
+          <div className="bg-white p-6 sm:p-8 rounded-2xl border border-[#E2E0D9] shadow-xs text-center space-y-3">
+            <h2 className="text-2xl sm:text-3xl font-bold text-[#19243B] tracking-tight">
+              {meta.question_bank_name}
+            </h2>
+            <div className="flex flex-wrap items-center justify-center gap-2 text-xs text-[#687184]">
+              <span>Subject: <strong className="text-[#19243B]">{meta.subject}</strong></span>
+              {meta.author_name && (
+                <>
+                  <span>•</span>
+                  <span>Curated by <strong className="text-[#0057FF]">{meta.author_name}</strong></span>
+                </>
+              )}
             </div>
 
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--text-muted)]" />
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Filter questions..."
-                className="w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface)] py-1.5 pl-9 pr-3 text-xs text-[var(--text-primary)] placeholder-[var(--text-disabled)] focus:border-[var(--primary)] focus:outline-none"
-              />
+            <div className="inline-flex items-center gap-3 rounded-full border border-[#C8D8FF] bg-[#EAF0FF] px-4 py-1.5 text-xs text-[#0057FF] font-medium mx-auto">
+              <span>{meta.completed_questions || answers.length} Questions Solved</span>
+              <span>•</span>
+              <span>{totalMarks} Total Marks</span>
             </div>
           </div>
 
-          {/* Detailed Question List */}
-          <div className="flex-1 overflow-y-auto p-3 space-y-2">
-            {filteredAnswers.map((ans, idx) => {
-              const qNum = ans.question_number || idx + 1;
-              const isSelected = activeQuestionId === ans.id;
-              return (
-                <button
+          {isLoadingCommunityViewer ? (
+            <div className="py-32 text-center text-[#687184]">
+              <LoaderCircle className="size-8 animate-spin text-[#0057FF] mb-3 mx-auto" />
+              <p className="text-sm font-medium">Opening solved answers from The Commons...</p>
+            </div>
+          ) : answers.length > 0 ? (
+            <div className="space-y-8">
+              {answers.map((ans, idx) => (
+                <div
                   key={ans.id || idx}
-                  onClick={() => scrollToQuestion(ans.id)}
-                  className={`w-full text-left p-3 rounded-[8px] border transition-all text-xs ${
-                    isSelected
-                      ? 'border-[var(--primary)] bg-[var(--surface-well)] shadow-xs'
-                      : 'border-[var(--border-subtle)] bg-[var(--surface)] hover:bg-[var(--surface-well)] hover:border-[var(--border)]'
-                  }`}
+                  id={`community-q-${ans.id}`}
+                  className="scroll-mt-6"
                 >
-                  <div className="flex items-center justify-between gap-2 mb-1">
-                    <span className="font-mono text-xs font-semibold text-[var(--primary)]">
-                      Question {qNum}
-                    </span>
-                    <span className="font-mono text-[10px] text-[var(--text-muted)] bg-[var(--surface-well)] px-1.5 py-0.5 rounded border border-[var(--border-subtle)]">
-                      {ans.marks} Marks
-                    </span>
-                  </div>
-                  <p className="text-[var(--text-secondary)] line-clamp-2 leading-relaxed">
-                    {ans.question_text}
-                  </p>
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Prominent Author Box in Sidebar */}
-          <div className="p-3.5 border-t border-[var(--border-subtle)] bg-[rgba(200,168,32,0.04)]">
-            <div className="flex items-center gap-2.5">
-              <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[rgba(200,168,32,0.18)] border border-[rgba(200,168,32,0.3)] text-[var(--community)] font-bold text-xs shrink-0">
-                {(meta.author_name || 'S')[0].toUpperCase()}
-              </div>
-              <div className="min-w-0">
-                <span className="font-mono text-[10px] uppercase text-[var(--community)] font-semibold block">
-                  Shared Contributor
-                </span>
-                <p className="text-xs font-semibold text-[var(--text-primary)] truncate">
-                  {meta.author_name || 'AcademicStack Scholar'}
-                </p>
-              </div>
+                  <AnswerCard
+                    answer={ans}
+                    index={idx}
+                    readOnly={true}
+                  />
+                </div>
+              ))}
             </div>
-          </div>
-        </aside>
+          ) : (
+            <div className="py-24 text-center text-[#687184] rounded-2xl border border-dashed border-[#E2E0D9] bg-white">
+              <BookOpen className="size-10 text-[#C6CAD3] mb-3 mx-auto" />
+              <p className="text-lg font-bold text-[#19243B]">No answers found</p>
+            </div>
+          )}
 
-        {/* ── Right Main Manuscript Reading Canvas ── */}
-        <main className="flex-1 overflow-y-auto p-4 sm:p-8 lg:p-12 bg-[var(--background)]">
-          <div className="mx-auto max-w-4xl space-y-8">
-            
-            {/* Manuscript Title Banner */}
-            <div className="pb-6 border-b border-[var(--border)]">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="font-mono text-[11px] uppercase tracking-widest text-[var(--community)] font-semibold">
-                  The Commons Solved Manuscript
-                </span>
-                <span className="text-[var(--text-muted)]">·</span>
-                <span className="font-mono text-[11px] text-[var(--text-muted)]">
-                  {meta.created_at ? new Date(meta.created_at).toLocaleDateString(undefined, { year: 'numeric', month: 'long', day: 'numeric' }) : 'Verified Archive'}
-                </span>
-              </div>
-
-              <h2 className="font-display text-2xl sm:text-3xl lg:text-4xl font-normal text-[var(--text-primary)] tracking-tight leading-tight">
-                {meta.question_bank_name}
-              </h2>
-
-              <p className="mt-2 text-sm text-[var(--text-secondary)]">
-                Syllabus-grounded step-by-step examination solutions compiled from verified lecture resources.
+          {answers.length > 0 && (
+            <div className="pt-8 pb-16 text-center border-t border-[#E2E0D9]">
+              <p className="text-sm text-[#687184] italic">
+                — End of Solved Examination Manuscript —
               </p>
-
-              {/* Contributor Highlight Card in Main Banner */}
-              <div className="mt-4 inline-flex items-center gap-3 rounded-[10px] border border-[rgba(200,168,32,0.3)] bg-[rgba(200,168,32,0.06)] px-4 py-2.5 text-xs shadow-xs">
-                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-[rgba(200,168,32,0.2)] border border-[rgba(200,168,32,0.35)] text-[var(--community)] font-bold text-xs shrink-0">
-                  {(meta.author_name || 'S')[0].toUpperCase()}
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[var(--text-muted)] font-mono text-[11px]">Shared by:</span>
-                    <strong className="text-[var(--text-primary)] font-semibold text-xs">
-                      {meta.author_name || 'AcademicStack Scholar'}
-                    </strong>
-                    <span className="font-mono text-[10px] uppercase tracking-wider text-[var(--community)] bg-[rgba(200,168,32,0.18)] px-1.5 py-0.5 rounded font-semibold border border-[rgba(200,168,32,0.3)]">
-                      Verified Contributor
-                    </span>
-                  </div>
-                  <div className="mt-0.5 flex items-center gap-3 text-[11px] text-[var(--text-muted)] font-mono">
-                    <span>{meta.completed_questions || answers.length} Questions Solved</span>
-                    <span>•</span>
-                    <span>{totalMarks} Total Marks</span>
-                    <span>•</span>
-                    <span className="text-[var(--success)] font-medium">RAG Grounded</span>
-                  </div>
-                </div>
-              </div>
             </div>
+          )}
 
-
-            {/* Answers Feed */}
-            {isLoadingCommunityViewer ? (
-              <div className="py-32 text-center text-[var(--text-muted)]">
-                <Loader2 className="mx-auto h-8 w-8 animate-spin text-[var(--primary)] mb-3 stroke-[1.5]" />
-                <p className="font-mono text-sm">Opening full examination manuscript from The Commons...</p>
-              </div>
-            ) : filteredAnswers.length > 0 ? (
-              <div className="space-y-8">
-                {filteredAnswers.map((ans, idx) => (
-                  <div
-                    key={ans.id || idx}
-                    id={`community-q-${ans.id}`}
-                    className="scroll-mt-6"
-                  >
-                    <AnswerCard
-                      answer={ans}
-                      index={idx}
-                      readOnly={true}
-                    />
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="py-24 text-center text-[var(--text-muted)] rounded-[12px] border border-dashed border-[var(--border)] bg-[var(--surface)]">
-                <BookOpen className="mx-auto h-10 w-10 text-[var(--text-disabled)] mb-3 stroke-[1.5]" />
-                <p className="font-display text-lg text-[var(--text-primary)]">No matching answers found</p>
-                <p className="mt-1 text-xs font-mono">Try adjusting your filter keyword.</p>
-              </div>
-            )}
-
-            {/* Bottom End of Paper Mark */}
-            {filteredAnswers.length > 0 && (
-              <div className="pt-12 pb-16 text-center border-t border-[var(--border)]">
-                <p className="font-display text-sm text-[var(--text-muted)] italic">
-                  — End of Solved Examination Manuscript —
-                </p>
-                <div className="mt-4 flex items-center justify-center gap-3">
-                  <button
-                    onClick={handleDownload}
-                    className="inline-flex items-center gap-2 rounded-[8px] bg-[var(--community)] px-5 py-2.5 font-mono text-xs font-semibold text-[var(--community-foreground)] hover:opacity-90 transition-all shadow-sm"
-                  >
-                    <Download className="h-4 w-4 stroke-[2]" />
-                    <span>Download Complete PDF</span>
-                  </button>
-                  <button
-                    onClick={closeCommunityViewer}
-                    className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] px-4 py-2.5 font-mono text-xs font-medium text-[var(--text-secondary)] hover:text-[var(--text-primary)] transition-colors"
-                  >
-                    Back to The Commons
-                  </button>
-                </div>
-              </div>
-            )}
-
-          </div>
-        </main>
-
-      </div>
+        </div>
+      </main>
     </div>
   );
 };
+
+export default CommunityAnswerViewer;

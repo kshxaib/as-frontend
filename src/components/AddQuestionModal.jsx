@@ -1,119 +1,114 @@
 import React, { useState } from 'react';
-import { X } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
 
-export const AddQuestionModal = ({ isOpen, onClose, questionBankId }) => {
+export const AddQuestionModal = ({ isOpen, onClose, questionBankId, nextNumber = 1 }) => {
   const { addQuestion } = useQuestionBankStore();
   const [questionText, setQuestionText] = useState('');
+  const [qNumber, setQNumber] = useState(`Q${String(nextNumber).padStart(2, '0')}`);
   const [marks, setMarks] = useState(5);
+  const [touched, setTouched] = useState(false);
 
   if (!isOpen) return null;
 
+  const marksNum = Number(marks);
+  const isMarksInvalid = marks === '' || isNaN(marksNum) || marksNum < 1;
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!questionText.trim()) return;
+    setTouched(true);
+    if (!questionText.trim() || isMarksInvalid) return;
+
+    const parsedNum = parseInt(qNumber.replace(/\D/g, ''), 10) || nextNumber;
 
     addQuestion(questionBankId, {
       question_text: questionText.trim(),
-      marks: Number(marks),
+      question_number: parsedNum,
+      marks: marksNum,
+      marks_source: 'user_modified',
     });
 
     setQuestionText('');
     setMarks(5);
+    setTouched(false);
     onClose();
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[var(--overlay)] p-4 backdrop-blur-sm animate-in fade-in duration-150">
-      <div className="relative w-full max-w-lg rounded-[16px] border border-[var(--border)] bg-[var(--surface-elevated)] p-6 sm:p-7 shadow-[var(--shadow-lg)] my-auto">
-
+    <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#19243B]/40 p-4 backdrop-blur-xs animate-in fade-in duration-150 selection:bg-[#0057FF] selection:text-white">
+      <div className="shadow-[0px_25px_50px_-12px_rgba(0,0,0,0.25)] rounded-2xl bg-white border border-[#E2E0D9] w-[520px] max-w-full overflow-hidden text-[#19243B] my-auto">
         
-        {/* Close Button */}
-        <button
-          onClick={onClose}
-          className="absolute right-4 top-4 rounded-[6px] p-1.5 text-[var(--text-muted)] hover:bg-[var(--surface-well)] hover:text-[var(--text-primary)] transition-colors"
-        >
-          <X className="h-4 w-4 stroke-[1.5]" />
-        </button>
-
-        {/* Header (No icon) */}
-        <div className="pb-4 border-b border-[var(--border-subtle)] pr-6">
-          <h3 className="font-display text-lg font-normal text-[var(--text-primary)] tracking-tight">
-            Add Examination Question
-          </h3>
-          <p className="mt-1 text-xs text-[var(--text-muted)]">
-            Specify the question text and allotted marks for the solution synthesis pipeline.
-          </p>
+        <div className="border-b border-[#E2E0D9] pt-5 pr-6 pb-5 pl-6">
+          <h2 className="font-semibold text-xl tracking-tight text-[#19243B]">
+            Add question
+          </h2>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="mt-5 space-y-4">
-          <div>
-            <label className="block font-mono text-[11px] uppercase tracking-wider text-[var(--text-secondary)] mb-1.5">
-              Question Statement *
+        <form onSubmit={handleSubmit}>
+          <div className="flex pt-6 pr-6 pb-6 pl-6 flex-col gap-4">
+            <label className="font-medium text-sm flex flex-col gap-2 text-[#19243B]">
+              <span>Question</span>
+              <textarea
+                required
+                rows={4}
+                value={questionText}
+                onChange={(e) => setQuestionText(e.target.value)}
+                placeholder="Enter the question text"
+                className="font-normal resize-none rounded-[10px] bg-white text-sm border border-[#E2E0D9] outline-none pt-2.5 pr-3 pb-2.5 pl-3 min-h-28 text-[#19243B] placeholder-[#687184] focus:border-[#0057FF] transition-colors"
+              />
             </label>
-            <textarea
-              required
-              rows={4}
-              value={questionText}
-              onChange={(e) => setQuestionText(e.target.value)}
-              placeholder="e.g. Explain the ACID properties of transactions with a concrete banking transfer example..."
-              className="w-full rounded-[8px] border border-[var(--border)] bg-[var(--surface-well)] p-3 text-xs sm:text-sm text-[var(--text-primary)] placeholder-[var(--text-disabled)] focus:border-[var(--primary)] focus:outline-none leading-relaxed transition-colors"
-            />
-          </div>
 
-          <div>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="font-mono text-[11px] uppercase tracking-wider text-[var(--text-secondary)]">
-                Allotted Marks *
+            <div className="grid gap-4 grid-cols-2">
+              <label className="font-medium text-sm flex flex-col gap-2 text-[#19243B]">
+                <span>Question number</span>
+                <input
+                  type="text"
+                  value={qNumber}
+                  onChange={(e) => setQNumber(e.target.value)}
+                  placeholder="e.g. Q06"
+                  className="font-normal rounded-[10px] bg-white text-sm border border-[#E2E0D9] outline-none pr-3 pl-3 h-10 text-[#19243B] focus:border-[#0057FF] transition-colors"
+                />
               </label>
-              <span className="font-mono text-[11px] text-[var(--text-muted)]">
-                Current: <strong className="text-[var(--primary)]">{marks} Marks</strong>
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              {[2, 5, 10, 15].map((preset) => (
-                <button
-                  type="button"
-                  key={preset}
-                  onClick={() => setMarks(preset)}
-                  className={`flex-1 rounded-[6px] py-2 font-mono text-xs font-medium transition-all ${
-                    marks === preset
-                      ? 'bg-[var(--primary)] text-[var(--primary-foreground)] font-semibold shadow-xs'
-                      : 'border border-[var(--border)] bg-[var(--surface-well)] text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)]'
-                  }`}
-                >
-                  {preset}M
-                </button>
-              ))}
-              <div className="w-24">
+
+              <label className="font-medium text-sm flex flex-col gap-2 text-[#19243B]">
+                <span>Marks</span>
                 <input
                   type="number"
                   min="1"
                   max="100"
                   value={marks}
-                  onChange={(e) => setMarks(Number(e.target.value))}
-                  className="w-full rounded-[6px] border border-[var(--border)] bg-[var(--surface-well)] py-2 px-2 text-center font-mono text-xs text-[var(--text-primary)] focus:border-[var(--primary)] focus:outline-none"
-                  placeholder="Custom"
+                  onChange={(e) => {
+                    setMarks(e.target.value);
+                    setTouched(true);
+                  }}
+                  className={`font-normal rounded-[10px] text-sm outline-none pr-3 pl-3 h-10 transition-colors ${
+                    isMarksInvalid && touched
+                      ? 'bg-[#FFF0EE] text-[#19243B] border border-[#B42318]'
+                      : 'bg-white text-[#19243B] border border-[#E2E0D9] focus:border-[#0057FF]'
+                  }`}
                 />
-              </div>
+                {isMarksInvalid && touched && (
+                  <span className="font-normal text-[#B42318] text-xs">
+                    Marks must be at least 1
+                  </span>
+                )}
+              </label>
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="mt-6 flex items-center justify-end gap-2.5 pt-4 border-t border-[var(--border-subtle)]">
+          <div className="border-t border-[#E2E0D9] flex pt-4 pr-6 pb-4 pl-6 justify-end items-center gap-3 bg-[#FDFCFA]">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-[6px] border border-[var(--border)] bg-[var(--surface-well)] px-4 py-2 text-xs font-medium text-[var(--text-secondary)] hover:bg-[var(--surface-muted)] hover:text-[var(--text-primary)] transition-all"
+              className="font-medium rounded-[10px] bg-white text-[#19243B] text-sm border border-[#E2E0D9] pr-4 pl-4 h-10 hover:bg-[#F1F0EC] transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="inline-flex items-center gap-1.5 rounded-[6px] bg-[var(--primary)] px-5 py-2 text-xs font-semibold text-[var(--primary-foreground)] hover:opacity-90 transition-all shadow-sm"
+              disabled={!questionText.trim() || isMarksInvalid}
+              className="font-medium rounded-[10px] bg-[#0057FF] hover:bg-[#0047D4] text-white text-sm pr-4 pl-4 h-10 shadow-sm transition-all disabled:opacity-50 cursor-pointer disabled:cursor-not-allowed"
             >
-              Add Question
+              Add question
             </button>
           </div>
         </form>

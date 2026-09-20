@@ -4,19 +4,16 @@ import { persist } from 'zustand/middleware';
 export const usePracticeStore = create(
   persist(
     (set) => ({
-      // Active recall test mode
+      
       isTestMode: false,
       toggleTestMode: () => set((state) => ({ isTestMode: !state.isTestMode })),
       setTestMode: (val) => set({ isTestMode: val }),
 
-      // Filter for practice mode: 'ALL' | 'NEED_PRACTICE' | 'UNTESTED' | 'MASTERED'
       practiceFilter: 'ALL',
       setPracticeFilter: (filter) => set({ practiceFilter: filter }),
 
-      // Mastery map: { [answerId]: 'mastered' | 'need_practice' }
       masteryMap: {},
 
-      // Set status for a specific answer
       setMastery: (answerId, status) =>
         set((state) => ({
           masteryMap: {
@@ -25,7 +22,6 @@ export const usePracticeStore = create(
           },
         })),
 
-      // Reset mastery for a bank
       resetBankMastery: (answerIds = []) =>
         set((state) => {
           const nextMap = { ...state.masteryMap };
@@ -33,7 +29,6 @@ export const usePracticeStore = create(
           return { masteryMap: nextMap };
         }),
 
-      // Session revealed state (ephemeral session state)
       revealedMap: {},
       revealAnswer: (answerId) =>
         set((state) => ({

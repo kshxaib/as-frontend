@@ -4,7 +4,6 @@ const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:8000/api',
 });
 
-// Request interceptor to attach JWT token
 api.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('academicstack_token');
@@ -16,7 +15,6 @@ api.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response interceptor
 api.interceptors.response.use(
   (response) => response,
   (error) => Promise.reject(error)
@@ -42,4 +40,3 @@ export const getErrorMessage = (err, fallback = 'An unexpected error occurred') 
 };
 
 export default api;
-
