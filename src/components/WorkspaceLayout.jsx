@@ -18,6 +18,7 @@ import {
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { ConfirmationModal } from './ConfirmationModal';
+import { AcademicLogo } from './ui/AcademicLogo';
 
 export const WorkspaceLayout = ({ children }) => {
   const { activeTab, setActiveTab, currentAnswerSet } = useQuestionBankStore();
@@ -266,9 +267,7 @@ export const WorkspaceLayout = ({ children }) => {
             }`}
             title="AcademicStack Workspace"
           >
-            <div className="rounded-xl bg-[#0057FF] text-white grid place-items-center size-9 shadow-xs group-hover:scale-105 transition-transform shrink-0">
-              <BookOpen className="size-5" />
-            </div>
+            <AcademicLogo size={36} className="group-hover:scale-105 transition-transform" />
             {!isSidebarCollapsed && (
               <span className="font-bold text-lg tracking-tight text-[#19243B] truncate transition-opacity duration-200">
                 AcademicStack
@@ -309,9 +308,7 @@ export const WorkspaceLayout = ({ children }) => {
             </button>
 
             <div className="flex items-center gap-2.5 lg:hidden">
-              <div className="rounded-xl bg-[#0057FF] text-white grid place-items-center size-8 shadow-xs">
-                <BookOpen className="size-4.5" />
-              </div>
+              <AcademicLogo size={32} />
               <div>
                 <span className="font-bold text-base tracking-tight text-[#19243B] block">
                   AcademicStack

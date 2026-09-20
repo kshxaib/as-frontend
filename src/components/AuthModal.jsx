@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { BookOpen, CircleAlert, LoaderCircle, X } from 'lucide-react';
+import { CircleAlert, LoaderCircle, X } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
+import { AcademicLogo } from './ui/AcademicLogo';
 
 export const AuthModal = () => {
   const {
@@ -98,8 +99,8 @@ export const AuthModal = () => {
           <X className="size-4" />
         </button>
 
-        <div className="rounded-xl bg-[#0057FF] text-white grid place-items-center size-10 mb-5 shadow-xs">
-          <BookOpen className="size-6" />
+        <div className="mb-5 shadow-xs inline-block">
+          <AcademicLogo size={42} />
         </div>
 
         {isLogin ? (

@@ -16,6 +16,7 @@ import {
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { ConfirmationModal } from './ConfirmationModal';
+import { AcademicLogo } from './ui/AcademicLogo';
 
 export const Navbar = () => {
   const { activeTab, setActiveTab, currentAnswerSet } = useQuestionBankStore();
@@ -74,9 +75,7 @@ export const Navbar = () => {
             onClick={() => setActiveTab(isAuthenticated ? 'resources' : '')}
             className="flex items-center gap-3 cursor-pointer select-none shrink-0 group"
           >
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#E2E0D9] bg-[#F8F7F4] text-[#0057FF] transition-colors group-hover:border-[#0057FF]">
-              <Library className="h-4 w-4 stroke-[1.5]" />
-            </div>
+            <AcademicLogo size={32} className="group-hover:scale-105 transition-transform" />
             <div className="flex flex-col">
               <span className="text-base font-bold tracking-tight text-[#19243B]">
                 AcademicStack
