@@ -12,11 +12,13 @@ import {
   ChevronDown,
   Library,
   Sparkles,
+  GitPullRequest,
 } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { ConfirmationModal } from './ConfirmationModal';
 import { AcademicLogo } from './ui/AcademicLogo';
+import { GithubIcon } from './ui/GithubIcon';
 
 export const Navbar = () => {
   const { activeTab, setActiveTab, currentAnswerSet } = useQuestionBankStore();
@@ -116,6 +118,16 @@ export const Navbar = () => {
           </nav>
 
           <div className="flex items-center gap-2 sm:gap-3">
+            <a
+              href="https://github.com/kshxaib/AcademicStack"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="View source & contribute on GitHub"
+              className="hidden sm:flex items-center gap-1.5 rounded-lg border border-[#E2E0D9] bg-[#F8F7F4] hover:bg-[#EAE8E3] hover:text-[#0057FF] px-2.5 py-1 text-xs font-medium text-[#19243B] transition-colors"
+            >
+              <GithubIcon size={14} className="shrink-0" />
+              <span>Contribute</span>
+            </a>
 
             {isAuthenticated && user ? (
               <div className="relative" ref={userMenuRef}>
@@ -181,6 +193,17 @@ export const Navbar = () => {
                           {hasOpenAIKey ? 'OpenAI Ready' : 'Key Needed'}
                         </span>
                       </button>
+
+                      <a
+                        href="https://github.com/kshxaib/AcademicStack"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={() => setIsUserMenuOpen(false)}
+                        className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-xs text-[#687184] hover:bg-[#F8F7F4] hover:text-[#0057FF] transition-colors"
+                      >
+                        <GithubIcon size={14} className="text-[#19243B] shrink-0" />
+                        <span>Contribute on GitHub</span>
+                      </a>
                     </div>
 
                     <div className="my-1 border-t border-[#E2E0D9]" />

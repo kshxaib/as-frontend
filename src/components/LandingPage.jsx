@@ -9,9 +9,12 @@ import {
   Users,
   CheckCircle2,
   ShieldCheck,
+  GitPullRequest,
+  Sparkles,
 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import { AcademicLogo } from './ui/AcademicLogo';
+import { GithubIcon } from './ui/GithubIcon';
 
 export const LandingPage = ({ justLoggedOut, hasSharedToken }) => {
   const { openAuthModal } = useAuthStore();
@@ -264,6 +267,84 @@ export const LandingPage = ({ justLoggedOut, hasSharedToken }) => {
                   </section>
 
                 </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Open Source Contribution Banner */}
+        <section className="px-6 pb-20 max-w-4xl mx-auto">
+          <div className="rounded-[20px] bg-white border border-[#E2E0D9] p-8 sm:p-10 shadow-[0px_10px_30px_rgba(25,_36,_59,_0.06)] text-center relative overflow-hidden">
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-1 bg-gradient-to-r from-transparent via-[#0057FF] to-transparent" />
+            
+            <div className="inline-flex items-center gap-2 rounded-full bg-[#EAF0FF] border border-[#C8D8FF] px-3.5 py-1 text-xs font-semibold text-[#0057FF] mb-4">
+              <GitPullRequest className="h-3.5 w-3.5" />
+              <span>Open Source & Community Driven</span>
+            </div>
+
+            <h2 className="text-2xl sm:text-3xl font-bold text-[#19243B] tracking-tight">
+              Want to improve AcademicStack?
+            </h2>
+
+            <p className="text-[#526078] text-sm sm:text-base mt-3 max-w-xl mx-auto leading-relaxed">
+              AcademicStack is open for contributions! Whether you want to enhance the exam predictor, add new study formats, improve LaTeX math rendering, or refine the UI — we welcome all ideas and pull requests.
+            </p>
+
+            <div className="flex flex-wrap items-center justify-center gap-3 mt-6">
+              <a
+                href="https://github.com/kshxaib/AcademicStack"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-[10px] bg-[#19243B] hover:bg-[#0057FF] text-white px-5 h-11 text-xs font-semibold transition-all shadow-sm"
+              >
+                <GithubIcon size={16} />
+                <span>Contribute on GitHub</span>
+              </a>
+
+              <a
+                href="https://github.com/kshxaib/AcademicStack/issues/new"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-2 rounded-[10px] bg-[#F8F7F4] hover:bg-[#EAE8E3] text-[#19243B] border border-[#E2E0D9] px-5 h-11 text-xs font-semibold transition-colors"
+              >
+                <Sparkles className="h-4 w-4 text-[#0057FF]" />
+                <span>Suggest a Feature</span>
+              </a>
+            </div>
+
+            <div className="mt-8 pt-6 border-t border-[#E2E0D9]/60 flex flex-wrap items-center justify-between text-xs text-[#687184] gap-4">
+              <div className="flex items-center gap-2">
+                <AcademicLogo size={18} />
+                <span className="font-semibold text-[#19243B]">AcademicStack</span>
+                <span>· Built for university students</span>
+              </div>
+              <div className="flex items-center gap-4">
+                <a
+                  href="https://github.com/kshxaib/as-frontend"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-[#0057FF] transition-colors"
+                >
+                  Frontend Repo
+                </a>
+                <span>·</span>
+                <a
+                  href="https://github.com/kshxaib/as-backend"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-[#0057FF] transition-colors"
+                >
+                  Backend Repo
+                </a>
+                <span>·</span>
+                <a
+                  href="https://github.com/kshxaib/AcademicStack"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-[#0057FF] font-medium transition-colors"
+                >
+                  Main Repo
+                </a>
               </div>
             </div>
           </div>
