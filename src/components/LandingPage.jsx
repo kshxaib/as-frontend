@@ -318,34 +318,15 @@ export const LandingPage = ({ justLoggedOut, hasSharedToken }) => {
                 <span className="font-semibold text-[#19243B]">AcademicStack</span>
                 <span>· Built for university students</span>
               </div>
-              <div className="flex items-center gap-4">
-                <a
-                  href="https://github.com/kshxaib/as-frontend"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-[#0057FF] transition-colors"
-                >
-                  Frontend Repo
-                </a>
-                <span>·</span>
-                <a
-                  href="https://github.com/kshxaib/as-backend"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-[#0057FF] transition-colors"
-                >
-                  Backend Repo
-                </a>
-                <span>·</span>
-                <a
-                  href="https://github.com/kshxaib/AcademicStack"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="hover:text-[#0057FF] font-medium transition-colors"
-                >
-                  Main Repo
-                </a>
-              </div>
+              <a
+                href="https://github.com/kshxaib/AcademicStack"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 text-[#19243B] hover:text-[#0057FF] font-medium transition-colors"
+              >
+                <GithubIcon size={14} />
+                <span>github.com/kshxaib/AcademicStack</span>
+              </a>
             </div>
           </div>
         </section>
