@@ -193,17 +193,6 @@ export const Navbar = () => {
                           {hasOpenAIKey ? 'OpenAI Ready' : 'Key Needed'}
                         </span>
                       </button>
-
-                      <a
-                        href="https://github.com/kshxaib/AcademicStack"
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        onClick={() => setIsUserMenuOpen(false)}
-                        className="w-full flex items-center gap-2 rounded-lg px-3 py-2 text-xs text-[#687184] hover:bg-[#F8F7F4] hover:text-[#0057FF] transition-colors"
-                      >
-                        <GithubIcon size={14} className="text-[#19243B] shrink-0" />
-                        <span>Contribute on GitHub</span>
-                      </a>
                     </div>
 
                     <div className="my-1 border-t border-[#E2E0D9]" />

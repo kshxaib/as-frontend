@@ -23,7 +23,6 @@ import { useQuestionBankStore } from '../store/useQuestionBankStore';
 import { CommunityAnswerViewer } from './CommunityAnswerViewer';
 import { CommunityPredictedPaperViewer } from './CommunityPredictedPaperViewer';
 import { CommunityQuestionBankViewer } from './CommunityQuestionBankViewer';
-import { GithubIcon } from './ui/GithubIcon';
 
 export const CommunityHub = () => {
   const {
@@ -164,28 +163,6 @@ export const CommunityHub = () => {
     <div className="min-h-screen bg-[#F8F7F4] text-[#19243B] pb-24 animate-in fade-in duration-150">
       <div className="shadow-[0px_1px_3px_rgba(0,0,0,0.06)] rounded-2xl bg-white border border-[#E2E0D9] p-6 sm:p-8 space-y-6">
         
-        {/* Header & Open-Source Contribute Banner */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 rounded-xl bg-[#F8F7F4] border border-[#E2E0D9]">
-          <div>
-            <h2 className="text-base font-bold text-[#19243B] flex items-center gap-2">
-              <LibraryBig className="h-4 w-4 text-[#0057FF]" />
-              <span>The Commons — Peer Study Repository</span>
-            </h2>
-            <p className="text-xs text-[#526078] mt-0.5">
-              Discover shared question banks, solved solutions, and predicted papers. 1-click clone anything directly to your workspace.
-            </p>
-          </div>
-          <a
-            href="https://github.com/kshxaib/AcademicStack"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-[#C8D8FF] bg-[#EAF0FF] hover:bg-[#DCE5FB] text-[#0057FF] px-3 py-1.5 text-xs font-semibold whitespace-nowrap transition-colors shrink-0"
-          >
-            <GithubIcon size={14} />
-            <span>Contribute on GitHub →</span>
-          </a>
-        </div>
-
         {copyNotification && (
           <div className="p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center justify-between animate-in fade-in duration-200">
             <div className="flex items-center gap-2">

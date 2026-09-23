@@ -19,6 +19,7 @@ import { useQuestionBankStore } from '../store/useQuestionBankStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { ConfirmationModal } from './ConfirmationModal';
 import { AcademicLogo } from './ui/AcademicLogo';
+import { GithubIcon } from './ui/GithubIcon';
 
 export const WorkspaceLayout = ({ children }) => {
   const { activeTab, setActiveTab, currentAnswerSet } = useQuestionBankStore();
@@ -321,7 +322,17 @@ export const WorkspaceLayout = ({ children }) => {
           </div>
 
           <div className="flex items-center gap-3">
-            
+            <a
+              href="https://github.com/kshxaib/AcademicStack"
+              target="_blank"
+              rel="noopener noreferrer"
+              title="Contribute on GitHub"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-[#E2E0D9] bg-white px-3 py-1.5 text-xs font-semibold text-[#19243B] hover:bg-[#F8F7F4] hover:text-[#0057FF] hover:border-[#0057FF]/30 transition-all shadow-2xs"
+            >
+              <GithubIcon size={14} />
+              <span className="hidden sm:inline">Contribute</span>
+            </a>
+
             <div className="hidden lg:block relative" ref={userMenuRef}>
               <button
                 onClick={() => setIsUserMenuOpen((prev) => !prev)}
