@@ -86,42 +86,54 @@ export const AuthModal = () => {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#19243B]/30 p-4 backdrop-blur-xs animate-in fade-in duration-150 selection:bg-[#0057FF] selection:text-white">
       <div
-        className="relative z-10 w-full max-w-[440px] rounded-[18px] bg-white border border-[#E2E0D9] p-7 sm:p-8 shadow-[0px_16px_50px_rgba(25,36,59,0.12)] text-[#19243B] my-auto"
+        className="relative z-10 w-full max-w-[440px] rounded-[18px] bg-white border border-[#E2E0D9] p-7 sm:p-8 shadow-[0px_16px_50px_rgba(25,36,59,0.12)] text-[#19243B] my-auto overflow-hidden"
         role="dialog"
         aria-modal="true"
       >
-        
+        {isLoading && (
+          <div className="absolute inset-0 bg-white/85 backdrop-blur-[2px] z-20 flex flex-col items-center justify-center gap-3 animate-in fade-in duration-150">
+            <div className="size-12 rounded-2xl bg-[#EAF0FF] flex items-center justify-center border border-[#C8D8FF] shadow-xs">
+              <LoaderCircle className="animate-spin text-[#0057FF] size-6" />
+            </div>
+            <p className="text-sm font-semibold text-[#19243B]">
+              {isLogin ? 'Signing in…' : 'Creating your account…'}
+            </p>
+          </div>
+        )}
+
         <button
           onClick={closeAuthModal}
-          className="absolute right-4 top-4 rounded-lg p-2 text-[#526078] hover:bg-[#F1F0EC] hover:text-[#19243B] transition-colors"
+          className="absolute right-4 top-4 rounded-lg p-2 text-[#526078] hover:bg-[#F1F0EC] hover:text-[#19243B] transition-colors cursor-pointer z-10"
           aria-label="Close dialog"
         >
           <X className="size-4" />
         </button>
 
-        <div className="mb-5 shadow-xs inline-block">
-          <AcademicLogo size={42} />
-        </div>
+        <div className="flex flex-col items-center text-center mb-6">
+          <div className="mb-4 shadow-xs">
+            <AcademicLogo size={46} />
+          </div>
 
-        {isLogin ? (
-          <div>
-            <h2 className="font-semibold text-[#19243B] text-[27px] sm:text-[29px] leading-tight tracking-tight">
-              Welcome back.
-            </h2>
-            <p className="text-[#526078] text-sm mt-1.5">
-              Your next study session starts here.
-            </p>
-          </div>
-        ) : (
-          <div>
-            <h1 className="font-semibold text-[#19243B] text-[27px] sm:text-[29px] leading-tight tracking-tight">
-              Let's get your study space ready.
-            </h1>
-            <p className="text-[#526078] text-sm mt-1.5">
-              A fresh space for everything you are learning.
-            </p>
-          </div>
-        )}
+          {isLogin ? (
+            <div>
+              <h2 className="font-semibold text-[#19243B] text-[26px] sm:text-[28px] leading-tight tracking-tight">
+                Welcome back.
+              </h2>
+              <p className="text-[#526078] text-sm mt-1.5">
+                Your next study session starts here.
+              </p>
+            </div>
+          ) : (
+            <div>
+              <h1 className="font-semibold text-[#19243B] text-[26px] sm:text-[28px] leading-tight tracking-tight">
+                Let's get your study space ready.
+              </h1>
+              <p className="text-[#526078] text-sm mt-1.5">
+                A fresh space for everything you are learning.
+              </p>
+            </div>
+          )}
+        </div>
 
         <form onSubmit={handleSubmit} className="mt-6" noValidate>
           

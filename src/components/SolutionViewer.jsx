@@ -3,24 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
-import {
-  BookOpen,
-  ChevronDown,
-  Download,
-  FileText,
-  Copy,
-  Sparkles,
-  RefreshCw,
-  Search,
-  CheckCircle2,
-  AlertCircle,
-  CircleAlert,
-  ArrowUpRight,
-  Workflow,
-  Share2,
-  Zap,
-  LoaderCircle,
-} from 'lucide-react';
+import { BookOpen, ChevronDown, Download, FileText, Copy, Sparkles, RefreshCw, Search, CheckCircle2, AlertCircle, CircleAlert, ArrowUpRight, Workflow, Share2, Zap, LoaderCircle } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { AnswerCard, extractQuickRecall } from './AnswerCard';
@@ -164,10 +147,6 @@ export const SolutionViewer = () => {
           const top = rect.top + window.scrollY;
           if (triggerY >= top) {
             setSelectedQuestionIndex(i);
-            const sideBtn = document.getElementById(`side-q-${filteredAnswers[i].id}`);
-            if (sideBtn) {
-              sideBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            }
             break;
           }
         }
@@ -267,7 +246,7 @@ export const SolutionViewer = () => {
         </div>
       )}
 
-      <ApiKeyBanner feature="Solution Manuscript Synthesis & AI Review" />
+
 
       <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-1">
         <div className="flex flex-col gap-1">
@@ -454,57 +433,8 @@ export const SolutionViewer = () => {
       </div>
 
       {studyMode === 'read' && (
-        <div className="grid grid-cols-1 lg:grid-cols-[160px_minmax(0,1fr)] gap-6 items-start">
-          <aside className="hidden lg:block sticky top-24 rounded-2xl bg-white border border-[#E2E0D9] p-3 shadow-[0px_1px_3px_rgba(0,0,0,0.04)]">
-            <p className="font-semibold uppercase text-[#526078] text-[10px] tracking-wider mb-2 px-1">
-              Questions ({filteredAnswers.length})
-            </p>
-            <div className="space-y-1 max-h-[75vh] overflow-y-auto scrollbar-none [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden pr-0.5">
-              {filteredAnswers.map((ans, idx) => {
-                const qNum = String(ans.question_number || idx + 1).padStart(2, '0');
-                const isSelected = activeQuestion?.id === ans.id;
-                const isFailed = ans.status === 'failed';
-
-                return (
-                  <button
-                    key={ans.id}
-                    id={`side-q-${ans.id}`}
-                    type="button"
-                    onClick={() => {
-                      isClickingQuestionRef.current = true;
-                      setSelectedQuestionIndex(idx);
-                      const el = document.getElementById(`q-${ans.id}`);
-                      if (el) {
-                        el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                      }
-                      setTimeout(() => {
-                        isClickingQuestionRef.current = false;
-                      }, 800);
-                    }}
-                    className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-xs font-medium transition-all text-left cursor-pointer ${
-                      isSelected
-                        ? 'bg-[#0057FF] text-white font-semibold shadow-xs'
-                        : isFailed
-                        ? 'bg-red-50 text-red-700 border border-red-200 hover:bg-red-100'
-                        : 'text-[#526078] hover:bg-[#F1F0EC] hover:text-[#19243B]'
-                    }`}
-                  >
-                    <span className="font-mono flex items-center gap-1.5">
-                      {isFailed && (
-                        <CircleAlert className={`size-3.5 ${isSelected ? 'text-white' : 'text-red-600'}`} />
-                      )}
-                      <span>Q{qNum}</span>
-                    </span>
-                    <span className={`text-[10px] font-semibold px-1.5 py-0.5 rounded ${isSelected ? 'bg-white/20 text-white' : 'bg-black/5 text-[#526078]'}`}>
-                      {ans.marks || 5}M
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </aside>
-
-          <main className="space-y-6 min-w-0">
+        <div className="w-full">
+          <main className="space-y-6 w-full min-w-0">
             {isLoading ? (
               <div className="py-20 text-center rounded-2xl bg-white border border-[#E2E0D9] text-[#526078] shadow-xs">
                 <RefreshCw className="mx-auto size-6 animate-spin text-[#0057FF] mb-2" />
@@ -524,8 +454,6 @@ export const SolutionViewer = () => {
                     setSelectedQuestionIndex(index - 1);
                     const prevEl = document.getElementById(`q-${filteredAnswers[index - 1]?.id}`);
                     if (prevEl) prevEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    const sideBtn = document.getElementById(`side-q-${filteredAnswers[index - 1]?.id}`);
-                    if (sideBtn) sideBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                     setTimeout(() => { isClickingQuestionRef.current = false; }, 800);
                   }}
                   onNavigateNext={() => {
@@ -533,8 +461,6 @@ export const SolutionViewer = () => {
                     setSelectedQuestionIndex(index + 1);
                     const nextEl = document.getElementById(`q-${filteredAnswers[index + 1]?.id}`);
                     if (nextEl) nextEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    const sideBtn = document.getElementById(`side-q-${filteredAnswers[index + 1]?.id}`);
-                    if (sideBtn) sideBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
                     setTimeout(() => { isClickingQuestionRef.current = false; }, 800);
                   }}
                 />

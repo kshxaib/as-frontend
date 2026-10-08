@@ -1,20 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import {
-  BookOpen,
-  Files,
-  CircleHelp,
-  MessageCircle,
-  ChartNoAxesColumnIncreasing,
-  Users,
-  LogOut,
-  ChevronDown,
-  KeyRound,
-  Menu,
-  X,
-  PanelLeftClose,
-  PanelLeftOpen,
-  PanelLeft,
-} from 'lucide-react';
+import { BookOpen, Files, CircleHelp, MessageCircle, ChartNoAxesColumnIncreasing, Users, LogOut, ChevronDown, KeyRound, Menu, X } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { ConfirmationModal } from './ConfirmationModal';
@@ -27,28 +12,9 @@ export const WorkspaceLayout = ({ children }) => {
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
-  
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
-    try {
-      return localStorage.getItem('academicstack_sidebar_collapsed') === 'true';
-    } catch {
-      return false;
-    }
-  });
+  const [isSidebarHovered, setIsSidebarHovered] = useState(false);
 
   const userMenuRef = useRef(null);
-
-  const toggleSidebar = () => {
-    setIsSidebarCollapsed((prev) => {
-      const next = !prev;
-      try {
-        localStorage.setItem('academicstack_sidebar_collapsed', String(next));
-      } catch {
-        
-      }
-      return next;
-    });
-  };
 
   useEffect(() => {
     const handleOutsideClick = (e) => {
@@ -108,25 +74,27 @@ export const WorkspaceLayout = ({ children }) => {
 
   const hasOpenAIKey = Boolean(user?.has_openai_key);
 
-  const renderNavItems = (isCollapsed = false) => (
+  const renderNavItems = (isExpanded = false) => (
     <>
       <nav aria-label="Workspace navigation" className="flex-1 flex flex-col gap-6">
-        
+
         <div className="flex flex-col gap-1">
-          {!isCollapsed ? (
-            <p className="font-semibold uppercase text-[#526078] text-[10px] tracking-[0.08em] px-3 mb-1 select-none transition-opacity duration-200">
-              Your workspace
-            </p>
-          ) : (
-            <div className="h-px bg-[#E2E0D9] mx-2 my-1" />
-          )}
+          <div className="overflow-hidden transition-all duration-300 ease-in-out min-h-[18px] flex items-center">
+            {isExpanded ? (
+              <p className="font-semibold uppercase text-[#526078] text-[10px] tracking-[0.08em] px-3 select-none truncate whitespace-nowrap animate-in fade-in duration-200">
+                Your workspace
+              </p>
+            ) : (
+              <div className="h-px bg-[#E2E0D9] w-7 mx-auto" />
+            )}
+          </div>
 
           <button
             type="button"
             onClick={() => handleTabClick('resources')}
             title="Study materials"
-            className={`font-medium rounded-xl text-sm flex items-center min-h-11 transition-all duration-200 text-left w-full cursor-pointer ${
-              isCollapsed ? 'justify-center px-0' : 'px-3 gap-3'
+            className={`font-medium rounded-xl text-sm flex items-center min-h-11 transition-all duration-300 text-left w-full cursor-pointer overflow-hidden ${
+              isExpanded ? 'px-3 gap-3 justify-start' : 'px-0 justify-center'
             } ${
               activeTab === 'resources'
                 ? 'bg-[#0057FF]/10 text-[#0057FF] font-semibold shadow-2xs'
@@ -134,17 +102,23 @@ export const WorkspaceLayout = ({ children }) => {
             }`}
           >
             <BookOpen className="size-5 shrink-0" />
-            {!isCollapsed && (
-              <span className="truncate transition-opacity duration-200">Study materials</span>
-            )}
+            <span
+              className={`truncate whitespace-nowrap transition-all duration-300 ease-in-out ${
+                isExpanded
+                  ? 'opacity-100 max-w-[160px] translate-x-0'
+                  : 'opacity-0 max-w-0 -translate-x-2 pointer-events-none'
+              }`}
+            >
+              Study materials
+            </span>
           </button>
 
           <button
             type="button"
             onClick={() => handleTabClick('question_banks')}
             title="Question papers"
-            className={`font-medium rounded-xl text-sm flex items-center min-h-11 transition-all duration-200 text-left w-full cursor-pointer ${
-              isCollapsed ? 'justify-center px-0' : 'px-3 gap-3'
+            className={`font-medium rounded-xl text-sm flex items-center min-h-11 transition-all duration-300 text-left w-full cursor-pointer overflow-hidden ${
+              isExpanded ? 'px-3 gap-3 justify-start' : 'px-0 justify-center'
             } ${
               activeTab === 'question_banks'
                 ? 'bg-[#0057FF]/10 text-[#0057FF] font-semibold shadow-2xs'
@@ -152,17 +126,23 @@ export const WorkspaceLayout = ({ children }) => {
             }`}
           >
             <Files className="size-5 shrink-0" />
-            {!isCollapsed && (
-              <span className="truncate transition-opacity duration-200">Question papers</span>
-            )}
+            <span
+              className={`truncate whitespace-nowrap transition-all duration-300 ease-in-out ${
+                isExpanded
+                  ? 'opacity-100 max-w-[160px] translate-x-0'
+                  : 'opacity-0 max-w-0 -translate-x-2 pointer-events-none'
+              }`}
+            >
+              Question papers
+            </span>
           </button>
 
           <button
             type="button"
             onClick={() => handleTabClick('review')}
             title="Review questions"
-            className={`font-medium rounded-xl text-sm flex items-center min-h-11 transition-all duration-200 text-left w-full cursor-pointer ${
-              isCollapsed ? 'justify-center px-0' : 'px-3 gap-3'
+            className={`font-medium rounded-xl text-sm flex items-center min-h-11 transition-all duration-300 text-left w-full cursor-pointer overflow-hidden ${
+              isExpanded ? 'px-3 gap-3 justify-start' : 'px-0 justify-center'
             } ${
               activeTab === 'review'
                 ? 'bg-[#0057FF]/10 text-[#0057FF] font-semibold shadow-2xs'
@@ -170,31 +150,43 @@ export const WorkspaceLayout = ({ children }) => {
             }`}
           >
             <CircleHelp className="size-5 shrink-0" />
-            {!isCollapsed && (
-              <span className="truncate transition-opacity duration-200">Review questions</span>
-            )}
+            <span
+              className={`truncate whitespace-nowrap transition-all duration-300 ease-in-out ${
+                isExpanded
+                  ? 'opacity-100 max-w-[160px] translate-x-0'
+                  : 'opacity-0 max-w-0 -translate-x-2 pointer-events-none'
+              }`}
+            >
+              Review questions
+            </span>
           </button>
 
           <button
             type="button"
             onClick={() => handleTabClick('solutions')}
             title="Answers"
-            className={`font-medium rounded-xl text-sm flex items-center min-h-11 transition-all duration-200 text-left w-full cursor-pointer ${
-              isCollapsed ? 'justify-center px-0' : 'px-3 justify-between'
+            className={`font-medium rounded-xl text-sm flex items-center min-h-11 transition-all duration-300 text-left w-full cursor-pointer overflow-hidden ${
+              isExpanded ? 'px-3 justify-between' : 'px-0 justify-center'
             } ${
               activeTab === 'solutions'
                 ? 'bg-[#0057FF]/10 text-[#0057FF] font-semibold shadow-2xs'
                 : 'text-[#526078] hover:bg-[#F1F0EC] hover:text-[#19243B]'
             }`}
           >
-            <div className={`flex items-center ${isCollapsed ? 'justify-center' : 'gap-3'}`}>
+            <div className={`flex items-center ${isExpanded ? 'gap-3 min-w-0' : 'justify-center'}`}>
               <MessageCircle className="size-5 shrink-0" />
-              {!isCollapsed && (
-                <span className="truncate transition-opacity duration-200">Answers</span>
-              )}
+              <span
+                className={`truncate whitespace-nowrap transition-all duration-300 ease-in-out ${
+                  isExpanded
+                    ? 'opacity-100 max-w-[120px] translate-x-0'
+                    : 'opacity-0 max-w-0 -translate-x-2 pointer-events-none'
+                }`}
+              >
+                Answers
+              </span>
             </div>
-            {!isCollapsed && currentAnswerSet?.completed_questions > 0 && (
-              <span className="rounded-full bg-[#EAF5EF] text-[#187347] px-2 py-0.5 text-[10px] font-bold">
+            {isExpanded && currentAnswerSet?.completed_questions > 0 && (
+              <span className="rounded-full bg-[#EAF5EF] text-[#187347] px-2 py-0.5 text-[10px] font-bold shrink-0 animate-in fade-in duration-200">
                 {currentAnswerSet.completed_questions}
               </span>
             )}
@@ -204,8 +196,8 @@ export const WorkspaceLayout = ({ children }) => {
             type="button"
             onClick={() => handleTabClick('predictor')}
             title="Paper predictor"
-            className={`font-medium rounded-xl text-sm flex items-center min-h-11 transition-all duration-200 text-left w-full cursor-pointer ${
-              isCollapsed ? 'justify-center px-0' : 'px-3 gap-3'
+            className={`font-medium rounded-xl text-sm flex items-center min-h-11 transition-all duration-300 text-left w-full cursor-pointer overflow-hidden ${
+              isExpanded ? 'px-3 gap-3 justify-start' : 'px-0 justify-center'
             } ${
               activeTab === 'predictor'
                 ? 'bg-[#0057FF]/10 text-[#0057FF] font-semibold shadow-2xs'
@@ -213,27 +205,35 @@ export const WorkspaceLayout = ({ children }) => {
             }`}
           >
             <ChartNoAxesColumnIncreasing className="size-5 shrink-0" />
-            {!isCollapsed && (
-              <span className="truncate transition-opacity duration-200">Paper predictor</span>
-            )}
+            <span
+              className={`truncate whitespace-nowrap transition-all duration-300 ease-in-out ${
+                isExpanded
+                  ? 'opacity-100 max-w-[160px] translate-x-0'
+                  : 'opacity-0 max-w-0 -translate-x-2 pointer-events-none'
+              }`}
+            >
+              Paper predictor
+            </span>
           </button>
         </div>
 
         <div className="flex flex-col gap-1">
-          {!isCollapsed ? (
-            <p className="font-semibold uppercase text-[#526078] text-[10px] tracking-[0.08em] px-3 mb-1 select-none transition-opacity duration-200">
-              Study together
-            </p>
-          ) : (
-            <div className="h-px bg-[#E2E0D9] mx-2 my-1" />
-          )}
+          <div className="overflow-hidden transition-all duration-300 ease-in-out min-h-[18px] flex items-center">
+            {isExpanded ? (
+              <p className="font-semibold uppercase text-[#526078] text-[10px] tracking-[0.08em] px-3 select-none truncate whitespace-nowrap animate-in fade-in duration-200">
+                Study together
+              </p>
+            ) : (
+              <div className="h-px bg-[#E2E0D9] w-7 mx-auto" />
+            )}
+          </div>
 
           <button
             type="button"
             onClick={() => handleTabClick('community')}
             title="Community"
-            className={`font-medium rounded-xl text-sm flex items-center min-h-11 transition-all duration-200 text-left w-full cursor-pointer ${
-              isCollapsed ? 'justify-center px-0' : 'px-3 gap-3'
+            className={`font-medium rounded-xl text-sm flex items-center min-h-11 transition-all duration-300 text-left w-full cursor-pointer overflow-hidden ${
+              isExpanded ? 'px-3 gap-3 justify-start' : 'px-0 justify-center'
             } ${
               activeTab === 'community'
                 ? 'bg-[#0057FF]/10 text-[#0057FF] font-semibold shadow-2xs'
@@ -241,9 +241,15 @@ export const WorkspaceLayout = ({ children }) => {
             }`}
           >
             <Users className="size-5 shrink-0" />
-            {!isCollapsed && (
-              <span className="truncate transition-opacity duration-200">Community</span>
-            )}
+            <span
+              className={`truncate whitespace-nowrap transition-all duration-300 ease-in-out ${
+                isExpanded
+                  ? 'opacity-100 max-w-[160px] translate-x-0'
+                  : 'opacity-0 max-w-0 -translate-x-2 pointer-events-none'
+              }`}
+            >
+              Community
+            </span>
           </button>
         </div>
       </nav>
@@ -252,62 +258,57 @@ export const WorkspaceLayout = ({ children }) => {
 
   return (
     <div className="bg-[#F8F7F4] text-[#19243B] flex min-h-screen font-sans antialiased selection:bg-[#0057FF] selection:text-white">
-      
+
+
+      <div className="hidden lg:block w-[72px] shrink-0" aria-hidden="true" />
+
+
       <aside
-        className={`hidden lg:flex bg-[#FCFBF9] border-r border-[#E2E0D9] flex-col shrink-0 min-h-screen sticky top-0 h-screen overflow-y-auto transition-all duration-300 ease-in-out ${
-          isSidebarCollapsed ? 'w-[72px] p-3' : 'w-[240px] p-4'
+        onMouseEnter={() => setIsSidebarHovered(true)}
+        onMouseLeave={() => setIsSidebarHovered(false)}
+        className={`hidden lg:flex bg-[#FCFBF9] border-r border-[#E2E0D9] flex-col shrink-0 min-h-screen fixed top-0 left-0 h-screen overflow-x-hidden overflow-y-auto transition-all duration-300 ease-in-out z-40 ${
+          isSidebarHovered
+            ? 'w-[240px] p-4 shadow-[8px_0_32px_rgba(25,36,59,0.08)]'
+            : 'w-[72px] p-3 shadow-none'
         }`}
         aria-label="Workspace navigation"
       >
-        
-        <div className="flex items-center select-none min-h-[40px]">
+        <div className="flex items-center select-none min-h-[44px] overflow-hidden">
           <div
             onClick={() => handleTabClick('resources')}
-            className={`flex items-center gap-2.5 cursor-pointer group ${
-              isSidebarCollapsed ? 'mx-auto' : ''
+            className={`flex items-center gap-3 cursor-pointer group transition-all duration-300 ${
+              isSidebarHovered ? 'px-1' : 'mx-auto'
             }`}
             title="AcademicStack Workspace"
           >
-            <AcademicLogo size={36} className="group-hover:scale-105 transition-transform" />
-            {!isSidebarCollapsed && (
-              <span className="font-bold text-lg tracking-tight text-[#19243B] truncate transition-opacity duration-200">
+            <AcademicLogo size={36} className="shrink-0 group-hover:scale-105 transition-transform" />
+            <div
+              className={`flex flex-col transition-all duration-300 ease-in-out overflow-hidden ${
+                isSidebarHovered
+                  ? 'opacity-100 max-w-[160px] translate-x-0'
+                  : 'opacity-0 max-w-0 -translate-x-2 pointer-events-none'
+              }`}
+            >
+              <span className="font-bold text-base tracking-tight text-[#19243B] truncate whitespace-nowrap">
                 AcademicStack
               </span>
-            )}
+              <span className="text-[#526078] text-[11px] truncate whitespace-nowrap">
+                Your study workspace
+              </span>
+            </div>
           </div>
         </div>
 
-        {!isSidebarCollapsed && (
-          <p className="text-[#526078] text-xs mt-1 pl-[46px] select-none truncate transition-opacity duration-200">
-            Your study workspace
-          </p>
-        )}
-
         <div className="mt-8 flex-1 flex flex-col">
-          {renderNavItems(isSidebarCollapsed)}
+          {renderNavItems(isSidebarHovered)}
         </div>
       </aside>
 
       <div className="flex flex-col flex-1 min-w-0 relative">
-        
-        <header className="bg-transparent flex px-4 sm:px-8 justify-between items-center shrink-0 h-14 sm:h-16 sticky top-0 z-30 transition-all">
-          
-          <div className="flex items-center gap-3">
-            
-            <button
-              type="button"
-              onClick={toggleSidebar}
-              className="hidden lg:inline-flex items-center justify-center size-9 rounded-xl border border-[#E2E0D9] bg-white text-[#526078] hover:text-[#19243B] hover:bg-[#F8F7F4] hover:border-[#C6CAD3] transition-all cursor-pointer shadow-2xs group"
-              title={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-              aria-label={isSidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
-            >
-              {isSidebarCollapsed ? (
-                <PanelLeftOpen className="size-4.5 text-[#0057FF] group-hover:scale-110 transition-transform" />
-              ) : (
-                <PanelLeftClose className="size-4.5 text-[#526078] group-hover:text-[#19243B] transition-transform" />
-              )}
-            </button>
 
+        <header className="bg-transparent flex px-4 sm:px-8 justify-between items-center shrink-0 h-14 sm:h-16 sticky top-0 z-30 transition-all">
+
+          <div className="flex items-center gap-3">
             <div className="flex items-center gap-2.5 lg:hidden">
               <AcademicLogo size={32} />
               <div>
@@ -433,7 +434,7 @@ export const WorkspaceLayout = ({ children }) => {
               <h2 className="font-bold text-base px-3 mb-4 text-[#19243B] select-none">
                 Your study workspace
               </h2>
-              {renderNavItems(false)}
+              {renderNavItems(true)}
             </aside>
           </>
         )}

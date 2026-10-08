@@ -1,31 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import {
-  BookOpen,
-  Upload,
-  Search,
-  FileText,
-  Trash2,
-  Share2,
-  Download,
-  AlertCircle,
-  CircleAlert,
-  CheckCircle2,
-  Users,
-  Lock,
-  Workflow,
-  RefreshCw,
-  X,
-  Loader2,
-  Sparkles,
-  ArrowRight,
-  Filter,
-  Check,
-  Globe,
-  SlidersHorizontal,
-  ChevronRight,
-  ChevronDown,
-  FileWarning,
-} from 'lucide-react';
+import { BookOpen, Upload, Search, FileText, Trash2, Share2, Download, AlertCircle, CircleAlert, CheckCircle2, Users, Lock, Workflow, RefreshCw, X, Loader2, Sparkles, ArrowRight, Filter, Check, Globe, SlidersHorizontal, ChevronRight, ChevronDown, FileWarning } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { ConfirmationModal } from './ConfirmationModal';
@@ -237,7 +211,7 @@ export const ResourceManager = () => {
         </div>
       )}
 
-      <ApiKeyBanner feature="AI Question Extraction & Solutions" />
+
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-1">
         <div>

@@ -16,27 +16,29 @@ export const ApiKeyRequiredModal = () => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#19243B]/40 p-4 backdrop-blur-xs animate-in fade-in duration-150">
-      <div className="relative w-full max-w-md rounded-2xl border border-[#E2E0D9] bg-white p-6 sm:p-7 shadow-2xl my-auto text-[#19243B] space-y-4">
+      <div className="relative w-full max-w-md rounded-2xl border border-[#E2E0D9] bg-white p-6 sm:p-8 shadow-2xl my-auto text-[#19243B] space-y-5">
         
-        <div className="flex items-start justify-between">
-          <div>
-            <h3 className="font-semibold text-lg sm:text-xl text-[#19243B] tracking-tight">
-              Add your API key to use AI tools
-            </h3>
-            <p className="text-[#687184] text-sm mt-2 leading-relaxed">
-              Configure your OpenAI API key in <b>Profile & API key</b> to generate answers and synthesize practice examination papers.
-            </p>
+        <button
+          onClick={closeKeyModal}
+          className="absolute right-4 top-4 rounded-lg p-1.5 text-[#687184] hover:bg-[#F1F0EC] hover:text-[#19243B] transition-colors cursor-pointer"
+        >
+          <X className="size-4" />
+        </button>
+
+        <div className="flex flex-col items-center text-center">
+          <div className="size-12 rounded-2xl bg-[#EAF0FF] border border-[#C8D8FF] flex items-center justify-center mb-3 text-[#0057FF] shadow-xs">
+            <Sparkles className="size-6" />
           </div>
-          <button
-            onClick={closeKeyModal}
-            className="rounded-lg p-1.5 text-[#687184] hover:bg-[#F1F0EC] hover:text-[#19243B] transition-colors cursor-pointer"
-          >
-            <X className="size-4" />
-          </button>
+          <h3 className="font-semibold text-lg sm:text-xl text-[#19243B] tracking-tight">
+            Add your API key to use AI tools
+          </h3>
+          <p className="text-[#687184] text-sm mt-2 leading-relaxed max-w-sm">
+            Configure your OpenAI API key in <b>Profile & API key</b> to generate answers and synthesize practice examination papers.
+          </p>
         </div>
 
         {keyModalFeature && (
-          <div className="rounded-xl bg-[#EAF0FF] border border-[#C8D8FF] p-3 text-xs text-[#0057FF] flex items-center gap-2">
+          <div className="rounded-xl bg-[#EAF0FF] border border-[#C8D8FF] p-3 text-xs text-[#0057FF] flex items-center justify-center gap-2">
             <Sparkles className="size-4 shrink-0" />
             <span>Target action: <b>{keyModalFeature}</b></span>
           </div>

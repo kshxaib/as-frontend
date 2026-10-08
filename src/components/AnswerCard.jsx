@@ -3,27 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkMath from 'remark-math';
 import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
-import {
-  BookOpen,
-  CheckCircle2,
-  AlertCircle,
-  RefreshCw,
-  ChevronDown,
-  ChevronUp,
-  Lightbulb,
-  Eye,
-  EyeOff,
-  Check,
-  RotateCcw,
-  Copy,
-  ExternalLink,
-  MoreHorizontal,
-  FileText,
-  Sparkles,
-  ArrowRight,
-  ArrowLeft,
-  Share2,
-} from 'lucide-react';
+import { BookOpen, CheckCircle2, AlertCircle, RefreshCw, ChevronDown, ChevronUp, Lightbulb, Eye, EyeOff, Check, RotateCcw, Copy, ExternalLink, MoreHorizontal, FileText, Sparkles, ArrowRight, ArrowLeft, Share2 } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
 import { ConfirmationModal } from './ConfirmationModal';
 import { MermaidDiagram } from './MermaidDiagram';
@@ -175,9 +155,74 @@ function formatMarkdownMath(content) {
     ''
   );
 
-  const parts = cleaned.split(/(```[\s\S]*?```)/g);
 
-  const processed = parts.map((part) => {
+  cleaned = cleaned.replace(
+    /```(?:flowchart|graph|diagram)?\s*\n\s*(flowchart\s+[A-Za-z]{2}|graph\s+[A-Za-z]{2}|sequenceDiagram|stateDiagram(?:-v2)?|erDiagram|classDiagram)/gi,
+    '```mermaid\n$1'
+  );
+
+
+  const parts = cleaned.split(/(```[\s\S]*?```)/g);
+  const unfencedPattern = /(?:^|\n)(?:(?:Diagram|Architecture|Flowchart|Workflow|Schema):?\s*\n+)?((?:graph\s+(?:TD|TB|BT|RL|LR)|flowchart\s+(?:TD|TB|BT|RL|LR)|sequenceDiagram|stateDiagram(?:-v2)?|erDiagram|classDiagram)\b[\s\S]*?)(?=(?:\n\s*(?:In this diagram|[A-Z][a-z]+[^\n]*\n|\#{1,4}\s+|\Z))|$)/gi;
+
+  for (let i = 0; i < parts.length; i++) {
+    if (!parts[i].startsWith('```')) {
+      parts[i] = parts[i].replace(unfencedPattern, '\n\n```mermaid\n$1\n```\n\n');
+    }
+  }
+  cleaned = parts.join('');
+
+
+  cleaned = cleaned.replace(/```mermaid\s*\n([\s\S]*?)\n```/gi, (_match, code) => {
+    const sanitizedCode = code.replace(/\[([^[\]\n]+)\]/g, (m, label) => {
+      if (label.includes('(') || label.includes(')') || label.includes('"')) {
+        const c = label.replace(/\(([^)]+)\)/g, '- $1').replace(/["'()]/g, '').trim();
+        return `[${c}]`;
+      }
+      return m;
+    });
+    return '```mermaid\n' + sanitizedCode.trim() + '\n```';
+  });
+
+
+  const lines = cleaned.split('\n');
+  let currentTab = [];
+  const resLines = [];
+  for (const line of lines) {
+    if (line.includes('\t') && line.split('\t').filter((c) => c.trim()).length >= 2) {
+      currentTab.push(line);
+    } else {
+      if (currentTab.length > 0) {
+        const rows = currentTab.map((l) => l.split('\t').map((c) => c.trim()));
+        const maxCols = Math.max(...rows.map((r) => r.length));
+        const header = '| ' + rows[0].join(' | ') + ' |';
+        const div = '| ' + Array(maxCols).fill(':---').join(' | ') + ' |';
+        const body = rows.slice(1).map((r) => {
+          while (r.length < maxCols) r.push('');
+          return '| ' + r.join(' | ') + ' |';
+        }).join('\n');
+        resLines.push(`\n${header}\n${div}\n${body}\n`);
+        currentTab = [];
+      }
+      resLines.push(line);
+    }
+  }
+  if (currentTab.length > 0) {
+    const rows = currentTab.map((l) => l.split('\t').map((c) => c.trim()));
+    const maxCols = Math.max(...rows.map((r) => r.length));
+    const header = '| ' + rows[0].join(' | ') + ' |';
+    const div = '| ' + Array(maxCols).fill(':---').join(' | ') + ' |';
+    const body = rows.slice(1).map((r) => {
+      while (r.length < maxCols) r.push('');
+      return '| ' + r.join(' | ') + ' |';
+    }).join('\n');
+    resLines.push(`\n${header}\n${div}\n${body}\n`);
+  }
+  cleaned = resLines.join('\n');
+
+
+  const subparts = cleaned.split(/(```[\s\S]*?```)/g);
+  const processed = subparts.map((part) => {
     if (part.startsWith('```') && part.endsWith('```')) {
       return part;
     }
@@ -278,7 +323,7 @@ export const AnswerCard = React.memo(function AnswerCard({
         id={id || `q-${answer.id}`}
         className="rounded-2xl bg-white border border-[#E2E0D9] p-6 sm:p-8 shadow-[0px_1px_3px_rgba(0,0,0,0.04)] transition-all duration-200 hover:shadow-[0px_4px_12px_rgba(25,36,59,0.06)]"
       >
-        
+
         <div className="border-b border-[#EAE8E3] pb-5 mb-6 flex justify-between items-start gap-4">
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-2">
@@ -384,8 +429,14 @@ export const AnswerCard = React.memo(function AnswerCard({
                   code({ className, children, ...props }) {
                     const match = /language-(\w+)/.exec(className || '');
                     const lang = match ? match[1] : '';
-                    if (lang === 'mermaid') {
-                      return <MermaidDiagram chart={String(children).replace(/\n$/, '')} />;
+                    const rawText = String(children).replace(/\n$/, '').trim();
+                    const isMermaid =
+                      lang === 'mermaid' ||
+                      lang === 'flowchart' ||
+                      /^\s*(?:graph\s+(?:TD|TB|BT|RL|LR)|flowchart\s+(?:TD|TB|BT|RL|LR)|sequenceDiagram|stateDiagram(?:-v2)?|erDiagram|classDiagram|pie|gitGraph)\b/m.test(rawText);
+
+                    if (isMermaid) {
+                      return <MermaidDiagram chart={rawText} />;
                     }
                     const isBlock = Boolean(className) || (typeof children === 'string' && children.includes('\n'));
                     if (isBlock) {

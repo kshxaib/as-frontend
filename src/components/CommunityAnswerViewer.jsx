@@ -1,14 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import {
-  X,
-  Download,
-  BookOpen,
-  CheckCircle2,
-  LoaderCircle,
-  ArrowLeft,
-  FolderPlus,
-  Sparkles,
-} from 'lucide-react';
+import { X, Download, BookOpen, CheckCircle2, LoaderCircle, ArrowLeft, FolderPlus, Sparkles } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
 import { AnswerCard } from './AnswerCard';
 

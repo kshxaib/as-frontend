@@ -5,16 +5,16 @@ const THEME_KEY = 'academicstack_theme';
 const applyThemeToDOM = () => {
   if (typeof document === 'undefined') return;
   const root = document.documentElement;
-  root.classList.remove('light');
-  root.classList.add('dark');
-  root.setAttribute('data-theme', 'dark');
+  root.classList.remove('dark');
+  root.classList.add('light');
+  root.setAttribute('data-theme', 'light');
 };
 
 export const useThemeStore = create(() => ({
-  theme: 'dark',
+  theme: 'light',
   initTheme: () => {
     if (typeof window !== 'undefined') {
-      localStorage.setItem(THEME_KEY, 'dark');
+      localStorage.setItem(THEME_KEY, 'light');
     }
     applyThemeToDOM();
   },

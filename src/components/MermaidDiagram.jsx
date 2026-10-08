@@ -61,8 +61,44 @@ function ensureMermaidInit() {
 function sanitizeMermaidCode(raw) {
   if (!raw) return '';
   let text = String(raw).trim();
-  text = text.replace(/^```(?:mermaid)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
+  text = text.replace(/^```(?:mermaid|flowchart|graph)?\s*\n?/i, '').replace(/\n?```\s*$/i, '').trim();
   text = text.replace(/&gt;/g, '>').replace(/&lt;/g, '<').replace(/&amp;/g, '&');
+
+  const headerMatch = text.search(/^(?:graph\s+|flowchart\s+|sequenceDiagram|stateDiagram(?:-v2)?|erDiagram|classDiagram|pie|gitGraph)/m);
+  if (headerMatch > 0) {
+    text = text.slice(headerMatch).trim();
+  }
+
+  const lines = text.split('\n');
+  const validLines = [];
+  let foundHeader = false;
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!foundHeader) {
+      if (/^(?:graph\s+|flowchart\s+|sequenceDiagram|stateDiagram(?:-v2)?|erDiagram|classDiagram|pie|gitGraph)/i.test(trimmed)) {
+        foundHeader = true;
+        validLines.push(line);
+      }
+      continue;
+    }
+
+    if (/^(?:In this diagram|This diagram|Note:|Here,|Where\b|The above|As shown)/i.test(trimmed)) {
+      break;
+    }
+    validLines.push(line);
+  }
+
+  text = (validLines.length > 0 ? validLines.join('\n') : text).trim();
+
+  text = text.replace(/\[([^[\]\n]+)\]/g, (match, label) => {
+    if (label.includes('(') || label.includes(')') || label.includes('"')) {
+      const cleanLabel = label.replace(/\(([^)]+)\)/g, '- $1').replace(/["'()]/g, '').trim();
+      return `[${cleanLabel}]`;
+    }
+    return match;
+  });
+
   return text;
 }
 
@@ -111,14 +147,36 @@ export function MermaidDiagram({ chart }) {
             setSvgContent(renderedSvg);
             setHasError(false);
           }
-        } else if (isMounted) {
-          setHasError(true);
+          return;
         }
       } catch {
         cleanupStrayMermaidErrors();
-        if (isMounted) {
-          setHasError(true);
+      }
+
+      try {
+        const lines = code.split('\n').map((l) => {
+          return l.replace(/\[(.*?)\]/g, (_m, inner) => `[${inner.replace(/[^a-zA-Z0-9\s_-]/g, ' ').trim()}]`);
+        }).join('\n');
+
+        const diagramId2 = getSafeDiagramId();
+        const res2 = await mermaid.render(diagramId2, lines);
+        cleanupStrayMermaidErrors();
+
+        const renderedSvg2 = typeof res2 === 'string' ? res2 : res2?.svg || '';
+        if (renderedSvg2) {
+          svgCache.set(code, renderedSvg2);
+          if (isMounted) {
+            setSvgContent(renderedSvg2);
+            setHasError(false);
+          }
+          return;
         }
+      } catch {
+        cleanupStrayMermaidErrors();
+      }
+
+      if (isMounted) {
+        setHasError(true);
       }
     })();
 

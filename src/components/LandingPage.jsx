@@ -1,17 +1,5 @@
 import React from 'react';
-import {
-  CircleCheck,
-  FileText,
-  Files,
-  ListChecks,
-  Target,
-  UserRound,
-  Users,
-  CheckCircle2,
-  ShieldCheck,
-  GitPullRequest,
-  Sparkles,
-} from 'lucide-react';
+import { CircleCheck, FileText, Files, ListChecks, Target, UserRound, Users, CheckCircle2, ShieldCheck, GitPullRequest, Sparkles } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import { AcademicLogo } from './ui/AcademicLogo';
 import { GithubIcon } from './ui/GithubIcon';
@@ -272,11 +260,11 @@ export const LandingPage = ({ justLoggedOut, hasSharedToken }) => {
           </div>
         </section>
 
-        {/* Open Source Contribution Banner */}
+
         <section className="px-6 pb-20 max-w-4xl mx-auto">
           <div className="rounded-[20px] bg-white border border-[#E2E0D9] p-8 sm:p-10 shadow-[0px_10px_30px_rgba(25,_36,_59,_0.06)] text-center relative overflow-hidden">
             <div className="absolute top-0 left-1/2 -translate-x-1/2 w-64 h-1 bg-gradient-to-r from-transparent via-[#0057FF] to-transparent" />
-            
+
             <div className="inline-flex items-center gap-2 rounded-full bg-[#EAF0FF] border border-[#C8D8FF] px-3.5 py-1 text-xs font-semibold text-[#0057FF] mb-4">
               <GitPullRequest className="h-3.5 w-3.5" />
               <span>Open Source & Community Driven</span>

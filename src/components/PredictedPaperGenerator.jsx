@@ -1,29 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import {
-  Sparkles,
-  Plus,
-  Trash2,
-  Download,
-  Bookmark,
-  Check,
-  AlertCircle,
-  CircleAlert,
-  RefreshCw,
-  BookOpen,
-  ArrowRight,
-  ShieldCheck,
-  CheckCircle2,
-  FileText,
-  FileUp,
-  Upload,
-  Link,
-  Share2,
-  Info,
-  LoaderCircle,
-  MoreHorizontal,
-  ChevronDown,
-  X,
-} from 'lucide-react';
+import { Sparkles, Plus, Trash2, Download, Bookmark, Check, AlertCircle, CircleAlert, RefreshCw, BookOpen, ArrowRight, ShieldCheck, CheckCircle2, FileText, FileUp, Upload, Link, Share2, Info, LoaderCircle, MoreHorizontal, ChevronDown, X } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { ApiKeyBanner } from './ui/ApiKeyBanner';
@@ -381,7 +357,7 @@ export const PredictedPaperGenerator = ({ sharedToken, onClearShared }) => {
         </div>
       )}
 
-      <ApiKeyBanner feature="Examination Paper Prediction & Synthesis" />
+
 
       {!predictedPaper ? (
         <form onSubmit={handleSubmit} className="space-y-6 max-w-5xl">

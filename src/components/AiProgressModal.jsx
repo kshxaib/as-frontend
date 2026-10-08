@@ -32,7 +32,7 @@ const AiProgressModalContent = ({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-[#19243B]/40 p-4 sm:p-8 backdrop-blur-xs animate-in fade-in duration-150 selection:bg-[#0057FF] selection:text-white">
       <section className="shadow-[0px_25px_50px_-12px_rgba(0,0,0,0.25)] rounded-2xl bg-white border border-[#E2E0D9] w-[480px] max-w-full overflow-hidden text-[#19243B] my-auto">
-        <div className="border-b border-[#E2E0D9] pt-6 px-6 sm:px-8 pb-5">
+        <div className="border-b border-[#E2E0D9] pt-6 px-6 sm:px-8 pb-5 text-center">
           <h2 className="font-semibold text-lg sm:text-xl tracking-tight text-[#19243B]">
             {title || defaultTitle}
           </h2>

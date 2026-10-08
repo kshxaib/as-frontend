@@ -1,14 +1,5 @@
 import React, { useState } from 'react';
-import {
-  CheckCircle2,
-  AlertCircle,
-  Eye,
-  EyeOff,
-  Trash2,
-  Key,
-  LoaderCircle,
-  User,
-} from 'lucide-react';
+import { CheckCircle2, AlertCircle, Eye, EyeOff, Trash2, Key, LoaderCircle, User } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 
 export const ProfileSettings = () => {

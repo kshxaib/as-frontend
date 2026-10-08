@@ -1,18 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import {
-  ArrowLeft,
-  Download,
-  ShieldCheck,
-  Sparkles,
-  Calendar,
-  Eye,
-  Copy,
-  Check,
-  FolderPlus,
-  LoaderCircle,
-  X,
-  CheckCircle2,
-} from 'lucide-react';
+import { ArrowLeft, Download, ShieldCheck, Sparkles, Calendar, Eye, Copy, Check, FolderPlus, LoaderCircle, X, CheckCircle2 } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
 
 const formatSectionHeader = (secName, secInst, marksSummary) => {
@@ -415,50 +402,6 @@ export const CommunityPredictedPaperViewer = () => {
                 </div>
 
               </article>
-            </div>
-
-            <div className="flex flex-wrap justify-center items-center gap-3 pt-2">
-              <button
-                type="button"
-                onClick={handleDownload}
-                disabled={isDownloadingPdf}
-                className="font-semibold rounded-xl bg-[#0057FF] text-white hover:bg-[#0047D6] px-5 h-11 text-xs sm:text-sm inline-flex items-center gap-2 transition-colors cursor-pointer shadow-xs disabled:opacity-60"
-              >
-                {isDownloadingPdf ? (
-                  <LoaderCircle className="size-4 animate-spin" />
-                ) : (
-                  <Download className="size-4" />
-                )}
-                <span>{isDownloadingPdf ? 'Generating PDF...' : 'Download PDF'}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleClone}
-                disabled={isCloningCommunityPredictedPaper || isCopied}
-                className={`font-semibold rounded-xl px-5 h-11 text-xs sm:text-sm inline-flex items-center gap-2 transition-colors cursor-pointer shadow-2xs ${
-                  isCopied
-                    ? 'border border-[#A6F4C5] bg-[#EAF5EF] text-[#187347] cursor-default'
-                    : 'border border-[#C6CAD3] bg-white text-[#19243B] hover:bg-[#F1F0EC] disabled:opacity-50'
-                }`}
-              >
-                {isCloningCommunityPredictedPaper ? (
-                  <LoaderCircle className="size-4 animate-spin text-[#0057FF]" />
-                ) : isCopied ? (
-                  <CheckCircle2 className="size-4 text-[#187347]" />
-                ) : (
-                  <FolderPlus className="size-4 text-[#187347]" />
-                )}
-                <span>{isCloningCommunityPredictedPaper ? 'Adding...' : isCopied ? 'Copied to Workspace' : 'Add to workspace'}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={closeCommunityPredictedViewer}
-                className="font-semibold rounded-xl border border-[#C6CAD3] bg-white text-[#526078] hover:text-[#19243B] hover:bg-[#F1F0EC] px-4 h-11 text-xs sm:text-sm inline-flex items-center gap-1.5 transition-colors cursor-pointer"
-              >
-                Back to Community
-              </button>
             </div>
 
           </div>

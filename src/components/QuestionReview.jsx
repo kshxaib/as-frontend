@@ -1,21 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import {
-  Search,
-  Download,
-  Plus,
-  ArrowRight,
-  Sparkles,
-  AlertTriangle,
-  Info,
-  Trash2,
-  FileText,
-  AlertCircle,
-  CheckCircle2,
-  ChevronDown,
-  RefreshCw,
-  CircleAlert,
-  LoaderCircle,
-} from 'lucide-react';
+import { Search, Download, Plus, ArrowRight, Sparkles, AlertTriangle, Info, Trash2, FileText, AlertCircle, CheckCircle2, ChevronDown, RefreshCw, CircleAlert, LoaderCircle } from 'lucide-react';
 import { useQuestionBankStore } from '../store/useQuestionBankStore';
 import { useAuthStore } from '../store/useAuthStore';
 import { QuestionCard } from './QuestionCard';
@@ -116,7 +100,7 @@ export const QuestionReview = () => {
         </div>
       )}
 
-      <ApiKeyBanner feature="AI Answer Generation" />
+
 
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 pb-1">
         <div className="flex flex-col gap-1">
