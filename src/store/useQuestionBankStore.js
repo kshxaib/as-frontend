@@ -76,9 +76,13 @@ export const useQuestionBankStore = create((set, get) => ({
   },
 
   fetchResources: async () => {
+    const auth = useAuthStore.getState();
+    if (auth.isAuthenticated && !auth.user) {
+      return;
+    }
     set({ isLoading: true, error: null });
     try {
-      const user = useAuthStore.getState().user;
+      const user = auth.user;
       const params = user ? { user_id: user.id } : {};
       const res = await api.get('/resources', { params });
       set({ resources: res.data.resources || [], isLoading: false });
@@ -171,9 +175,13 @@ export const useQuestionBankStore = create((set, get) => ({
   },
 
   fetchQuestionBanks: async () => {
+    const auth = useAuthStore.getState();
+    if (auth.isAuthenticated && !auth.user) {
+      return;
+    }
     set({ isLoading: true, error: null });
     try {
-      const user = useAuthStore.getState().user;
+      const user = auth.user;
       const params = user ? { user_id: user.id } : {};
       const res = await api.get('/question-banks', { params });
       const banks = res.data.question_banks || [];

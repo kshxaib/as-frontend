@@ -1,11 +1,14 @@
 import { create } from 'zustand';
 import api, { getErrorMessage } from '../api/client';
 
+const savedToken = localStorage.getItem('academicstack_token');
+
 export const useAuthStore = create((set) => ({
   user: null,
-  token: localStorage.getItem('academicstack_token') || null,
-  isAuthenticated: !!localStorage.getItem('academicstack_token'),
+  token: savedToken || null,
+  isAuthenticated: !!savedToken,
   isLoading: false,
+  isInitializing: !!savedToken,
   error: null,
   isAuthModalOpen: false,
   authModalMode: 'login', 
@@ -16,16 +19,19 @@ export const useAuthStore = create((set) => ({
 
   initAuth: async () => {
     const token = localStorage.getItem('academicstack_token');
-    if (!token) return;
+    if (!token) {
+      set({ isInitializing: false, isLoading: false });
+      return;
+    }
 
-    set({ isLoading: true });
+    set({ isLoading: true, isInitializing: true });
     try {
       const res = await api.get('/auth/me');
-      set({ user: res.data, isAuthenticated: true, isLoading: false });
+      set({ user: res.data, isAuthenticated: true, isLoading: false, isInitializing: false });
     } catch {
       console.warn('Auth token invalid or expired, clearing session.');
       localStorage.removeItem('academicstack_token');
-      set({ user: null, token: null, isAuthenticated: false, isLoading: false });
+      set({ user: null, token: null, isAuthenticated: false, isLoading: false, isInitializing: false });
     }
   },
 

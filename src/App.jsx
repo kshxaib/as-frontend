@@ -14,10 +14,11 @@ import { ErrorModal } from './components/ErrorModal';
 import { useQuestionBankStore } from './store/useQuestionBankStore';
 import { useAuthStore } from './store/useAuthStore';
 import { useThemeStore } from './store/useThemeStore';
+import { AcademicLogo } from './components/ui/AcademicLogo';
 
 function App() {
   const { activeTab, setActiveTab } = useQuestionBankStore();
-  const { initAuth, isAuthenticated } = useAuthStore();
+  const { initAuth, isAuthenticated, user, isInitializing } = useAuthStore();
   const { initTheme } = useThemeStore();
   const [justLoggedOut, setJustLoggedOut] = useState(false);
 
@@ -49,7 +50,21 @@ function App() {
     prevAuthRef.current = isAuthenticated;
   }, [isAuthenticated, setActiveTab]);
 
-  const showApp = isAuthenticated;
+  if (isInitializing) {
+    return (
+      <div className="min-h-screen bg-[#F8F7F4] flex flex-col items-center justify-center font-sans antialiased text-[#19243B]">
+        <div className="flex flex-col items-center gap-4">
+          <AcademicLogo size={48} className="animate-pulse" />
+          <div className="flex items-center gap-2.5 text-xs sm:text-sm font-medium text-[#526078]">
+            <div className="size-4 rounded-full border-2 border-[#0057FF] border-t-transparent animate-spin" />
+            <span>Loading workspace...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const showApp = isAuthenticated && Boolean(user);
 
   return (
     <div className="min-h-screen bg-[#F8F7F4] text-[#19243B] font-sans antialiased selection:bg-[#0057FF] selection:text-white">

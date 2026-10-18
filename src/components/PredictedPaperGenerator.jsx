@@ -249,7 +249,7 @@ export const PredictedPaperGenerator = ({ sharedToken, onClearShared }) => {
     setShareMessage('');
 
     if (!communityPaperId) {
-      const creator = user.name || 'Student Scholar';
+      const creator = user?.name || user?.username || 'Student Scholar';
       const res = await sharePredictedPaper(predictedPaper, creator, 'community');
       setIsSharing(false);
       if (res.success && res.data) {

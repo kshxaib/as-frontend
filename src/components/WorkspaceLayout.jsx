@@ -31,7 +31,7 @@ export const WorkspaceLayout = ({ children }) => {
   }, [isUserMenuOpen]);
 
   const getInitials = (name) => {
-    if (!name) return 'AL';
+    if (!name) return 'U';
     const parts = name.trim().split(' ');
     if (parts.length >= 2) {
       return (parts[0][0] + parts[1][0]).toUpperCase();
@@ -335,33 +335,40 @@ export const WorkspaceLayout = ({ children }) => {
             </a>
 
             <div className="hidden lg:block relative" ref={userMenuRef}>
-              <button
-                onClick={() => setIsUserMenuOpen((prev) => !prev)}
-                className="flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer"
-                type="button"
-                aria-expanded={isUserMenuOpen}
-              >
-                <div className="font-bold rounded-full bg-[#0057FF]/10 text-[#0057FF] text-xs border border-[#0057FF]/20 grid place-items-center size-9 shadow-2xs">
-                  {getInitials(user?.name || user?.username)}
+              {user ? (
+                <button
+                  onClick={() => setIsUserMenuOpen((prev) => !prev)}
+                  className="flex items-center gap-3 hover:opacity-80 transition-opacity cursor-pointer"
+                  type="button"
+                  aria-expanded={isUserMenuOpen}
+                >
+                  <div className="font-bold rounded-full bg-[#0057FF]/10 text-[#0057FF] text-xs border border-[#0057FF]/20 grid place-items-center size-9 shadow-2xs">
+                    {getInitials(user.name || user.username)}
+                  </div>
+                  <span className="font-semibold text-sm text-[#19243B]">
+                    {user.name || user.username}
+                  </span>
+                  <ChevronDown
+                    className={`text-[#526078] size-4 transition-transform duration-200 ${
+                      isUserMenuOpen ? 'rotate-180 text-[#0057FF]' : ''
+                    }`}
+                  />
+                </button>
+              ) : (
+                <div className="flex items-center gap-2.5">
+                  <div className="size-9 rounded-full bg-[#E2E0D9] animate-pulse" />
+                  <div className="h-4 w-20 bg-[#E2E0D9] animate-pulse rounded" />
                 </div>
-                <span className="font-semibold text-sm text-[#19243B]">
-                  {user?.name || user?.username || 'Alex Lee'}
-                </span>
-                <ChevronDown
-                  className={`text-[#526078] size-4 transition-transform duration-200 ${
-                    isUserMenuOpen ? 'rotate-180 text-[#0057FF]' : ''
-                  }`}
-                />
-              </button>
+              )}
 
-              {isUserMenuOpen && (
+              {isUserMenuOpen && user && (
                 <div className="absolute right-0 mt-2 w-60 rounded-xl border border-[#E2E0D9] bg-white p-1.5 shadow-[0px_8px_24px_rgba(25,36,59,0.08)] z-50 animate-in fade-in zoom-in-95 duration-100">
                   <div className="px-3 py-2 border-b border-[#E2E0D9]">
                     <p className="text-xs font-bold text-[#19243B] truncate">
-                      {user?.name || 'User'}
+                      {user.name || user.username}
                     </p>
                     <p className="text-[11px] text-[#526078] truncate">
-                      @{user?.username || 'user'}
+                      @{user.username}
                     </p>
                   </div>
 

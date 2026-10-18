@@ -584,7 +584,6 @@ export const SolutionViewer = () => {
       <AiProgressModal
         isOpen={isGeneratingAnswers}
         type="generation"
-        title="Creating your answers"
         itemName={currentQuestionBank?.name}
         subjectName={currentQuestionBank?.subject}
       />

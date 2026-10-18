@@ -20,6 +20,15 @@ export const ProfileSettings = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  if (isAuthenticated && !user) {
+    return (
+      <div className="mx-auto max-w-md px-4 py-24 text-center">
+        <LoaderCircle className="mx-auto h-8 w-8 animate-spin text-[#0057FF] mb-3" />
+        <p className="text-sm font-semibold text-[#19243B]">Loading profile...</p>
+      </div>
+    );
+  }
+
   if (!isAuthenticated || !user) {
     return (
       <div className="mx-auto max-w-md px-4 py-20 text-center">
