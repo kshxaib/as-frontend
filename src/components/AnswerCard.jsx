@@ -267,6 +267,7 @@ export const AnswerCard = React.memo(function AnswerCard({
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [expandedSources, setExpandedSources] = useState({});
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const menuRef = useRef(null);
 
   useEffect(() => {
@@ -324,8 +325,11 @@ export const AnswerCard = React.memo(function AnswerCard({
         className="rounded-2xl bg-white border border-[#E2E0D9] p-6 sm:p-8 shadow-[0px_1px_3px_rgba(0,0,0,0.04)] transition-all duration-200 hover:shadow-[0px_4px_12px_rgba(25,36,59,0.06)]"
       >
 
-        <div className="border-b border-[#EAE8E3] pb-5 mb-6 flex justify-between items-start gap-4">
-          <div className="min-w-0 flex-1">
+        <div className={`flex justify-between items-start gap-4 ${isCollapsed ? '' : 'border-b border-[#EAE8E3] pb-5 mb-6'}`}>
+          <div
+            className="min-w-0 flex-1 cursor-pointer select-none"
+            onClick={() => setIsCollapsed((prev) => !prev)}
+          >
             <div className="flex flex-wrap items-center gap-2">
               <span className="font-mono font-bold text-xs px-2.5 py-1 rounded-lg bg-[#0057FF] text-white shadow-2xs tracking-wide">
                 Q{formattedQNum}
@@ -345,7 +349,18 @@ export const AnswerCard = React.memo(function AnswerCard({
             </h3>
           </div>
 
-          <div className="relative shrink-0" ref={menuRef}>
+          <div className="relative shrink-0 flex items-center gap-2" ref={menuRef}>
+            <button
+              type="button"
+              onClick={() => setIsCollapsed((prev) => !prev)}
+              className="flex items-center gap-1.5 rounded-lg text-[#526078] hover:text-[#19243B] hover:bg-[#F1F0EC] px-2.5 py-1.5 text-xs font-medium transition-colors cursor-pointer border border-[#E2E0D9]"
+              title={isCollapsed ? 'Expand answer' : 'Collapse answer'}
+              aria-label={isCollapsed ? 'Expand answer' : 'Collapse answer'}
+            >
+              <span>{isCollapsed ? 'Expand' : 'Collapse'}</span>
+              {isCollapsed ? <ChevronDown className="size-4" /> : <ChevronUp className="size-4" />}
+            </button>
+
             <button
               type="button"
               onClick={() => setIsMenuOpen((prev) => !prev)}
@@ -384,7 +399,8 @@ export const AnswerCard = React.memo(function AnswerCard({
           </div>
         </div>
 
-        <div className="text-[#19243B] text-[16px] sm:text-[17px] leading-8 mt-6">
+        {!isCollapsed && (
+          <div className="text-[#19243B] text-[16px] sm:text-[17px] leading-8 mt-6">
 
           {answer.status === 'failed' ? (
             <div className="rounded-xl bg-[#FEF2F2] border border-[#FCA5A5]/60 p-6 my-4 transition-all">
@@ -564,6 +580,7 @@ export const AnswerCard = React.memo(function AnswerCard({
             </div>
           </div>
         </div>
+        )}
       </article>
 
       <ConfirmationModal
